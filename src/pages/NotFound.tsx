@@ -1,26 +1,32 @@
-import { motion } from "framer-motion";
+import { NBButton, NBPanel } from "@/components/nb";
+import logo from "@/assets/logo.svg";
+import { Link } from "react-router";
 
 export default function NotFound() {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="min-h-screen flex flex-col"
-    >
-
-      
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="max-w-5xl mx-auto relative px-4">
-          <div className="flex items-center justify-center min-h-[200px]">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-              <p className="text-lg text-gray-600">Page Not Found</p>
-            </div>
-          </div>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-paper px-4">
+      <NBPanel className="max-w-md p-8 text-center nb-shadow-lg">
+        <img
+          src={logo}
+          alt="Tone Re:Align"
+          width={56}
+          height={56}
+          className="nb mx-auto size-14 bg-ink"
+        />
+        <h1 className="mt-6 font-display text-6xl">404</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Off-key. This page doesn't exist — but your next take is still
+          waiting.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link to="/">
+            <NBButton variant="sun">Back home</NBButton>
+          </Link>
+          <Link to="/dashboard">
+            <NBButton variant="paper">Open app</NBButton>
+          </Link>
         </div>
-      </div>
-    </motion.div>
+      </NBPanel>
+    </main>
   );
 }

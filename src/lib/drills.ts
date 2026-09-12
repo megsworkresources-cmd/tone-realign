@@ -1,0 +1,74 @@
+/** The drill catalog for tone practice. */
+
+export interface Drill {
+  id: string;
+  name: string;
+  tag: string;
+  color: string; // tailwind bg class
+  prompt: string; // what to actually say
+  focus: string;
+  tips: string[];
+  seconds: number; // suggested take length
+}
+
+export const DRILLS: Drill[] = [
+  {
+    id: "steady-ground",
+    name: "Steady Ground",
+    tag: "CALM UNDER PRESSURE",
+    color: "bg-sun",
+    prompt:
+      "Describe what happened this morning — factually, without complaint. Then say: \"I'd like to fix one thing about it.\"",
+    focus: "Keep volume even. Let sentences land. No rush.",
+    tips: [
+      "Speak on the exhale, not the inhale",
+      "Pause a full beat before \"I'd like to fix one thing\"",
+      "If you speed up, stop and restart the sentence",
+    ],
+    seconds: 45,
+  },
+  {
+    id: "warm-open",
+    name: "Warm Open",
+    tag: "WARMTH & PRESENCE",
+    color: "bg-mint",
+    prompt:
+      "Greet someone you haven't seen in months. Tell them one thing you genuinely appreciate about them.",
+    focus: "Let your pitch move. Smile audibly. Slow down on the person's name.",
+    tips: [
+      "Pitch rises slightly on genuine warmth — let it",
+      "Say their name slowly",
+      "End statements downward, not upward",
+    ],
+    seconds: 40,
+  },
+  {
+    id: "firm-clear",
+    name: "Firm & Clear",
+    tag: "BOUNDARIES",
+    color: "bg-coral",
+    prompt:
+      "Say: \"That doesn't work for me. Here's what I can do instead.\" Then hold a pause for two seconds without filling it.",
+    focus: "Firm isn't loud. Lower pitch, steady volume, no apologetic tail.",
+    tips: [
+      "Don't trail off at the end of the sentence",
+      "The pause is part of the answer — don't fill it",
+      "Keep volume below your urge to push",
+    ],
+    seconds: 35,
+  },
+];
+
+export function getDrill(id: string): Drill | undefined {
+  return DRILLS.find((d) => d.id === id);
+}
+
+/** Scenario prompts for the trigger-reframe practice. */
+export const REFRAME_SCENARIOS = [
+  "Your boss emails \"we need to talk\" with no context.",
+  "A friend cancels plans last minute for the third time.",
+  "Someone takes credit for your idea in a meeting.",
+  "Your partner sighs and says \"fine, whatever.\"",
+  "A stranger cuts in line in front of you.",
+  "You get critical feedback on something you worked hard on.",
+];

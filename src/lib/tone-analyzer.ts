@@ -1,0 +1,305 @@
+/**
+ * Client-side voice tone analyzer.
+ *
+ * Captures the microphone with the Web Audio API and derives, in real time:
+ *  - pitch (Hz) via time-domain autocorrelation
+ *  - volume (RMS)
+ *  - voiced/silence ratio, speaking pace estimate
+ *
+ * From these it computes coaching scores (0..100): calm, energy, clarity,
+ * stability, and an overall score, plus a dominant tone label.
+ */
+
+export interface ToneFrame {
+  pitchHz: number | null; // null when unvoiced
+  volume: number; // RMS 0..1
+  timestamp: number;
+}
+
+export interface ToneAnalysis {
+  dominantTone: string;
+  avgPitchHz: number;
+  pitchRangeHz: number;
+  avgVolume: number;
+  volumeVariability: number;
+  wordsPerMinute: number;
+  voicedRatio: number;
+  calmScore: number;
+  energyScore: number;
+  clarityScore: number;
+  stabilityScore: number;
+  overallScore: number;
+}
+
+const MIN_PITCH = 60;
+const MAX_PITCH = 400;
+const WPM_ASSUMED_SYLLABLES_PER_WORD = 1.6;
+
+/** Autocorrelation pitch detection on a time-domain buffer. Returns null if unvoiced. */
+export function detectPitch(buffer: Float32Array, sampleRate: number): number | null {
+  const size = buffer.length;
+  let rms = 0;
+  for (let i = 0; i < size; i++) rms += buffer[i] * buffer[i];
+  rms = Math.sqrt(rms / size);
+  if (rms < 0.015) return null; // silence / noise floor
+
+  // Trim low-amplitude edges for a cleaner correlation window
+  let start = 0;
+  let end = size - 1;
+  const threshold = 0.2;
+  while (start < size / 2 && Math.abs(buffer[start]) < threshold) start++;
+  while (end > size / 2 && Math.abs(buffer[end]) < threshold) end--;
+  if (end - start < 2) return null;
+
+  const window = buffer.slice(start, end);
+  const n = window.length;
+  const c = new Float32Array(n).fill(0);
+  for (let lag = 0; lag < n; lag++) {
+    let sum = 0;
+    for (let i = 0; i < n - lag; i++) {
+      sum += window[i] * window[i + lag];
+    }
+    c[lag] = sum;
+  }
+
+  let d = 0;
+  while (d < n - 1 && c[d] > c[d + 1]) d++;
+  let maxVal = -1;
+  let maxPos = -1;
+  for (let i = d; i < n; i++) {
+    if (c[i] > maxVal) {
+      maxVal = c[i];
+      maxPos = i;
+    }
+  }
+  if (maxPos <= 0) return null;
+
+  let T0 = maxPos;
+  // Parabolic interpolation around the peak for sub-sample accuracy
+  const x1 = c[T0 - 1] ?? 0;
+  const x2 = c[T0];
+  const x3 = c[T0 + 1] ?? 0;
+  const a = (x1 + x3 - 2 * x2) / 2;
+  const b = (x3 - x1) / 2;
+  if (a) T0 = T0 - b / (2 * a);
+
+  const pitchHz = sampleRate / T0;
+  if (pitchHz < MIN_PITCH || pitchHz > MAX_PITCH) return null;
+  return pitchHz;
+}
+
+export interface AnalyzeOptions {
+  /** Spoken-word estimate; when provided, WPM uses it instead of the syllable heuristic. */
+  wordCount?: number;
+}
+
+/** Aggregate captured frames into a full analysis. */
+export function analyzeFrames(
+  frames: ToneFrame[],
+  durationMs: number,
+  options: AnalyzeOptions = {},
+): ToneAnalysis {
+  const pitches = frames
+    .map((f) => f.pitchHz)
+    .filter((p): p is number => p !== null);
+  const volumes = frames.map((f) => f.volume);
+  const voicedFrames = frames.filter((f) => f.pitchHz !== null).length;
+  const voicedRatio = frames.length > 0 ? voicedFrames / frames.length : 0;
+
+  const avgPitchHz =
+    pitches.length > 0
+      ? pitches.reduce((a, b) => a + b, 0) / pitches.length
+      : 0;
+  const pitchRangeHz =
+    pitches.length > 1
+      ? Math.max(...pitches) - Math.min(...pitches)
+      : 0;
+
+  const avgVolume =
+    volumes.length > 0
+      ? volumes.reduce((a, b) => a + b, 0) / volumes.length
+      : 0;
+  const volumeVariability =
+    volumes.length > 1
+      ? Math.sqrt(
+          volumes.reduce(
+            (acc, v) => acc + (v - avgVolume) * (v - avgVolume),
+            0,
+          ) / volumes.length,
+        )
+      : 0;
+
+  // Relative pitch spread: tension and flatness both narrow it
+  let pitchVariability = 0;
+  if (pitches.length > 1) {
+    const mean = avgPitchHz;
+    pitchVariability =
+      Math.sqrt(
+        pitches.reduce((acc, p) => acc + (p - mean) * (p - mean), 0) /
+          pitches.length,
+      ) / mean;
+  }
+
+  // Speaking pace
+  const durationSec = Math.max(durationMs / 1000, 1);
+  let wordsPerMinute: number;
+  if (options.wordCount && options.wordCount > 0) {
+    wordsPerMinute = Math.round((options.wordCount / durationSec) * 60);
+  } else {
+    // Heuristic: each voiced burst ~ one syllable
+    const estimatedSyllables = countVoicedBursts(frames);
+    wordsPerMinute = Math.round(
+      (estimatedSyllables / WPM_ASSUMED_SYLLABLES_PER_WORD / durationSec) * 60,
+    );
+  }
+
+  // ---- Scores (0..100) ----
+
+  // Calm: moderate pace, not too loud, healthy voiced ratio
+  const paceIdeal = 130; // wpm
+  const pacePenalty = Math.min(Math.abs(wordsPerMinute - paceIdeal) / 90, 1);
+  const volumePenalty = Math.min(Math.max(avgVolume - 0.25, 0) / 0.2, 1);
+  const calmScore = Math.round(
+    100 * (1 - 0.5 * pacePenalty - 0.3 * volumePenalty - 0.2 * (1 - voicedRatio)),
+  );
+
+  // Energy: pitch movement + volume presence (monotone reads low-energy)
+  const rangeScore = Math.min(pitchRangeHz / 90, 1);
+  const presenceScore = Math.min(avgVolume / 0.15, 1);
+  const energyScore = Math.round(100 * (0.55 * rangeScore + 0.45 * presenceScore));
+
+  // Clarity: steadiness of volume, adequate voicing, sane pace
+  const steadyVolume = Math.min(volumeVariability / 0.09, 1); // lower = steadier
+  const paceClarity = wordsPerMinute > 190 || wordsPerMinute < 70 ? 0.4 : 1;
+  const clarityScore = Math.round(
+    100 *
+      (0.4 * (1 - Math.abs(steadyVolume - 0.35)) +
+        0.35 * Math.min(voicedRatio / 0.6, 1) +
+        0.25 * paceClarity),
+  );
+
+  // Stability: how consistently pitch holds (relative spread)
+  const stabilityRaw = 1 - Math.min(pitchVariability / 0.35, 1);
+  const stabilityScore = Math.round(
+    100 * (voicedRatio > 0.15 ? stabilityRaw : 0.2),
+  );
+
+  // Tone label
+  const dominantTone = labelTone({
+    avgVolume,
+    pitchVariability,
+    wordsPerMinute,
+    pitchRangeHz,
+    voicedRatio,
+  });
+
+  const overallScore = Math.round(
+    0.3 * calmScore +
+      0.2 * energyScore +
+      0.25 * clarityScore +
+      0.25 * stabilityScore,
+  );
+
+  return {
+    dominantTone,
+    avgPitchHz: Math.round(avgPitchHz),
+    pitchRangeHz: Math.round(pitchRangeHz),
+    avgVolume: round2(avgVolume),
+    volumeVariability: round2(volumeVariability),
+    wordsPerMinute,
+    voicedRatio: round2(voicedRatio),
+    calmScore: clampScore(calmScore),
+    energyScore: clampScore(energyScore),
+    clarityScore: clampScore(clarityScore),
+    stabilityScore: clampScore(stabilityScore),
+    overallScore: clampScore(overallScore),
+  };
+}
+
+function labelTone(m: {
+  avgVolume: number;
+  pitchVariability: number;
+  wordsPerMinute: number;
+  pitchRangeHz: number;
+  voicedRatio: number;
+}): string {
+  if (m.voicedRatio < 0.12) return "quiet";
+  const tense = m.pitchVariability > 0.22 && m.avgVolume > 0.12;
+  const rushed = m.wordsPerMinute > 175;
+  const flat = m.pitchRangeHz < 25 && m.pitchVariability < 0.08;
+  if (tense) return "tense";
+  if (rushed) return "rushed";
+  if (flat) return "flat";
+  if (m.wordsPerMinute >= 110 && m.pitchVariability >= 0.08) return "engaged";
+  if (m.avgVolume > 0.02 && m.pitchVariability < 0.14) return "calm";
+  return "mixed";
+}
+
+function countVoicedBursts(frames: ToneFrame[]): number {
+  let bursts = 0;
+  let inBurst = false;
+  let gapFrames = 0;
+  for (const f of frames) {
+    if (f.pitchHz !== null) {
+      if (!inBurst) {
+        bursts++;
+        inBurst = true;
+      }
+      gapFrames = 0;
+    } else {
+      gapFrames++;
+      if (gapFrames > 4) inBurst = false; // ~200ms gap ends a burst
+    }
+  }
+  return Math.max(bursts, 1);
+}
+
+function clampScore(n: number): number {
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+/** Tone label + friendly description for display. */
+export const TONE_LABELS: Record<
+  string,
+  { label: string; note: string; color: string }
+> = {
+  calm: {
+    label: "CALM",
+    note: "Steady pressure and even pacing. This is the baseline to return to.",
+    color: "bg-mint text-ink",
+  },
+  engaged: {
+    label: "ENGAGED",
+    note: "Lively pitch movement and presence. Great for storytelling and buy-in.",
+    color: "bg-sun text-ink",
+  },
+  tense: {
+    label: "TENSE",
+    note: "High pressure with sharp pitch swings. Exhale first, then speak.",
+    color: "bg-coral text-ink",
+  },
+  rushed: {
+    label: "RUSHED",
+    note: "Fast pacing outruns your listener. Land the period. Then breathe.",
+    color: "bg-coral text-ink",
+  },
+  flat: {
+    label: "FLAT",
+    note: "Narrow pitch range reads as disengaged. Let key words rise.",
+    color: "bg-paper text-ink",
+  },
+  quiet: {
+    label: "QUIET",
+    note: "Low signal — we could barely hear you. Speak into the mic directly.",
+    color: "bg-paper text-ink",
+  },
+  mixed: {
+    label: "MIXED",
+    note: "Shifting between modes. Pick one intention for the whole take.",
+    color: "bg-secondary text-ink",
+  },
+};

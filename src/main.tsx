@@ -15,6 +15,8 @@ import "./types/global.d.ts";
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
+const Practice = lazy(() => import("./pages/Practice.tsx"));
+const Reframe = lazy(() => import("./pages/Reframe.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Simple loading fallback for route transitions
@@ -73,6 +75,22 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Dashboard />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/practice/:drillId"
+                element={
+                  <RequireAuth>
+                    <Practice />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/reframe"
+                element={
+                  <RequireAuth>
+                    <Reframe />
                   </RequireAuth>
                 }
               />

@@ -1,22 +1,13 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { NBButton, NBPanel } from "@/components/nb";
 import { Input } from "@/components/ui/input";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-
 import { useAuth } from "@/hooks/use-auth";
 import logo from "@/assets/logo.svg";
-import { ArrowRight, Loader2, Mail, UserX } from "lucide-react";
+import { ArrowRight, AudioWaveform, Loader2, UserX } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -24,10 +15,7 @@ interface AuthProps {
   redirectAfterAuth?: string;
 }
 
-function resolveRedirectAfterAuth(
-  returnTo: string | null,
-  fallback = "/dashboard",
-) {
+function resolveRedirectAfterAuth(returnTo: string | null, fallback = "/dashboard") {
   if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
     return returnTo;
   }
@@ -52,6 +40,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       navigate(redirect);
     }
   }, [authLoading, isAuthenticated, navigate, redirect]);
+
   const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
@@ -79,16 +68,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     try {
       const formData = new FormData(event.currentTarget);
       await signIn("email-otp", formData);
-
-      console.log("signed in");
-
       navigate(redirect);
     } catch (error) {
       console.error("OTP verification error:", error);
-
       setError("The verification code you entered is incorrect.");
       setIsLoading(false);
-
       setOtp("");
     }
   };
@@ -97,115 +81,151 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      console.log("Attempting anonymous sign in...");
       await signIn("anonymous");
-      console.log("Anonymous sign in successful");
       navigate(redirect);
     } catch (error) {
       console.error("Guest login error:", error);
-      console.error("Error details:", JSON.stringify(error, null, 2));
-      setError(`Failed to sign in as guest: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setError(
+        `Failed to sign in as guest: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen bg-paper">
+      {/* Left brand panel */}
+      <div className="hidden w-[42%] flex-col justify-between border-r-2 border-ink bg-ink p-10 text-paper lg:flex">
+        <div className="flex items-center gap-3">
+          <img src={logo} alt="Tone Re:Align" width={40} height={40} className="nb size-10 bg-ink" />
+          <span className="font-display text-lg">TONE RE:ALIGN</span>
+        </div>
+        <div>
+          <h2 className="font-display text-4xl leading-tight">
+            The voice is honest.
+            <br />
+            <span className="text-sun">Train it.</span>
+          </h2>
+          <p className="mt-5 max-w-sm text-sm leading-relaxed text-paper/70">
+            Sign in to keep your practice log, streak, and reframe history. Your
+            audio stays on your device — only the scores are saved.
+          </p>
+          <div className="mt-8 flex items-center gap-3">
+            <div className="flex h-10 items-end gap-1" aria-hidden>
+              {[40, 75, 55, 90, 45, 70].map((h, i) => (
+                <div
+                  key={i}
+                  className="w-1.5 bg-mint"
+                  style={{
+                    height: `${h}%`,
+                    animation: `nb-eq ${0.9 + i * 0.15}s ease-in-out infinite`,
+                  }}
+                />
+              ))}
+            </div>
+            <AudioWaveform className="size-5 text-sun" />
+          </div>
+        </div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-paper/50">
+          Calm is a skill · Practice the pause
+        </p>
+      </div>
 
-      
-      {/* Auth Content */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="flex items-center justify-center h-full flex-col">
-        <Card className="min-w-[350px] pb-0 border shadow-md">
+      {/* Right form panel */}
+      <div className="flex flex-1 items-center justify-center px-4 py-10">
+        <NBPanel className="w-full max-w-md">
           {step === "signIn" ? (
             <>
-              <CardHeader className="text-center">
-              <div className="flex justify-center">
-                    <img
-                      src={logo}
-                      alt="Lock Icon"
-                      width={64}
-                      height={64}
-                      className="rounded-lg mb-4 mt-4 cursor-pointer"
-                      onClick={() => navigate("/")}
+              <div className="border-b-2 border-ink bg-sun px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={logo}
+                    alt="Tone Re:Align"
+                    width={40}
+                    height={40}
+                    className="nb size-10 bg-ink cursor-pointer lg:hidden"
+                    onClick={() => navigate("/")}
+                  />
+                  <div>
+                    <p className="font-display text-xl leading-none">
+                      Get started
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-muted-foreground">
+                      Log in or sign up — free
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <form onSubmit={handleEmailSubmit}>
+                <div className="flex flex-col gap-4 p-6">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest">
+                      Email
+                    </label>
+                    <Input
+                      name="email"
+                      placeholder="name@example.com"
+                      type="email"
+                      className="nb h-11 rounded-none bg-card px-3 shadow-none focus-visible:ring-2 focus-visible:ring-sun"
+                      disabled={isLoading}
+                      required
                     />
                   </div>
-                <CardTitle className="text-xl">Get Started</CardTitle>
-                <CardDescription>
-                  Enter your email to log in or sign up
-                </CardDescription>
-              </CardHeader>
-              <form onSubmit={handleEmailSubmit}>
-                <CardContent>
-                  
-                  <div className="relative flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        name="email"
-                        placeholder="name@example.com"
-                        type="email"
-                        className="pl-9"
-                        disabled={isLoading}
-                        required
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      size="icon"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <ArrowRight className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
                   {error && (
-                    <p className="mt-2 text-sm text-red-500">{error}</p>
+                    <p className="nb bg-coral px-3 py-2 text-sm font-medium">
+                      {error}
+                    </p>
                   )}
-                  
-                  <div className="mt-4">
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
-                          Or
-                        </span>
-                      </div>
+                  <NBButton
+                    type="submit"
+                    variant="ink"
+                    disabled={isLoading}
+                    className="w-full py-3"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <>
+                        Continue <ArrowRight className="size-4" />
+                      </>
+                    )}
+                  </NBButton>
+
+                  <div className="relative py-1">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t-2 border-dashed border-ink/30" />
                     </div>
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full mt-4"
-                      onClick={handleGuestLogin}
-                      disabled={isLoading}
-                    >
-                      <UserX className="mr-2 h-4 w-4" />
-                      Continue as Guest
-                    </Button>
+                    <div className="relative flex justify-center">
+                      <span className="bg-card px-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                        Or
+                      </span>
+                    </div>
                   </div>
-                </CardContent>
+
+                  <NBButton
+                    type="button"
+                    variant="paper"
+                    className="w-full py-3"
+                    onClick={handleGuestLogin}
+                    disabled={isLoading}
+                  >
+                    <UserX className="size-4" /> Continue as guest
+                  </NBButton>
+                </div>
               </form>
             </>
           ) : (
             <>
-              <CardHeader className="text-center mt-4">
-                <CardTitle>Check your email</CardTitle>
-                <CardDescription>
-                  We've sent a code to {step.email}
-                </CardDescription>
-              </CardHeader>
+              <div className="border-b-2 border-ink bg-mint px-6 py-4">
+                <p className="font-display text-xl leading-none">Check your email</p>
+                <p className="mt-1 text-xs font-medium text-muted-foreground">
+                  We sent a 6-digit code to {step.email}
+                </p>
+              </div>
               <form onSubmit={handleOtpSubmit}>
-                <CardContent className="pb-4">
+                <div className="flex flex-col gap-5 p-6">
                   <input type="hidden" name="email" value={step.email} />
                   <input type="hidden" name="code" value={otp} />
-
                   <div className="flex justify-center">
                     <InputOTP
                       value={otp}
@@ -213,12 +233,13 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       maxLength={6}
                       disabled={isLoading}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" && otp.length === 6 && !isLoading) {
-                          // Find the closest form and submit it
+                        if (
+                          e.key === "Enter" &&
+                          otp.length === 6 &&
+                          !isLoading
+                        ) {
                           const form = (e.target as HTMLElement).closest("form");
-                          if (form) {
-                            form.requestSubmit();
-                          }
+                          if (form) form.requestSubmit();
                         }
                       }}
                     >
@@ -230,66 +251,38 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     </InputOTP>
                   </div>
                   {error && (
-                    <p className="mt-2 text-sm text-red-500 text-center">
+                    <p className="nb bg-coral px-3 py-2 text-center text-sm font-medium">
                       {error}
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground text-center mt-4">
-                    Didn't receive a code?{" "}
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto"
-                      onClick={() => setStep("signIn")}
-                    >
-                      Try again
-                    </Button>
-                  </p>
-                </CardContent>
-                <CardFooter className="flex-col gap-2">
-                  <Button
+                  <NBButton
                     type="submit"
-                    className="w-full"
+                    variant="ink"
+                    className="w-full py-3"
                     disabled={isLoading || otp.length !== 6}
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Verifying...
+                        <Loader2 className="size-4 animate-spin" /> Verifying…
                       </>
                     ) : (
                       <>
-                        Verify code
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        Verify code <ArrowRight className="size-4" />
                       </>
                     )}
-                  </Button>
-                  <Button
+                  </NBButton>
+                  <button
                     type="button"
-                    variant="ghost"
                     onClick={() => setStep("signIn")}
-                    disabled={isLoading}
-                    className="w-full"
+                    className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-ink"
                   >
-                    Use different email
-                  </Button>
-                </CardFooter>
+                    ← Use a different email
+                  </button>
+                </div>
               </form>
             </>
           )}
-
-          <div className="py-4 px-6 text-xs text-center text-muted-foreground bg-muted border-t rounded-b-lg">
-            Secured by{" "}
-            <a
-              href="https://freebuff.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-primary transition-colors"
-            >
-              freebuff.com
-            </a>
-          </div>
-        </Card>
-        </div>
+        </NBPanel>
       </div>
     </div>
   );
