@@ -36,7 +36,7 @@ async function reportErrorToVly(errorData: {
   lineno?: number;
   colno?: number;
 }) {
-  if (!import.meta.env.VITE_VLY_APP_ID) {
+  if (!import.meta.env.VITE_VLY_APP_ID || !import.meta.env.VITE_VLY_MONITORING_URL) {
     return;
   }
 

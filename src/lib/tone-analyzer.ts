@@ -146,8 +146,8 @@ export function analyzeFrames(
   if (options.wordCount && options.wordCount > 0) {
     wordsPerMinute = Math.round((options.wordCount / durationSec) * 60);
   } else {
-    // Heuristic: each voiced burst ~ one syllable
-    const estimatedSyllables = countVoicedBursts(frames);
+    // Syllable-nucleus estimate: vowel centers show up as local energy peaks
+    const estimatedSyllables = countSyllableNuclei(frames);
     wordsPerMinute = Math.round(
       (estimatedSyllables / WPM_ASSUMED_SYLLABLES_PER_WORD / durationSec) * 60,
     );
@@ -235,23 +235,25 @@ function labelTone(m: {
   return "mixed";
 }
 
-function countVoicedBursts(frames: ToneFrame[]): number {
-  let bursts = 0;
-  let inBurst = false;
-  let gapFrames = 0;
-  for (const f of frames) {
-    if (f.pitchHz !== null) {
-      if (!inBurst) {
-        bursts++;
-        inBurst = true;
-      }
-      gapFrames = 0;
-    } else {
-      gapFrames++;
-      if (gapFrames > 4) inBurst = false; // ~200ms gap ends a burst
+/**
+ * Rough syllable count: vowel nuclei appear as local peaks in the volume
+ * envelope. A ~200ms refractory window keeps one nucleus from counting twice.
+ */
+function countSyllableNuclei(frames: ToneFrame[]): number {
+  const SYL_FLOOR = 0.04; // above silence, below voiced average
+  const SYL_REFRACTORY = 2; // frames (~100ms) — allows fast speech up to ~6.7 syl/s
+  let count = 0;
+  let lastPeakAt = -Infinity;
+  for (let i = 1; i < frames.length - 1; i++) {
+    const v = frames[i].volume;
+    if (v < SYL_FLOOR) continue;
+    const isLocalMax = v >= frames[i - 1].volume && v > frames[i + 1].volume;
+    if (isLocalMax && i - lastPeakAt > SYL_REFRACTORY) {
+      count++;
+      lastPeakAt = i;
     }
   }
-  return Math.max(bursts, 1);
+  return Math.max(count, 1);
 }
 
 function clampScore(n: number): number {

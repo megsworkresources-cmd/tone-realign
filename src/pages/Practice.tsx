@@ -1,11 +1,11 @@
 import { NBBadge, NBButton, NBPanel, NBMeter } from "@/components/nb";
-import { getDrill } from "@/lib/drills";
+import { getDrill, type Drill } from "@/lib/drills";
 import { TONE_LABELS, type ToneAnalysis } from "@/lib/tone-analyzer";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { api } from "@/convex/_generated/api";
 import { ArrowLeft, Check, Mic, Square } from "lucide-react";
 import { useMutation } from "convex/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { toast } from "sonner";
 
@@ -17,14 +17,6 @@ function fmtTime(ms: number) {
 export default function Practice() {
   const { drillId } = useParams();
   const drill = drillId ? getDrill(drillId) : undefined;
-  const capture = useToneCapture();
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    setSaved(false);
-    capture.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drillId]);
 
   if (!drill) {
     return (
@@ -40,6 +32,15 @@ export default function Practice() {
       </main>
     );
   }
+
+  // Keyed by drillId: switching drills remounts the runner, which resets
+  // capture and saved state cleanly instead of via setState-in-effect.
+  return <PracticeRunner key={drillId} drill={drill} />;
+}
+
+function PracticeRunner({ drill }: { drill: Drill }) {
+  const capture = useToneCapture();
+  const [saved, setSaved] = useState(false);
 
   const { state, error, level, livePitchHz, elapsedMs, analysis, start, stop, reset } =
     capture;
