@@ -35,7 +35,7 @@ export default function Dashboard() {
   );
 
   return (
-    <main className="min-h-screen bg-paper">
+    <main className="nb-dots min-h-screen bg-paper">
       {/* Header bar */}
       <header className="border-b-2 border-ink bg-ink text-paper">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">

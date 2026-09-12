@@ -44,84 +44,87 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* Neobrutalism Minimalism palette: paper, ink, sun, mint, coral. Flat blocks, no gradients. */
+/* Warm neobrutalism palette: cream paper, honey gold, sage, terracotta on warm espresso ink.
+   Flat blocks, no gradients — the dot grid is the only texture. */
 @theme {
-  --color-ink: #141414;
-  --color-paper: #faf7ef;
-  --color-sun: #ffd02f;
-  --color-mint: #8fe3b4;
-  --color-coral: #ff6b57;
+  --color-ink: #2e2019;
+  --color-paper: #f9eedd;
+  --color-sun: #f7b733;
+  --color-mint: #81b29a;
+  --color-coral: #e8735a;
 }
 
 /* CHANGE VALUES FOR THEME */
 :root {
   --radius: 0rem;
-  --background: #faf7ef;
-  --foreground: #141414;
-  --card: #ffffff;
-  --card-foreground: #141414;
-  --popover: #ffffff;
-  --popover-foreground: #141414;
-  --primary: #ffd02f;
-  --primary-foreground: #141414;
-  --secondary: #efe9d9;
-  --secondary-foreground: #141414;
-  --muted: #f1ede2;
-  --muted-foreground: #5c574c;
-  --accent: #d9f4e4;
-  --accent-foreground: #141414;
-  --destructive: #ff6b57;
-  --border: #141414;
-  --input: #141414;
-  --ring: #141414;
-  --chart-1: #ffd02f;
-  --chart-2: #8fe3b4;
-  --chart-3: #ff6b57;
-  --chart-4: #141414;
-  --chart-5: #efe9d9;
-  --sidebar: #faf7ef;
-  --sidebar-foreground: #141414;
-  --sidebar-primary: #ffd02f;
-  --sidebar-primary-foreground: #141414;
-  --sidebar-accent: #d9f4e4;
-  --sidebar-accent-foreground: #141414;
-  --sidebar-border: #141414;
-  --sidebar-ring: #141414;
+  --background: #f9eedd;
+  --foreground: #2e2019;
+  --card: #fffaf2;
+  --card-foreground: #2e2019;
+  --popover: #fffaf2;
+  --popover-foreground: #2e2019;
+  --primary: #f7b733;
+  --primary-foreground: #2e2019;
+  --secondary: #f3e2c7;
+  --secondary-foreground: #2e2019;
+  --muted: #f3e6cf;
+  --muted-foreground: #6d5a48;
+  --accent: #fce4c8;
+  --accent-foreground: #2e2019;
+  --destructive: #e8735a;
+  --border: #2e2019;
+  --input: #2e2019;
+  --ring: #2e2019;
+  --chart-1: #f7b733;
+  --chart-2: #81b29a;
+  --chart-3: #e8735a;
+  --chart-4: #2e2019;
+  --chart-5: #f3e2c7;
+  --sidebar: #f9eedd;
+  --sidebar-foreground: #2e2019;
+  --sidebar-primary: #f7b733;
+  --sidebar-primary-foreground: #2e2019;
+  --sidebar-accent: #fce4c8;
+  --sidebar-accent-foreground: #2e2019;
+  --sidebar-border: #2e2019;
+  --sidebar-ring: #2e2019;
+  --dot: rgba(46, 32, 25, 0.09);
 }
 
 .dark {
   --radius: 0rem;
-  --background: #141414;
-  --foreground: #faf7ef;
-  --card: #1e1d1a;
-  --card-foreground: #faf7ef;
-  --popover: #1e1d1a;
-  --popover-foreground: #faf7ef;
-  --primary: #ffd02f;
-  --primary-foreground: #141414;
-  --secondary: #262421;
-  --secondary-foreground: #faf7ef;
-  --muted: #262421;
-  --muted-foreground: #b5b0a3;
-  --accent: #2d3a31;
-  --accent-foreground: #faf7ef;
-  --destructive: #ff6b57;
-  --border: #faf7ef;
-  --input: #faf7ef;
-  --ring: #faf7ef;
-  --chart-1: #ffd02f;
-  --chart-2: #8fe3b4;
-  --chart-3: #ff6b57;
-  --chart-4: #faf7ef;
-  --chart-5: #57534e;
-  --sidebar: #1e1d1a;
-  --sidebar-foreground: #faf7ef;
-  --sidebar-primary: #ffd02f;
-  --sidebar-primary-foreground: #141414;
-  --sidebar-accent: #2d3a31;
-  --sidebar-accent-foreground: #faf7ef;
-  --sidebar-border: #faf7ef;
-  --sidebar-ring: #faf7ef;
+  --background: #221a15;
+  --foreground: #f6ead7;
+  --card: #2c221b;
+  --card-foreground: #f6ead7;
+  --popover: #2c221b;
+  --popover-foreground: #f6ead7;
+  --primary: #f7b733;
+  --primary-foreground: #221a15;
+  --secondary: #32271f;
+  --secondary-foreground: #f6ead7;
+  --muted: #32271f;
+  --muted-foreground: #c2ab8e;
+  --accent: #3a2d23;
+  --accent-foreground: #f6ead7;
+  --destructive: #e8735a;
+  --border: #f6ead7;
+  --input: #f6ead7;
+  --ring: #f6ead7;
+  --chart-1: #f7b733;
+  --chart-2: #81b29a;
+  --chart-3: #e8735a;
+  --chart-4: #f6ead7;
+  --chart-5: #4a3a2e;
+  --sidebar: #2c221b;
+  --sidebar-foreground: #f6ead7;
+  --sidebar-primary: #f7b733;
+  --sidebar-primary-foreground: #221a15;
+  --sidebar-accent: #3a2d23;
+  --sidebar-accent-foreground: #f6ead7;
+  --sidebar-border: #f6ead7;
+  --sidebar-ring: #f6ead7;
+  --dot: rgba(246, 234, 215, 0.08);
 }
 
 @layer base {
@@ -185,6 +188,11 @@
       system-ui,
       sans-serif;
     letter-spacing: -0.02em;
+  }
+  /* Signature warm dot-grid texture for page backgrounds — flat, subtle, no gradients */
+  .nb-dots {
+    background-image: radial-gradient(var(--dot) 1.2px, transparent 1.3px);
+    background-size: 22px 22px;
   }
 }
 

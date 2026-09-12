@@ -77,7 +77,7 @@ export default function Reframe() {
   };
 
   return (
-    <main className="min-h-screen bg-paper px-4 pb-16 pt-6">
+    <main className="nb-dots min-h-screen bg-paper px-4 pb-16 pt-6">
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <div className="flex items-center justify-between">
           <Link to="/dashboard">

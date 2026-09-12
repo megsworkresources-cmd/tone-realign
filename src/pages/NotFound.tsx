@@ -4,7 +4,7 @@ import { Link } from "react-router";
 
 export default function NotFound() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-paper px-4">
+    <main className="nb-dots flex min-h-screen flex-col items-center justify-center bg-paper px-4">
       <NBPanel className="max-w-md p-8 text-center nb-shadow-lg">
         <img
           src={logo}

@@ -28,7 +28,7 @@ export default function Practice() {
 
   if (!drill) {
     return (
-      <main className="min-h-screen bg-paper px-4 py-10">
+      <main className="nb-dots min-h-screen bg-paper px-4 py-10">
         <div className="mx-auto max-w-3xl">
           <NBPanel className="p-8 text-center">
             <p className="font-display text-xl">Drill not found</p>
@@ -45,7 +45,7 @@ export default function Practice() {
     capture;
 
   return (
-    <main className="min-h-screen bg-paper px-4 pb-16 pt-6">
+    <main className="nb-dots min-h-screen bg-paper px-4 pb-16 pt-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         {/* Top bar */}
         <div className="flex items-center justify-between">

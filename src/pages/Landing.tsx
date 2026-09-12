@@ -69,7 +69,7 @@ export default function Landing() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="nb-dots min-h-screen bg-paper">
       {/* Announcement strip */}
       <div className="border-b-2 border-ink bg-ink py-2 text-paper">
         <p className="text-center text-xs font-bold uppercase tracking-widest">
