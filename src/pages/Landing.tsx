@@ -1,6 +1,7 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import logo from "@/assets/logo.svg";
 import { useAuth } from "@/hooks/use-auth";
+import { WATCH_LIST, videoThumb } from "@/lib/watch-list";
 import {
   Activity,
   ArrowRight,
@@ -66,53 +67,6 @@ const DRILLS_PREVIEW = [
     body: "Say no without trailing off. Hold the two-second silence after.",
   },
 ];
-
-/** Curated external videos on tone, delivery, and regulated responses. */
-const WATCH_LIST: {
-  id: string;
-  title: string;
-  meta: string;
-  color: string;
-  minutes?: number;
-}[] = [
-  {
-    id: "ZcvbDuTeEhQ",
-    title: "How To Get Any Conversation UNSTUCK",
-    meta: "Recognize lost traction, name it without blame, and get dialogue moving again.",
-    color: "bg-sun",
-    minutes: 12,
-  },
-  {
-    id: "bNIPVejCzyY",
-    title: "How to Say What Needs to Be Said (Without Being Mean)",
-    meta: "Know your motive, soften the delivery, and land the message without collateral damage.",
-    color: "bg-mint",
-    minutes: 9,
-  },
-  {
-    id: "3tR-2fnzUEo",
-    title: "3 Phrases to Stay in Control of the Conversation",
-    meta: "Three short phrases that keep you composed and steering when things get heated.",
-    color: "bg-coral",
-    minutes: 1,
-  },
-  {
-    id: "Jp2SBS1LTuk",
-    title: "Speak Warmly, Present Confidently: The Ultimate Voice Hack!",
-    meta: "The voice trifecta: broad body, purposeful pauses, and speaking on the out-breath.",
-    color: "bg-paper",
-  },
-  {
-    id: "FD3H1dpPGtk",
-    title: "YOUR TONE MATTERS!",
-    meta: "A sixty-second reminder that how you sound decides how you're heard.",
-    color: "bg-sun",
-  },
-];
-
-function videoThumb(id: string) {
-  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-}
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
