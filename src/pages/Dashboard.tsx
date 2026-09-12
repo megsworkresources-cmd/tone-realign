@@ -39,15 +39,17 @@ export default function Dashboard() {
       {/* Header bar */}
       <header className="border-b-2 border-ink bg-ink text-paper">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link to="/" className="flex items-center gap-3">
+          <Link to="/" className="group flex items-center gap-3">
             <img
               src={logo}
-              alt="Tone Re:Align"
+              alt="ShiftedTone"
               width={36}
               height={36}
-              className="nb size-9 bg-ink"
+              className="nb size-9 bg-ink transition-transform duration-200 group-hover:-rotate-6"
             />
-            <span className="font-display text-lg">TONE RE:ALIGN</span>
+            <span className="font-display text-lg">
+              Shifted<span className="text-sun">Tone</span>
+            </span>
           </Link>
           <div className="flex items-center gap-3">
             <span className="hidden text-xs font-bold uppercase tracking-widest text-paper/70 sm:block">

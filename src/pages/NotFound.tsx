@@ -8,7 +8,7 @@ export default function NotFound() {
       <NBPanel className="max-w-md p-8 text-center nb-shadow-lg">
         <img
           src={logo}
-          alt="Tone Re:Align"
+          alt="ShiftedTone"
           width={56}
           height={56}
           className="nb mx-auto size-14 bg-ink"

@@ -97,8 +97,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       {/* Left brand panel */}
       <div className="nb-stripes hidden w-[42%] flex-col justify-between border-r-2 border-ink bg-ink p-10 text-paper lg:flex">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="Tone Re:Align" width={40} height={40} className="nb size-10 bg-ink" />
-          <span className="font-display text-lg">TONE RE:ALIGN</span>
+          <img src={logo} alt="ShiftedTone" width={40} height={40} className="nb size-10 bg-ink" />
+          <span className="font-display text-lg">
+            Shifted<span className="text-sun">Tone</span>
+          </span>
         </div>
         <div>
           <h2 className="font-display text-4xl leading-tight">
@@ -140,7 +142,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 <div className="flex items-center gap-3">
                   <img
                     src={logo}
-                    alt="Tone Re:Align"
+                    alt="ShiftedTone"
                     width={40}
                     height={40}
                     className="nb size-10 bg-ink cursor-pointer lg:hidden"
