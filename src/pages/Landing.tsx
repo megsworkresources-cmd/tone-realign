@@ -110,7 +110,7 @@ export default function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="border-b-2 border-ink">
+      <section className="nb-grid-dots border-b-2 border-ink">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-[1.15fr_0.85fr] lg:py-24">
           <div>
             <div className="nb inline-flex items-center gap-2 bg-mint px-3 py-1 text-[11px] font-bold uppercase tracking-widest nb-shadow-sm">
@@ -222,7 +222,7 @@ export default function Landing() {
       </div>
 
       {/* How it works */}
-      <section id="how" className="border-b-2 border-ink bg-secondary">
+      <section id="how" className="nb-grid border-b-2 border-ink bg-secondary">
         <div className="mx-auto max-w-6xl px-4 py-16 lg:py-20">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <h2 className="font-display text-3xl sm:text-4xl">
@@ -258,7 +258,7 @@ export default function Landing() {
       </section>
 
       {/* Drills preview */}
-      <section id="drills" className="border-b-2 border-ink">
+      <section id="drills" className="nb-dots border-b-2 border-ink">
         <div className="mx-auto max-w-6xl px-4 py-16 lg:py-20">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <h2 className="font-display text-3xl sm:text-4xl">
@@ -297,7 +297,7 @@ export default function Landing() {
       </section>
 
       {/* Reframe section */}
-      <section id="reframe" className="border-b-2 border-ink bg-ink text-paper">
+      <section id="reframe" className="nb-stripes border-b-2 border-ink bg-ink text-paper">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-2 lg:py-20">
           <div>
             <h2 className="font-display text-3xl sm:text-4xl">
@@ -368,7 +368,7 @@ export default function Landing() {
       </section>
 
       {/* Final CTA */}
-      <section className="border-b-2 border-ink bg-sun">
+      <section className="nb-rays border-b-2 border-ink bg-sun">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-16 text-center lg:py-20">
           <h2 className="max-w-2xl font-display text-3xl sm:text-4xl">
             The next conversation is already scheduled. How will you sound?

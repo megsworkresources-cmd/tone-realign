@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..900,0..100,0..1;1,9..144,300..900,0..100,0..1&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap");
 
 /* DO NOT CHANGE */
 @import "tailwindcss";
@@ -88,7 +88,10 @@
   --sidebar-accent-foreground: #2e2019;
   --sidebar-border: #2e2019;
   --sidebar-ring: #2e2019;
-  --dot: rgba(46, 32, 25, 0.09);
+  --dot: rgba(46, 32, 25, 0.12);
+  --grid: rgba(46, 32, 25, 0.07);
+  --stripe: rgba(249, 238, 221, 0.09);
+  --ray: rgba(46, 32, 25, 0.07);
 }
 
 .dark {
@@ -124,7 +127,10 @@
   --sidebar-accent-foreground: #f6ead7;
   --sidebar-border: #f6ead7;
   --sidebar-ring: #f6ead7;
-  --dot: rgba(246, 234, 215, 0.08);
+  --dot: rgba(246, 234, 215, 0.09);
+  --grid: rgba(246, 234, 215, 0.06);
+  --stripe: rgba(246, 234, 215, 0.07);
+  --ray: rgba(246, 234, 215, 0.06);
 }
 
 @layer base {
@@ -134,10 +140,11 @@
   body {
     @apply bg-background text-foreground;
     font-family:
-      "Space Grotesk",
+      "Instrument Sans",
       ui-sans-serif,
       system-ui,
       sans-serif;
+    font-feature-settings: "ss01" on, "cv01" on;
   }
   html {
     scroll-behavior: smooth;
@@ -181,18 +188,53 @@
     box-shadow: 1px 1px 0 0 var(--color-ink);
   }
   .font-display {
-    font-family:
-      "Archivo Black",
-      "Space Grotesk",
-      ui-sans-serif,
-      system-ui,
-      sans-serif;
-    letter-spacing: -0.02em;
+    font-family: "Fraunces", Georgia, serif;
+    font-variation-settings:
+      "opsz" 144,
+      "SOFT" 40,
+      "WONK" 1;
+    letter-spacing: -0.01em;
   }
   /* Signature warm dot-grid texture for page backgrounds — flat, subtle, no gradients */
   .nb-dots {
-    background-image: radial-gradient(var(--dot) 1.2px, transparent 1.3px);
-    background-size: 22px 22px;
+    background-image: radial-gradient(var(--dot) 1.4px, transparent 1.5px);
+    background-size: 20px 20px;
+  }
+  /* Blueprint line grid — layered alone or under dots for hero sections */
+  .nb-grid {
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  /* Dots + blueprint grid combined — the hero treatment */
+  .nb-grid-dots {
+    background-image:
+      radial-gradient(var(--dot) 1.4px, transparent 1.5px),
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size:
+      20px 20px,
+      44px 44px,
+      44px 44px;
+  }
+  /* Flat diagonal stripes for dark bands — no fades */
+  .nb-stripes {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      transparent 0,
+      transparent 12px,
+      var(--stripe) 12px,
+      var(--stripe) 24px
+    );
+  }
+  /* Flat sunburst rays for CTA bands — hard-stop conic, no gradients */
+  .nb-rays {
+    background-image: repeating-conic-gradient(
+      from 0deg at 50% 115%,
+      var(--ray) 0deg 5deg,
+      transparent 5deg 11deg
+    );
   }
 }
 

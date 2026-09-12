@@ -95,7 +95,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   return (
     <div className="nb-dots flex min-h-screen bg-paper">
       {/* Left brand panel */}
-      <div className="hidden w-[42%] flex-col justify-between border-r-2 border-ink bg-ink p-10 text-paper lg:flex">
+      <div className="nb-stripes hidden w-[42%] flex-col justify-between border-r-2 border-ink bg-ink p-10 text-paper lg:flex">
         <div className="flex items-center gap-3">
           <img src={logo} alt="Tone Re:Align" width={40} height={40} className="nb size-10 bg-ink" />
           <span className="font-display text-lg">TONE RE:ALIGN</span>
