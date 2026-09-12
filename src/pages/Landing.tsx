@@ -98,18 +98,18 @@ const WATCH_LIST = [
     minutes: 9,
   },
   {
-    id: "5yCqhY1D-VE",
-    title: "Communicate With Confidence & Ease",
-    meta: "Harvard-backed framing for influence, warmth, and holding your ground.",
+    id: "uRQAhWZ1bxs",
+    title: "#1 Blueprint for Mastering Every Conversation",
+    meta: "Jay Shetty sits down with Jefferson Fisher on why the conversations we avoid shape our lives the most.",
     color: "bg-mint",
-    minutes: 48,
+    minutes: 61,
   },
   {
-    id: "QMSTcIaa74Q",
-    title: "Have A Calm Voice Tone",
-    meta: "Practical skills for keeping your voice level when the room heats up.",
+    id: "XfVcnrNcBz4",
+    title: "How to Communicate So People Actually Listen",
+    meta: "Jay's four-step method: regulate, clarity, facts, care — so your words finally land.",
     color: "bg-sun",
-    minutes: 11,
+    minutes: 32,
   },
 ];
 
