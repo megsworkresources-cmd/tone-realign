@@ -111,6 +111,13 @@ const WATCH_LIST = [
     color: "bg-sun",
     minutes: 32,
   },
+  {
+    id: "QMSTcIaa74Q",
+    title: "Have A Calm Voice Tone",
+    meta: "Practical skills for lowering your voice pressure on purpose — the exact baseline the drills train.",
+    color: "bg-paper",
+    minutes: 14,
+  },
 ];
 
 function videoThumb(id: string) {
