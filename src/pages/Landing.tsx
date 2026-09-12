@@ -102,6 +102,12 @@ const WATCH_LIST: {
     meta: "The voice trifecta: broad body, purposeful pauses, and speaking on the out-breath.",
     color: "bg-paper",
   },
+  {
+    id: "FD3H1dpPGtk",
+    title: "YOUR TONE MATTERS!",
+    meta: "A sixty-second reminder that how you sound decides how you're heard.",
+    color: "bg-sun",
+  },
 ];
 
 function videoThumb(id: string) {
