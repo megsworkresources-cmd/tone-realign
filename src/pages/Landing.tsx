@@ -68,7 +68,13 @@ const DRILLS_PREVIEW = [
 ];
 
 /** Curated external videos on tone, delivery, and regulated responses. */
-const WATCH_LIST = [
+const WATCH_LIST: {
+  id: string;
+  title: string;
+  meta: string;
+  color: string;
+  minutes?: number;
+}[] = [
   {
     id: "ZcvbDuTeEhQ",
     title: "How To Get Any Conversation UNSTUCK",
@@ -91,32 +97,10 @@ const WATCH_LIST = [
     minutes: 1,
   },
   {
-    id: "5hvVjOqk_4o",
-    title: "Tone of Voice in Communication",
-    meta: "How pitch, pace and pressure shape the way people actually hear you.",
+    id: "Jp2SBS1LTuk",
+    title: "Speak Warmly, Present Confidently: The Ultimate Voice Hack!",
+    meta: "The voice trifecta: broad body, purposeful pauses, and speaking on the out-breath.",
     color: "bg-paper",
-    minutes: 9,
-  },
-  {
-    id: "uRQAhWZ1bxs",
-    title: "#1 Blueprint for Mastering Every Conversation",
-    meta: "Jay Shetty sits down with Jefferson Fisher on why the conversations we avoid shape our lives the most.",
-    color: "bg-mint",
-    minutes: 61,
-  },
-  {
-    id: "XfVcnrNcBz4",
-    title: "How to Communicate So People Actually Listen",
-    meta: "Jay's four-step method: regulate, clarity, facts, care — so your words finally land.",
-    color: "bg-sun",
-    minutes: 32,
-  },
-  {
-    id: "QMSTcIaa74Q",
-    title: "Have A Calm Voice Tone",
-    meta: "Practical skills for lowering your voice pressure on purpose — the exact baseline the drills train.",
-    color: "bg-paper",
-    minutes: 14,
   },
 ];
 
@@ -438,9 +422,11 @@ export default function Landing() {
                         <Play className="size-5 fill-ink" />
                       </span>
                     </div>
-                    <span className="nb absolute bottom-2 right-2 bg-ink px-1.5 py-0.5 text-[10px] font-bold text-paper">
-                      {video.minutes} min
-                    </span>
+                    {video.minutes != null && (
+                      <span className="nb absolute bottom-2 right-2 bg-ink px-1.5 py-0.5 text-[10px] font-bold text-paper">
+                        {video.minutes} min
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-1 flex-col p-4">
                     <div className={`mb-2 h-1.5 w-10 ${video.color}`} />
