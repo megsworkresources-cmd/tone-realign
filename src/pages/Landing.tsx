@@ -77,24 +77,38 @@ const WATCH_LIST = [
     minutes: 12,
   },
   {
+    id: "bNIPVejCzyY",
+    title: "How to Say What Needs to Be Said (Without Being Mean)",
+    meta: "Know your motive, soften the delivery, and land the message without collateral damage.",
+    color: "bg-mint",
+    minutes: 9,
+  },
+  {
+    id: "3tR-2fnzUEo",
+    title: "3 Phrases to Stay in Control of the Conversation",
+    meta: "Three short phrases that keep you composed and steering when things get heated.",
+    color: "bg-coral",
+    minutes: 1,
+  },
+  {
     id: "5hvVjOqk_4o",
     title: "Tone of Voice in Communication",
     meta: "How pitch, pace and pressure shape the way people actually hear you.",
-    color: "bg-mint",
+    color: "bg-paper",
     minutes: 9,
   },
   {
     id: "5yCqhY1D-VE",
     title: "Communicate With Confidence & Ease",
     meta: "Harvard-backed framing for influence, warmth, and holding your ground.",
-    color: "bg-coral",
+    color: "bg-mint",
     minutes: 48,
   },
   {
     id: "QMSTcIaa74Q",
     title: "Have A Calm Voice Tone",
     meta: "Practical skills for keeping your voice level when the room heats up.",
-    color: "bg-paper",
+    color: "bg-sun",
     minutes: 11,
   },
 ];
@@ -391,7 +405,7 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {WATCH_LIST.map((video, i) => (
               <motion.a
                 key={video.id}
