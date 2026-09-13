@@ -245,31 +245,31 @@ export default function Landing() {
               The voice tone gym · live
             </motion.div>
             <h1 className="mt-6 font-display text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">
-              You know{" "}
+              What you{" "}
               <motion.span
                 initial={{ scale: 0.4, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 240, damping: 13, delay: 0.35 }}
                 className="nb bg-sun px-2 italic inline-block -rotate-1"
               >
-                what you said
+                meant
               </motion.span>
-              . But do you know{" "}
+              . What they{" "}
               <motion.span
                 initial={{ scale: 0.4, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 240, damping: 13, delay: 0.5 }}
                 className="nb bg-mint px-2 italic inline-block rotate-1"
               >
-                how you sounded
+                heard
               </motion.span>
-              ?
+              .
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              Everyone has a voice they use when they're caught off guard.
-              ShiftedTone listens for yours, shows you what it's doing, and
-              helps you practice something better before the real moment
-              arrives.
+              Most arguments aren't about the words. They're about the tone
+              underneath. ShiftedTone hears yours, shows you what it's giving
+              away, and trains the gap out — before the next conversation
+              needs it.
             </p>
 
             {/* Rotating real moments */}

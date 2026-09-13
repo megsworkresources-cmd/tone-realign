@@ -168,14 +168,14 @@ drawText("TONE", 88 + textWidth("SHIFTED ", 10), wmY, 10, CORAL, null);
 
 // ---- Slogan under the wordmark (two lines) ----
 drawText(
-  "YOU KNOW WHAT YOU SAID.",
+  "WHAT YOU MEANT.",
   90,
   wmY + 92,
   5,
   [109, 90, 72], // muted-foreground #6d5a48
 );
 drawText(
-  "BUT DO YOU KNOW HOW YOU SOUND?",
+  "WHAT THEY HEARD.",
   90,
   wmY + 140,
   5,
