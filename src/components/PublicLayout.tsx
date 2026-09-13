@@ -5,14 +5,9 @@ import { motion, useScroll, useSpring } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router";
+import { NAV_ITEMS } from "@/lib/site-nav";
 
-/** The public site's shared chrome: progress bar, nav, announcement, footer. */
-const NAV = [
-  { to: "/how", label: "How it works", dot: "bg-sun" },
-  { to: "/tone-check", label: "Tone check", dot: "bg-coral" },
-  { to: "/drills", label: "Drills", dot: "bg-mint" },
-  { to: "/library", label: "Library", dot: "bg-paper" },
-];
+const NAV = NAV_ITEMS;
 
 function navClass(active: boolean) {
   return `relative after:absolute after:-bottom-0.5 after:left-0 after:h-0.5 after:transition-all ${
