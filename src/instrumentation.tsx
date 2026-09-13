@@ -13,6 +13,7 @@ import {
 import { Dialog } from "@radix-ui/react-dialog";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { isRuntimeError, normalizeRejection } from "@/lib/error-report";
 
 type SyncError = {
   error: string;
@@ -181,7 +182,7 @@ export function InstrumentationProvider({
       // Resource-loading failures (img/css/script — e.g. a blocked YouTube
       // thumbnail) also surface here, without an Error object. They are not
       // runtime errors and shouldn't pop the dialog.
-      if (!event.error) return;
+      if (!isRuntimeError(event)) return;
       try {
         console.log(event);
         event.preventDefault();
@@ -211,14 +212,7 @@ export function InstrumentationProvider({
       try {
         console.error(event);
 
-        const reason: unknown = event.reason;
-        const message =
-          reason instanceof Error
-            ? reason.message
-            : typeof reason === "string" && reason.length > 0
-              ? reason
-              : "Unhandled promise rejection";
-        const stack = reason instanceof Error ? (reason.stack ?? "") : "";
+        const { error: message, stack } = normalizeRejection(event.reason);
 
         if (import.meta.env.VITE_VLY_APP_ID) {
           await reportErrorToVly({
