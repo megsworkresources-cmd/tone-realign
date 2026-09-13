@@ -103,10 +103,12 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           </span>
         </div>
         <div>
-          <h2 className="font-display text-4xl leading-tight">
+          <h2 className="font-display text-4xl leading-tight text-balance">
             The voice is honest.
             <br />
-            <span className="text-sun">Train it.</span>
+            <span className="text-sun">
+              <span className="italic">Train</span> it.
+            </span>
           </h2>
           <p className="mt-5 max-w-sm text-sm leading-relaxed text-paper/70">
             Sign in so your takes, streak, and reframes are here when you come

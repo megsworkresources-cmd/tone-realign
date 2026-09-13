@@ -14,7 +14,12 @@ import {
   ShieldCheck,
   Timer,
 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useScroll,
+  useSpring,
+} from "framer-motion";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
@@ -127,6 +132,14 @@ const READS: {
 export default function Landing() {
   const { isAuthenticated } = useAuth();
 
+  // Reading-progress bar: a thin coral thread filling as you scroll
+  const { scrollYProgress } = useScroll();
+  const progress = useSpring(scrollYProgress, {
+    stiffness: 120,
+    damping: 26,
+    mass: 0.4,
+  });
+
   // Drives the hero's rotating moments and the live-read card beats
   const [beat, setBeat] = useState(0);
   const [sec, setSec] = useState(7);
@@ -146,6 +159,13 @@ export default function Landing() {
 
   return (
     <div className="nb-dots min-h-screen bg-paper">
+      {/* Reading progress */}
+      <motion.div
+        style={{ scaleX: progress }}
+        aria-hidden
+        className="fixed inset-x-0 top-0 z-50 h-1 origin-left bg-coral"
+      />
+
       {/* Announcement strip */}
       <div className="border-b-2 border-ink bg-ink py-2 text-paper">
         <p className="text-center text-xs font-bold uppercase tracking-widest">
@@ -230,7 +250,7 @@ export default function Landing() {
                 initial={{ scale: 0.4, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 240, damping: 13, delay: 0.35 }}
-                className="nb bg-sun px-2 inline-block -rotate-1"
+                className="nb bg-sun px-2 italic inline-block -rotate-1"
               >
                 what you said
               </motion.span>
@@ -239,7 +259,7 @@ export default function Landing() {
                 initial={{ scale: 0.4, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 240, damping: 13, delay: 0.5 }}
-                className="nb bg-mint px-2 inline-block rotate-1"
+                className="nb bg-mint px-2 italic inline-block rotate-1"
               >
                 how you sounded
               </motion.span>
@@ -301,8 +321,14 @@ export default function Landing() {
             initial={{ opacity: 0, y: 36, rotate: 2.5 }}
             animate={{ opacity: 1, y: 0, rotate: 0 }}
             transition={{ type: "spring", stiffness: 120, damping: 15, delay: 0.45 }}
+            className="relative"
           >
-            <NBPanel className="nb-shadow-lg self-center transition-transform duration-300 hover:-translate-y-1">
+            {/* Flat sun backing block — depth without gradients */}
+            <div
+              aria-hidden
+              className="nb absolute -right-2.5 -top-2.5 h-full w-full rotate-2 bg-sun"
+            />
+            <NBPanel className="nb-shadow-lg relative self-center transition-transform duration-300 hover:-translate-y-1">
               <div className="flex items-center justify-between border-b-2 border-ink bg-sun px-4 py-2.5">
                 <span className="flex items-center gap-2 font-display text-sm">
                   <Mic className="size-4" /> Live read
@@ -416,7 +442,11 @@ export default function Landing() {
               className="flex items-center gap-8 font-display text-sm uppercase tracking-widest"
             >
               {item}
-              <span className="inline-block size-2 bg-sun" />
+              <span
+                className={`inline-block size-2 ${
+                  i % 2 ? "bg-coral" : "bg-sun"
+                }`}
+              />
             </span>
           ))}
         </div>
@@ -433,7 +463,7 @@ export default function Landing() {
               transition={{ duration: 0.45 }}
               className="font-display text-3xl sm:text-4xl"
             >
-              How it actually works
+              How it <span className="italic text-coral">actually</span> works
             </motion.h2>
             <p className="max-w-md text-sm text-muted-foreground">
               Self-awareness doesn't change anything on its own. Reps do. Every
@@ -450,7 +480,13 @@ export default function Landing() {
                 transition={{ duration: 0.4, delay: i * 0.12 }}
                 className="transition-transform duration-300 hover:-translate-y-1"
               >
-                <NBPanel className="h-full">
+                <NBPanel className="relative h-full overflow-hidden">
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute -bottom-7 -right-1 font-display text-[7.5rem] leading-none text-ink/5"
+                  >
+                    0{i + 1}
+                  </span>
                   <div
                     className={`flex items-center justify-between border-b-2 border-ink px-5 py-3 ${step.color}`}
                   >
@@ -472,7 +508,8 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-4 py-16 lg:py-20">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <h2 className="font-display text-3xl sm:text-4xl">
-              Three drills for the moments that get to you
+              Three drills for the moments that{" "}
+              <span className="italic text-coral">get to you</span>
             </h2>
             <p className="max-w-md text-sm text-muted-foreground">
               Calm when you're annoyed, warmth when you mean it, and a no that
@@ -520,7 +557,8 @@ export default function Landing() {
             <div>
               <NBBadge className="bg-sun text-ink">Watch & learn</NBBadge>
               <h2 className="mt-4 font-display text-3xl sm:text-4xl">
-                Then hear it from the pros
+                Then hear it from the{" "}
+                <span className="italic text-sun">pros</span>
               </h2>
             </div>
             <p className="max-w-md text-sm text-paper/70">
@@ -548,7 +586,7 @@ export default function Landing() {
                       src={videoThumb(video.id)}
                       alt={video.title}
                       loading="lazy"
-                      className="aspect-video w-full object-cover"
+                      className="aspect-video w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-ink/30 transition-colors group-hover:bg-ink/10">
                       <span className="nb flex size-12 items-center justify-center bg-sun text-ink nb-shadow-sm transition-transform duration-300 group-hover:scale-110">
@@ -588,7 +626,8 @@ export default function Landing() {
             <div>
               <NBBadge className="bg-coral text-ink">Reframe lab</NBBadge>
               <h2 className="mt-4 font-display text-3xl sm:text-4xl">
-                Catch it. Reframe it. Rehearse it.
+                Catch it. Reframe it.{" "}
+                <span className="italic text-coral">Rehearse it.</span>
               </h2>
               <p className="mt-5 max-w-lg leading-relaxed text-muted-foreground">
                 We all have a reply we regret the second it leaves our mouth.
@@ -617,7 +656,7 @@ export default function Landing() {
             </div>
 
             {/* Reframe card preview */}
-            <NBPanel className="self-center transition-transform duration-300 hover:-translate-y-1">
+            <NBPanel className="nb-shadow-duo self-center transition-transform duration-300 hover:-translate-y-1">
               <div className="border-b-2 border-ink bg-coral px-4 py-2.5 text-ink">
                 <span className="font-display text-sm">Reframe #047</span>
               </div>
@@ -638,10 +677,10 @@ export default function Landing() {
                 <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   Reframed response
                 </p>
-                <p className="nb mt-1.5 bg-mint p-3 text-sm font-medium">
+                <p className="nb mt-1.5 -rotate-[0.6deg] bg-mint p-3 text-sm font-medium">
                   "Happy to talk — send over the agenda so I can come prepared."
                 </p>
-                <div className="mt-3 nb bg-sun p-3">
+                <div className="nb mt-3 rotate-[0.5deg] bg-sun p-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest">
                     Delivery note
                   </p>
@@ -657,18 +696,22 @@ export default function Landing() {
       </section>
 
       {/* Final CTA */}
-      <section className="nb-rays border-b-2 border-ink bg-sun">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-16 text-center lg:py-20">
+      <section className="relative overflow-hidden border-b-2 border-ink bg-sun">
+        <div
+          aria-hidden
+          className="nb-rays nb-spin-slow pointer-events-none absolute -inset-[60%]"
+        />
+        <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-16 text-center lg:py-20">
           <h2 className="max-w-2xl font-display text-3xl sm:text-4xl">
-            The next hard conversation is already on your calendar. What
-            version of you shows up?
+            The next hard conversation is already on your calendar. What{" "}
+            <span className="italic">version of you</span> shows up?
           </h2>
           <p className="max-w-xl text-ink/70">
             It's free to start. The only equipment is the microphone you
             already own.
           </p>
           <Link to="/auth">
-            <NBButton variant="ink" className="px-8 py-4 text-lg">
+            <NBButton variant="ink" className="nb-shadow-lg px-8 py-4 text-lg">
               Start practicing free <ArrowRight className="size-5" />
             </NBButton>
           </Link>

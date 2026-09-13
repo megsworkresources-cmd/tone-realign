@@ -89,7 +89,9 @@ export default function Reframe() {
         </div>
 
         <NBPanel className="p-6">
-          <h1 className="font-display text-2xl">Say it better this time</h1>
+          <h1 className="font-display text-2xl text-balance">
+            Say it <span className="italic text-coral">better</span> this time
+          </h1>
           <p className="mt-2 max-w-lg text-sm text-muted-foreground">
             The trigger fires. The old reply comes out. This is where you slow
             it down and write the version you actually want to say.

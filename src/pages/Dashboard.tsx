@@ -73,7 +73,7 @@ export default function Dashboard() {
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Your practice
               </p>
-              <h1 className="mt-1 font-display text-3xl sm:text-4xl">
+              <h1 className="mt-1 font-display text-3xl text-balance sm:text-4xl">
                 Welcome{user?.name ? `, ${user.name}` : " back"}
               </h1>
             </div>
@@ -111,7 +111,9 @@ export default function Dashboard() {
         {/* Drills */}
         <section>
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-2xl">Today's drills</h2>
+            <h2 className="font-display text-2xl">
+              Today's <span className="italic text-coral">drills</span>
+            </h2>
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
               Mic on. One honest take at a time.
             </p>
