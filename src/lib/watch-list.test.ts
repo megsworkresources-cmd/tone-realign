@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { DRILLS } from "./drills";
 import { WATCH_LIST, videoThumb } from "./watch-list";
 
 const YT_ID_RE = /^[A-Za-z0-9_-]{11}$/;
@@ -50,6 +51,18 @@ describe("WATCH_LIST", () => {
       expect(v.meta.trim().length).toBeGreaterThan(0);
       expect(v.color.trim().length).toBeGreaterThan(0);
     }
+  });
+
+  test("every video pairs with a real practice drill (the landing→app bridge)", () => {
+    for (const v of WATCH_LIST) {
+      const drill = DRILLS.find((d) => d.id === v.practice);
+      expect(drill).toBeDefined();
+    }
+  });
+
+  test("the five videos cover at least four distinct drills", () => {
+    const pairs = new Set(WATCH_LIST.map((v) => v.practice));
+    expect(pairs.size).toBeGreaterThanOrEqual(4);
   });
 
   test("accent colors rotate through the theme palette without repeating adjacently", () => {

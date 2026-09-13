@@ -1,6 +1,10 @@
 /**
  * Curated external videos on tone, delivery, and regulated responses.
  * Consumed by the "Watch & learn" section of the landing page.
+ *
+ * `practice` is the landing→app bridge: after (or before) watching, the
+ * visitor is handed the drill that lets them *use* the idea with their
+ * own voice — the section teaches, the app trains.
  */
 
 export interface WatchVideo {
@@ -12,6 +16,8 @@ export interface WatchVideo {
   color: string;
   /** Duration in minutes. Omit for Shorts / unverified runtimes. */
   minutes?: number;
+  /** Drill id from lib/drills that puts this idea into practice. */
+  practice: string;
 }
 
 export const WATCH_LIST: WatchVideo[] = [
@@ -21,6 +27,7 @@ export const WATCH_LIST: WatchVideo[] = [
     meta: "When a conversation stalls, say so — out loud, without blame. Fisher shows you how.",
     color: "bg-sun",
     minutes: 12,
+    practice: "steady-ground",
   },
   {
     id: "bNIPVejCzyY",
@@ -28,6 +35,7 @@ export const WATCH_LIST: WatchVideo[] = [
     meta: "Figure out why you're saying it first. Then say it so it lands without leaving a mark.",
     color: "bg-mint",
     minutes: 9,
+    practice: "firm-clear",
   },
   {
     id: "3tR-2fnzUEo",
@@ -35,18 +43,21 @@ export const WATCH_LIST: WatchVideo[] = [
     meta: "Three sentences worth memorizing for the next time things get heated.",
     color: "bg-coral",
     minutes: 1,
+    practice: "unruffled",
   },
   {
     id: "Jp2SBS1LTuk",
     title: "Speak Warmly, Present Confidently: The Ultimate Voice Hack!",
     meta: "Broad body, real pauses, speak on the exhale. Her trifecta works — we test it every day.",
     color: "bg-paper",
+    practice: "warm-open",
   },
   {
     id: "FD3H1dpPGtk",
     title: "YOUR TONE MATTERS!",
     meta: "Sixty seconds on why people hear your tone long before your words.",
     color: "bg-sun",
+    practice: "steady-ground",
   },
 ];
 

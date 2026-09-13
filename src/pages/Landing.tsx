@@ -2,11 +2,20 @@ import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import logo from "@/assets/logo.svg";
 import { useAuth } from "@/hooks/use-auth";
 import { WATCH_LIST, videoThumb } from "@/lib/watch-list";
+import { READING_LIST } from "@/lib/reading-list";
+import {
+  ARCHETYPES,
+  TONE_CHECK,
+  scoreToneCheck,
+  type ToneArchetype,
+} from "@/lib/tone-check";
+import { getDrill } from "@/lib/drills";
 import {
   Activity,
   ArrowRight,
   ArrowUpRight,
   AudioWaveform,
+  BookOpen,
   Brain,
   Mic,
   Play,
@@ -157,6 +166,20 @@ export default function Landing() {
   const momentIdx = beat % MOMENTS.length;
   const read = READS[beat % READS.length];
 
+  // Tone check: three quick answers → the visitor's archetype + their drill
+  const [tq, setTq] = useState(0);
+  const [answers, setAnswers] = useState<ToneArchetype[]>([]);
+  const toneDone = answers.length === TONE_CHECK.length;
+  const archetype = toneDone ? ARCHETYPES[scoreToneCheck(answers)] : null;
+  const answerTone = (a: ToneArchetype) => {
+    setAnswers((prev) => [...prev, a]);
+    setTq((n) => n + 1);
+  };
+  const restartTone = () => {
+    setTq(0);
+    setAnswers([]);
+  };
+
   return (
     <div className="nb-dots min-h-screen bg-paper">
       {/* Reading progress */}
@@ -194,6 +217,12 @@ export default function Landing() {
               className="relative after:absolute after:-bottom-0.5 after:left-0 after:h-0.5 after:w-0 after:bg-coral after:transition-all hover:after:w-full"
             >
               How it works
+            </a>
+            <a
+              href="#tone-check"
+              className="relative after:absolute after:-bottom-0.5 after:left-0 after:h-0.5 after:w-0 after:bg-sun after:transition-all hover:after:w-full"
+            >
+              Tone check
             </a>
             <a
               href="#drills"
@@ -550,71 +579,233 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Watch & learn */}
+      {/* Tone check — 60-second interactive, ends at your drill */}
+      <section id="tone-check" className="nb-grid border-b-2 border-ink bg-secondary">
+        <div className="mx-auto max-w-6xl px-4 py-16 lg:py-20">
+          <div className="grid items-start gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+            <div>
+              <NBBadge className="bg-coral text-ink">60-second tone check</NBBadge>
+              <h2 className="mt-4 font-display text-3xl sm:text-4xl">
+                Everyone has a default.{" "}
+                <span className="italic text-coral">What's yours?</span>
+              </h2>
+              <p className="mt-5 max-w-md leading-relaxed text-muted-foreground">
+                Under pressure, we all reach for the same moves. Three quick
+                questions and you'll see yours — plus the drill built
+                specifically for it. No mic, no account, no wrong answers.
+              </p>
+              <ul className="mt-6 flex flex-col gap-3 text-sm">
+                {[
+                  "Four archetypes, zero labels-shaming",
+                  "Your result pairs with a real drill",
+                  "Takes less time than the coffee you're drinking",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-3">
+                    <Timer className="size-4 shrink-0 text-coral" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <NBPanel className="nb-shadow-duo overflow-hidden">
+              {/* Progress header */}
+              <div className="flex items-center justify-between border-b-2 border-ink bg-paper px-5 py-3">
+                <span className="font-display text-sm">
+                  {toneDone ? "Your default" : `Question ${tq + 1} of ${TONE_CHECK.length}`}
+                </span>
+                <span className="flex gap-1.5">
+                  {TONE_CHECK.map((_, i) => (
+                    <span
+                      key={i}
+                      className={`size-2 ${i < answers.length || toneDone ? "bg-coral" : i === tq ? "bg-sun" : "bg-ink/15"}`}
+                    />
+                  ))}
+                </span>
+              </div>
+
+              {!toneDone && (
+                <div className="p-6">
+                  <p className="font-display text-xl leading-snug">
+                    {TONE_CHECK[tq].prompt}
+                  </p>
+                  <div className="mt-5 flex flex-col gap-3">
+                    {TONE_CHECK[tq].options.map((opt) => (
+                      <button
+                        key={opt.text}
+                        type="button"
+                        onClick={() => answerTone(opt.archetype)}
+                        className="nb nb-press bg-card p-4 text-left text-sm font-medium transition-transform duration-200 hover:-translate-y-0.5 hover:bg-paper"
+                      >
+                        {opt.text}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {archetype && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35 }}
+                  className="p-6"
+                >
+                  <div className={`nb inline-block px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${archetype.color}`}>
+                    {archetype.name}
+                  </div>
+                  <p className="mt-4 text-lg leading-relaxed">{archetype.read}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {archetype.pairing}
+                  </p>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <Link to="/auth">
+                      <NBButton variant="coral" className="text-sm">
+                        <Mic className="size-4" /> Train it now
+                      </NBButton>
+                    </Link>
+                    <NBButton variant="paper" onClick={restartTone} className="text-sm">
+                      <RefreshCcw className="size-4" /> Retake
+                    </NBButton>
+                  </div>
+                </motion.div>
+              )}
+            </NBPanel>
+          </div>
+        </div>
+      </section>
+
+      {/* Watch & learn — teach, then hand the visitor a drill */}
       <section id="watch" className="nb-stripes border-b-2 border-ink bg-ink text-paper">
         <div className="mx-auto max-w-6xl px-4 py-16 lg:py-20">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <NBBadge className="bg-sun text-ink">Watch & learn</NBBadge>
               <h2 className="mt-4 font-display text-3xl sm:text-4xl">
-                Then hear it from the{" "}
-                <span className="italic text-sun">pros</span>
+                Ideas from the <span className="italic text-sun">pros</span>.
+                Reps from you.
               </h2>
             </div>
             <p className="max-w-md text-sm text-paper/70">
-              The reps happen here. The ideas come from people who've spent
-              their careers studying how we talk to each other.
+              Every video here ends the same way: with a drill underneath it.
+              Watch the idea, then use your own voice to make it stick.
             </p>
           </div>
 
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {WATCH_LIST.map((video, i) => (
-              <motion.a
-                key={video.id}
-                href={`https://youtu.be/${video.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-60px" }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="group block"
-              >
-                <NBPanel className="h-full overflow-hidden border-paper text-paper transition-transform duration-300 group-hover:-translate-y-1.5">
-                  <div className="relative border-b-2 border-ink">
-                    <img
-                      src={videoThumb(video.id)}
-                      alt={video.title}
-                      loading="lazy"
-                      className="aspect-video w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-ink/30 transition-colors group-hover:bg-ink/10">
-                      <span className="nb flex size-12 items-center justify-center bg-sun text-ink nb-shadow-sm transition-transform duration-300 group-hover:scale-110">
-                        <Play className="size-5 fill-ink" />
+            {WATCH_LIST.map((video, i) => {
+              const drill = getDrill(video.practice);
+              return (
+                <motion.div
+                  key={video.id}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-60px" }}
+                  transition={{ duration: 0.4, delay: i * 0.1 }}
+                  className="flex flex-col"
+                >
+                  <motion.a
+                    href={`https://youtu.be/${video.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    whileHover={{ y: -4 }}
+                    className="group block"
+                  >
+                    <NBPanel className="overflow-hidden border-paper text-paper">
+                      <div className="relative border-b-2 border-ink">
+                        <img
+                          src={videoThumb(video.id)}
+                          alt={video.title}
+                          loading="lazy"
+                          className="aspect-video w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-ink/30 transition-colors group-hover:bg-ink/10">
+                          <span className="nb flex size-12 items-center justify-center bg-sun text-ink nb-shadow-sm transition-transform duration-300 group-hover:scale-110">
+                            <Play className="size-5 fill-ink" />
+                          </span>
+                        </div>
+                        {video.minutes != null && (
+                          <span className="nb absolute bottom-2 right-2 bg-ink px-1.5 py-0.5 text-[10px] font-bold text-paper">
+                            {video.minutes} min
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-1 flex-col p-4">
+                        <div className={`mb-2 h-1.5 w-10 ${video.color}`} />
+                        <h3 className="font-display text-sm leading-snug">
+                          {video.title}
+                        </h3>
+                        <p className="mt-2 flex-1 text-xs leading-relaxed text-paper/60">
+                          {video.meta}
+                        </p>
+                        <span className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-sun">
+                          Watch on YouTube
+                          <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                        </span>
+                      </div>
+                    </NBPanel>
+                  </motion.a>
+
+                  {/* The bridge: this video's idea, trainable in the app */}
+                  {drill && (
+                    <Link
+                      to="/auth"
+                      className="group/link mt-3 flex items-center justify-between gap-2 border-2 border-paper/25 bg-paper/5 px-3 py-2.5 text-paper transition-colors hover:border-sun hover:bg-sun hover:text-ink"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Mic className="size-4 shrink-0" />
+                        <span className="text-left text-[10px] font-bold uppercase tracking-widest">
+                          Train it: {drill.name}
+                        </span>
                       </span>
-                    </div>
-                    {video.minutes != null && (
-                      <span className="nb absolute bottom-2 right-2 bg-ink px-1.5 py-0.5 text-[10px] font-bold text-paper">
-                        {video.minutes} min
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col p-4">
-                    <div className={`mb-2 h-1.5 w-10 ${video.color}`} />
-                    <h3 className="font-display text-sm leading-snug">
-                      {video.title}
-                    </h3>
-                    <p className="mt-2 flex-1 text-xs leading-relaxed text-paper/60">
-                      {video.meta}
-                    </p>
-                    <span className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-sun">
-                      Watch on YouTube
-                      <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      <ArrowRight className="size-3.5 shrink-0 transition-transform duration-300 group-hover/link:translate-x-1" />
+                    </Link>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Go deeper — the reading shelf */}
+          <div className="mt-16 border-t-2 border-paper/20 pt-10">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <h3 className="flex items-center gap-2 font-display text-xl">
+                <BookOpen className="size-5 text-sun" /> Go deeper
+              </h3>
+              <p className="max-w-md text-sm text-paper/60">
+                The research shelf — books, talks, and studies from the people
+                whose work this app stands on. No sign-up, just the sources.
+              </p>
+            </div>
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {READING_LIST.map((r, i) => (
+                <motion.a
+                  key={r.title}
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.35, delay: i * 0.06 }}
+                  className="group flex items-start gap-4 border-2 border-paper/25 bg-paper/5 p-4 text-paper transition-colors hover:border-paper/60 hover:bg-paper/10"
+                >
+                  <span className={`mt-1 h-10 w-1.5 shrink-0 ${r.color}`} />
+                  <span className="min-w-0 flex-1">
+                    <span className="font-display text-sm leading-snug">
+                      {r.title}
                     </span>
-                  </div>
-                </NBPanel>
-              </motion.a>
-            ))}
+                    <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-widest text-sun">
+                      {r.source}
+                    </span>
+                    <span className="mt-1.5 block text-xs leading-relaxed text-paper/60">
+                      {r.blurb}
+                    </span>
+                  </span>
+                  <ArrowUpRight className="mt-1 size-4 shrink-0 text-paper/50 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-sun" />
+                </motion.a>
+              ))}
+            </div>
           </div>
         </div>
       </section>
