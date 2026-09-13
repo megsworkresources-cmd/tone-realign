@@ -15,12 +15,45 @@ interface UseToneCapture {
   livePitchHz: number | null;
   elapsedMs: number;
   analysis: ToneAnalysis | null;
+  /** Best-effort live speech-to-text of the take (empty when unsupported). */
+  transcript: string;
   start: () => Promise<void>;
   stop: () => void;
   reset: () => void;
 }
 
 const FRAME_INTERVAL_MS = 50;
+
+// Minimal structural typing for the Web Speech API (not in lib.dom for all
+// browsers, and webkit prefixes the constructor) — no `any` escapes here.
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult:
+    | ((
+        event: {
+          resultIndex: number;
+          results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>;
+        },
+      ) => void)
+    | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+}
+
+function getSpeechRecognition(): SpeechRecognitionCtor | null {
+  const w = window as unknown as {
+    SpeechRecognition?: SpeechRecognitionCtor;
+    webkitSpeechRecognition?: SpeechRecognitionCtor;
+  };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
 
 /**
  * Records a microphone take and analyzes tone.
@@ -33,6 +66,7 @@ export function useToneCapture(): UseToneCapture {
   const [livePitchHz, setLivePitchHz] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [analysis, setAnalysis] = useState<ToneAnalysis | null>(null);
+  const [transcript, setTranscript] = useState("");
 
   const framesRef = useRef<ToneFrame[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -41,6 +75,8 @@ export function useToneCapture(): UseToneCapture {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef(0);
   const lastFrameAtRef = useRef(0);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const transcriptRef = useRef("");
 
   const cleanup = useCallback(() => {
     if (rafRef.current !== null) {
@@ -66,6 +102,8 @@ export function useToneCapture(): UseToneCapture {
     setLevel(0);
     setLivePitchHz(null);
     setElapsedMs(0);
+    setTranscript("");
+    transcriptRef.current = "";
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -93,6 +131,34 @@ export function useToneCapture(): UseToneCapture {
       startedAtRef.current = performance.now();
       lastFrameAtRef.current = 0;
       setState("recording");
+
+      // Best-effort transcript for the coach — silence on any failure.
+      const Recognition = getSpeechRecognition();
+      if (Recognition) {
+        try {
+          const recognition = new Recognition();
+          recognition.continuous = true;
+          recognition.interimResults = false;
+          recognition.lang = navigator.language || "en-US";
+          recognition.onresult = (event) => {
+            let next = "";
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const result = event.results[i];
+              if (result.isFinal) next += result[0].transcript + " ";
+            }
+            if (next) {
+              transcriptRef.current = (transcriptRef.current + " " + next).trim();
+              setTranscript(transcriptRef.current);
+            }
+          };
+          recognition.onerror = () => {};
+          recognition.onend = () => {};
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch {
+          recognitionRef.current = null;
+        }
+      }
 
       const loop = () => {
         const now = performance.now();
@@ -135,6 +201,11 @@ export function useToneCapture(): UseToneCapture {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      // transcript is best-effort
+    }
     const durationMs = performance.now() - startedAtRef.current;
     setState("analyzing");
     setLevel(0);
@@ -150,14 +221,33 @@ export function useToneCapture(): UseToneCapture {
 
   const reset = useCallback(() => {
     cleanup();
+    try {
+      recognitionRef.current?.abort();
+    } catch {
+      // transcript is best-effort
+    }
+    recognitionRef.current = null;
     setState("idle");
     setError(null);
     setAnalysis(null);
     setLevel(0);
     setLivePitchHz(null);
     setElapsedMs(0);
+    setTranscript("");
+    transcriptRef.current = "";
     framesRef.current = [];
   }, [cleanup]);
 
-  return { state, error, level, livePitchHz, elapsedMs, analysis, start, stop, reset };
+  return {
+    state,
+    error,
+    level,
+    livePitchHz,
+    elapsedMs,
+    analysis,
+    transcript,
+    start,
+    stop,
+    reset,
+  };
 }

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
+import { getDrill } from "../lib/drills";
 
 /** Save a completed microphone practice session and update best scores. */
 export const saveSession = mutation({
@@ -20,6 +21,7 @@ export const saveSession = mutation({
     wordsPerMinute: v.number(),
     voicedRatio: v.number(),
     dominantTone: v.string(),
+    transcript: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
@@ -166,5 +168,48 @@ export const summary = query({
       bestOverall,
       streakDays,
     };
+  },
+});
+
+/** Coach plumbing: one take (ownership-checked), enriched with drill copy. */
+export const getSessionForCoach = internalQuery({
+  args: { sessionId: v.id("practiceSessions") },
+  handler: async (ctx, { sessionId }) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) return null;
+    const session = await ctx.db.get(sessionId);
+    if (!session || session.userId !== user._id) return null;
+    const drill = getDrill(session.drill);
+    return {
+      userId: session.userId,
+      drill: session.drill,
+      drillName: drill?.name ?? session.drill,
+      focus: drill?.focus ?? "",
+      durationMs: session.durationMs,
+      dominantTone: session.dominantTone,
+      overallScore: session.overallScore,
+      calmScore: session.calmScore,
+      energyScore: session.energyScore,
+      clarityScore: session.clarityScore,
+      stabilityScore: session.stabilityScore,
+      avgPitchHz: session.avgPitchHz,
+      pitchRangeHz: session.pitchRangeHz,
+      wordsPerMinute: session.wordsPerMinute,
+      voicedRatio: session.voicedRatio,
+      volumeVariability: session.volumeVariability,
+      transcript: session.transcript,
+    };
+  },
+});
+
+/** Best overall score on a drill, or undefined when never practiced. */
+export const getDrillBest = internalQuery({
+  args: { userId: v.id("users"), drill: v.string() },
+  handler: async (ctx, { userId, drill }) => {
+    const row = await ctx.db
+      .query("drillAttempts")
+      .withIndex("by_user_drill", (q) => q.eq("userId", userId).eq("drill", drill))
+      .unique();
+    return row?.bestScore;
   },
 });

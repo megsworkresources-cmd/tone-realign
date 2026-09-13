@@ -30,6 +30,10 @@ const schema = defineSchema(
       isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
 
       role: v.optional(roleValidator), // role of the user. do not remove
+
+      // Paid add-on: the metrics-anchored post-take coach. Set by the
+      // entitlements module after checkout (see convex/entitlements.ts).
+      coachUnlocked: v.optional(v.boolean()),
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
     // One completed tone practice take (microphone session)
@@ -52,6 +56,8 @@ const schema = defineSchema(
       wordsPerMinute: v.number(),
       voicedRatio: v.number(),
       dominantTone: v.string(), // "calm" | "energetic" | "tense" | "flat" | "mixed"
+      // Live speech-to-text of the take when the browser supports it
+      transcript: v.optional(v.string()),
     }).index("by_user", ["userId"]),
 
     // A triggered-response reframe exercise
@@ -73,6 +79,17 @@ const schema = defineSchema(
     })
       .index("by_user", ["userId"])
       .index("by_user_drill", ["userId", "drill"]),
+
+    // One AI coach note per saved take — anchored to that take's numbers.
+    coachNotes: defineTable({
+      userId: v.id("users"),
+      sessionId: v.id("practiceSessions"),
+      feedback: v.string(), // 2-3 sentences citing their real numbers
+      oneThing: v.optional(v.string()), // the single move for the next take
+      source: v.string(), // "llm" | "fallback"
+    })
+      .index("by_session", ["sessionId"])
+      .index("by_user", ["userId"]),
   },
   {
     schemaValidation: false,

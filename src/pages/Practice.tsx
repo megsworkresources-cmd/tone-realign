@@ -1,4 +1,5 @@
 import { NBBadge, NBButton, NBPanel, NBMeter } from "@/components/nb";
+import { CoachNote } from "@/components/CoachNote";
 import { getDrill, type Drill } from "@/lib/drills";
 import { getDailyChallenge } from "@/lib/daily";
 import { TONE_LABELS, type ToneAnalysis } from "@/lib/tone-analyzer";
@@ -9,6 +10,7 @@ import { useMutation } from "convex/react";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { toast } from "sonner";
+import type { Id } from "@/convex/_generated/dataModel";
 
 function fmtTime(ms: number) {
   const s = Math.floor(ms / 1000);
@@ -43,7 +45,7 @@ function PracticeRunner({ drill }: { drill: Drill }) {
   const capture = useToneCapture();
   const [saved, setSaved] = useState(false);
 
-  const { state, error, level, livePitchHz, elapsedMs, analysis, start, stop, reset } =
+  const { state, error, level, livePitchHz, elapsedMs, analysis, transcript, start, stop, reset } =
     capture;
 
   return (
@@ -240,6 +242,7 @@ function PracticeRunner({ drill }: { drill: Drill }) {
               analysis={analysis}
               drillId={drill.id}
               elapsedMs={elapsedMs}
+              transcript={transcript}
               saved={saved}
               onSaved={() => setSaved(true)}
               onRetry={reset}
@@ -272,6 +275,7 @@ function SaveRow({
   analysis,
   drillId,
   elapsedMs,
+  transcript,
   saved,
   onSaved,
   onRetry,
@@ -279,17 +283,19 @@ function SaveRow({
   analysis: ToneAnalysis;
   drillId: string;
   elapsedMs: number;
+  transcript: string;
   saved: boolean;
   onSaved: () => void;
   onRetry: () => void;
 }) {
   const saveSession = useMutation(api.sessions.saveSession);
   const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState<Id<"practiceSessions"> | null>(null);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveSession({
+      const sessionId = await saveSession({
         drill: drillId,
         durationMs: Math.round(elapsedMs),
         calmScore: analysis.calmScore,
@@ -304,7 +310,9 @@ function SaveRow({
         wordsPerMinute: analysis.wordsPerMinute,
         voicedRatio: analysis.voicedRatio,
         dominantTone: analysis.dominantTone,
+        transcript: transcript || undefined,
       });
+      setSavedId(sessionId);
       toast.success("Saved. It's in your log.");
       onSaved();
     } catch {
@@ -315,19 +323,22 @@ function SaveRow({
   };
 
   return (
-    <div className="mt-5 flex flex-wrap items-center gap-3">
-      {!saved ? (
-        <NBButton onClick={handleSave} disabled={saving} variant="mint">
-          {saving ? "Saving…" : "Add to my log"}
+    <>
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        {!saved ? (
+          <NBButton onClick={handleSave} disabled={saving} variant="mint">
+            {saving ? "Saving…" : "Add to my log"}
+          </NBButton>
+        ) : (
+          <span className="nb inline-flex items-center gap-1 bg-mint px-3 py-2 text-sm font-bold">
+            <Check className="size-4" /> Saved
+          </span>
+        )}
+        <NBButton onClick={onRetry} variant="paper">
+          Not my best — again
         </NBButton>
-      ) : (
-        <span className="nb inline-flex items-center gap-1 bg-mint px-3 py-2 text-sm font-bold">
-          <Check className="size-4" /> Saved
-        </span>
-      )}
-      <NBButton onClick={onRetry} variant="paper">
-        Not my best — again
-      </NBButton>
-    </div>
+      </div>
+      {savedId && <CoachNote sessionId={savedId} />}
+    </>
   );
 }
