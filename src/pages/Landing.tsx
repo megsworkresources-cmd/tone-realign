@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   Timer,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 const MARQUEE_ITEMS = [
@@ -68,8 +69,80 @@ const DRILLS_PREVIEW = [
   },
 ];
 
+/** Rotating hero ticker: the everyday moments where tone decides everything. */
+const MOMENTS = [
+  "when your boss says “got a minute?”",
+  "the “we need to talk” text",
+  "when they ask if you're okay",
+  "the third time you explain yourself",
+  "when “no” gets stuck in your throat",
+  "the apology you keep rehearsing",
+];
+
+/** Cycling beats for the hero's live-read card. */
+const READS: {
+  tone: string;
+  toneColor: string;
+  pace: string;
+  pitch: string;
+  note: string;
+}[] = [
+  {
+    tone: "Grounded",
+    toneColor: "bg-mint",
+    pace: "128 wpm",
+    pitch: "Steady",
+    note: "That's the voice people lean in to. Bottle this one.",
+  },
+  {
+    tone: "Rushed",
+    toneColor: "bg-coral",
+    pace: "186 wpm",
+    pitch: "Climbing",
+    note: "You're finishing sentences like they're chasing you. Slow the exhale.",
+  },
+  {
+    tone: "Tense",
+    toneColor: "bg-sun",
+    pace: "141 wpm",
+    pitch: "High",
+    note: "Jaw tight, pitch up. Drop your shoulders and say it again — slower.",
+  },
+  {
+    tone: "Flat",
+    toneColor: "bg-paper",
+    pace: "112 wpm",
+    pitch: "Low",
+    note: "The words are fine — the energy isn't landing. Lift the ends of your sentences.",
+  },
+  {
+    tone: "Warm",
+    toneColor: "bg-mint",
+    pace: "135 wpm",
+    pitch: "Steady",
+    note: "Warmth with a spine. Remember how this felt — that's the rep.",
+  },
+];
+
 export default function Landing() {
   const { isAuthenticated } = useAuth();
+
+  // Drives the hero's rotating moments and the live-read card beats
+  const [beat, setBeat] = useState(0);
+  const [sec, setSec] = useState(7);
+  useEffect(() => {
+    const beatTimer = setInterval(() => setBeat((b) => b + 1), 2600);
+    const secTimer = setInterval(
+      () => setSec((s) => (s >= 45 ? 0 : s + 1)),
+      1000,
+    );
+    return () => {
+      clearInterval(beatTimer);
+      clearInterval(secTimer);
+    };
+  }, []);
+  const momentIdx = beat % MOMENTS.length;
+  const read = READS[beat % READS.length];
 
   return (
     <div className="nb-dots min-h-screen bg-paper">
@@ -137,15 +210,40 @@ export default function Landing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="nb inline-flex items-center gap-2 bg-mint px-3 py-1 text-[11px] font-bold uppercase tracking-widest nb-shadow-sm">
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 15, delay: 0.15 }}
+              className="nb inline-flex items-center gap-2 bg-mint px-3 py-1 text-[11px] font-bold uppercase tracking-widest nb-shadow-sm"
+            >
+              <motion.span
+                animate={{ opacity: [1, 0.2, 1] }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                className="size-2 bg-coral nb"
+              />
               <AudioWaveform className="size-4" />
-              The voice tone gym
-            </div>
+              The voice tone gym · live
+            </motion.div>
             <h1 className="mt-6 font-display text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">
               You know{" "}
-              <span className="nb bg-sun px-2 inline-block -rotate-1">what you said</span>
+              <motion.span
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 240, damping: 13, delay: 0.35 }}
+                className="nb bg-sun px-2 inline-block -rotate-1"
+              >
+                what you said
+              </motion.span>
               . Do you know{" "}
-              <span className="nb bg-mint px-2 inline-block rotate-1">how you sounded</span>?
+              <motion.span
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 240, damping: 13, delay: 0.5 }}
+                className="nb bg-mint px-2 inline-block rotate-1"
+              >
+                how you sounded
+              </motion.span>
+              ?
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
               Everyone has a voice they use when they're caught off guard.
@@ -153,7 +251,30 @@ export default function Landing() {
               helps you practice something better before the real moment
               arrives.
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-4">
+
+            {/* Rotating real moments */}
+            <div className="mt-5 flex h-6 items-center gap-3 text-xs font-bold uppercase tracking-widest">
+              <span className="size-2 shrink-0 bg-coral nb" />
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={momentIdx}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.22 }}
+                  className="text-ink/80"
+                >
+                  {MOMENTS[momentIdx]}
+                </motion.span>
+              </AnimatePresence>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.7 }}
+              className="mt-8 flex flex-wrap items-center gap-4"
+            >
               <Link to="/auth">
                 <NBButton variant="sun" className="px-6 py-3 text-base">
                   Try your first read <ArrowRight className="size-4" />
@@ -164,7 +285,7 @@ export default function Landing() {
                   Show me how it works
                 </NBButton>
               </a>
-            </div>
+            </motion.div>
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <span className="flex items-center gap-2">
                 <ShieldCheck className="size-4" /> Your audio stays with you
@@ -177,9 +298,9 @@ export default function Landing() {
 
           {/* Hero visual: live analyzer card */}
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
+            initial={{ opacity: 0, y: 36, rotate: 2.5 }}
+            animate={{ opacity: 1, y: 0, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 120, damping: 15, delay: 0.45 }}
           >
             <NBPanel className="nb-shadow-lg self-center transition-transform duration-300 hover:-translate-y-1">
               <div className="flex items-center justify-between border-b-2 border-ink bg-sun px-4 py-2.5">
@@ -187,7 +308,12 @@ export default function Landing() {
                   <Mic className="size-4" /> Live read
                 </span>
                 <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest">
-                  <span className="size-2 bg-coral nb" /> Rec
+                  <motion.span
+                    animate={{ opacity: [1, 0.15, 1] }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                    className="size-2 bg-coral nb"
+                  />
+                  Rec · 0:{String(sec).padStart(2, "0")}
                 </span>
               </div>
               <div className="p-5">
@@ -206,26 +332,74 @@ export default function Landing() {
                   )}
                 </div>
                 <div className="mt-5 grid grid-cols-3 gap-2">
-                  {[
-                    ["Tone", "Calm", "bg-mint"],
-                    ["Pace", "126 wpm", "bg-paper"],
-                    ["Pitch", "Stable", "bg-paper"],
-                  ].map(([k, v, c]) => (
-                    <div key={k} className={`nb p-2.5 ${c}`}>
-                      <div className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {k}
-                      </div>
-                      <div className="font-display text-sm">{v}</div>
+                  <div className={`nb p-2.5 ${read.toneColor}`}>
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Tone
                     </div>
-                  ))}
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={read.tone}
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -10, opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="font-display text-sm"
+                      >
+                        {read.tone}
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+                  <div className="nb bg-paper p-2.5">
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Pace
+                    </div>
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={read.pace}
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -10, opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="font-display text-sm"
+                      >
+                        {read.pace}
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+                  <div className="nb bg-paper p-2.5">
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Pitch
+                    </div>
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={read.pitch}
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -10, opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="font-display text-sm"
+                      >
+                        {read.pitch}
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
                 </div>
                 <div className="mt-3 nb bg-secondary p-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Coach note
                   </p>
-                  <p className="mt-1 text-sm">
-                    "Better. Let the last word land before you push on."
-                  </p>
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={read.note}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="mt-1 text-sm"
+                    >
+                      {read.note}
+                    </motion.p>
+                  </AnimatePresence>
                 </div>
               </div>
             </NBPanel>
