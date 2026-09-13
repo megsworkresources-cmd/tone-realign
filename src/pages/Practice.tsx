@@ -1,5 +1,6 @@
 import { NBBadge, NBButton, NBPanel, NBMeter } from "@/components/nb";
 import { getDrill, type Drill } from "@/lib/drills";
+import { getDailyChallenge } from "@/lib/daily";
 import { TONE_LABELS, type ToneAnalysis } from "@/lib/tone-analyzer";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { api } from "@/convex/_generated/api";
@@ -55,7 +56,12 @@ function PracticeRunner({ drill }: { drill: Drill }) {
               <ArrowLeft className="size-4" /> Dashboard
             </NBButton>
           </Link>
-          <NBBadge className="bg-sun">{drill.tag}</NBBadge>
+          <div className="flex items-center gap-2">
+            {getDailyChallenge().drill.id === drill.id && (
+              <NBBadge className="bg-coral">★ Today's challenge</NBBadge>
+            )}
+            <NBBadge className="bg-sun">{drill.tag}</NBBadge>
+          </div>
         </div>
 
         {/* Drill header */}

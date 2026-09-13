@@ -43,6 +43,36 @@ export const DRILLS: Drill[] = [
     seconds: 40,
   },
   {
+    id: "nice-no",
+    name: "The Kind No",
+    tag: "SAYING NO",
+    color: "bg-sun",
+    prompt:
+      "A friend asks you to help them move on your only day off. Say no, offer something small you can actually do, and don't apologize more than once.",
+    focus: "Steady voice, level ending. The pause after your no is part of the answer.",
+    tips: [
+      "A no said warmly still lands as a no",
+      "One apology, maximum — then move to the offer",
+      "If you start justifying, you're negotiating with yourself",
+    ],
+    seconds: 40,
+  },
+  {
+    id: "unruffled",
+    name: "Un-Ruffled",
+    tag: "TAKING THE HIT",
+    color: "bg-mint",
+    prompt:
+      "Someone takes a light jab at you in front of others. Respond without matching their energy — acknowledge it, then raise the temperature back to normal.",
+    focus: "Your job is to be the thermostat, not the thermometer. Notice the spike, drop your pace instead of raising your voice.",
+    tips: [
+      "Slow down exactly when you feel the urge to speed up",
+      "A small smile changes your tone before it changes your face",
+      "Lower your volume one notch below theirs",
+    ],
+    seconds: 30,
+  },
+  {
     id: "firm-clear",
     name: "Firm & Clear",
     tag: "BOUNDARIES",

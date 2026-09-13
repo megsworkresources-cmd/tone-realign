@@ -254,7 +254,7 @@ export default function Landing() {
               >
                 what you said
               </motion.span>
-              . Do you know{" "}
+              . But do you know{" "}
               <motion.span
                 initial={{ scale: 0.4, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}

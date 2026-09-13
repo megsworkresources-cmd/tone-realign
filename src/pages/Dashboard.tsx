@@ -1,6 +1,7 @@
 import { NBBadge, NBButton, NBPanel, NBStat } from "@/components/nb";
 import logo from "@/assets/logo.svg";
 import { DRILLS } from "@/lib/drills";
+import { dailyLabel, getDailyChallenge } from "@/lib/daily";
 import { TONE_LABELS } from "@/lib/tone-analyzer";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
@@ -9,12 +10,16 @@ import {
   Flame,
   History,
   LogOut,
+  MessagesSquare,
   Mic,
   Shuffle,
+  Sparkles,
   Timer,
   Trophy,
+  Wind,
 } from "lucide-react";
 import { useQuery } from "convex/react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
 export default function Dashboard() {
@@ -24,6 +29,23 @@ export default function Dashboard() {
   const recentSessions = useQuery(api.sessions.listSessions, { limit: 6 });
   const reframeLogs = useQuery(api.reframes.list, { limit: 3 });
   const drillStats = useQuery(api.sessions.drillStats);
+
+  const daily = getDailyChallenge();
+
+  // 4-7-8 breathing pacer: 4 in, 7 hold, 8 out — the reset before a hard take
+  const [breathPhase, setBreathPhase] = useState<0 | 1 | 2>(0);
+  const [breathOn, setBreathOn] = useState(false);
+  useEffect(() => {
+    if (!breathOn) return;
+    const durations = [4000, 7000, 8000];
+    const t = setTimeout(
+      () => setBreathPhase((p) => (((p + 1) % 3) as 0 | 1 | 2)),
+      durations[breathPhase],
+    );
+    return () => clearTimeout(t);
+  }, [breathOn, breathPhase]);
+  const breathLabels = ["Breathe in", "Hold it", "Breathe out"] as const;
+  const breathScales = ["scale-100", "scale-100", "scale-75"];
 
   const handleSignOut = async () => {
     await signOut();
@@ -108,6 +130,30 @@ export default function Dashboard() {
           </div>
         </section>
 
+        {/* Daily challenge */}
+        <section className="nb relative overflow-hidden bg-sun nb-shadow">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <span className="nb flex size-12 shrink-0 items-center justify-center bg-card">
+                <Sparkles className="size-6" />
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest">
+                  {dailyLabel()} · today's challenge
+                </p>
+                <h2 className="font-display text-xl leading-tight sm:text-2xl">
+                  {daily.drill.name} — {daily.angle.toLowerCase()}
+                </h2>
+              </div>
+            </div>
+            <Link to={`/practice/${daily.drill.id}`}>
+              <NBButton variant="ink" className="text-xs">
+                <Mic className="size-3.5" /> Do today's take
+              </NBButton>
+            </Link>
+          </div>
+        </section>
+
         {/* Drills */}
         <section>
           <div className="flex items-center justify-between">
@@ -154,6 +200,62 @@ export default function Dashboard() {
               );
             })}
           </div>
+        </section>
+
+        {/* Reset + quiz: the between-sessions rituals */}
+        <section className="grid gap-6 lg:grid-cols-2">
+          <NBPanel className="flex flex-col items-center justify-center gap-4 p-6">
+            <div className="flex w-full items-center justify-between">
+              <div className="flex items-center gap-2 font-display text-xl">
+                <Wind className="size-5" /> Reset before you talk
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setBreathOn((on) => !on);
+                  setBreathPhase(0);
+                }}
+                className="nb nb-press bg-coral px-3 py-1.5 text-xs font-bold uppercase tracking-widest"
+              >
+                {breathOn ? "Stop" : "Start 4·7·8"}
+              </button>
+            </div>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Four in, seven held, eight out. Two rounds is usually enough to
+              drop your shoulders — and your pitch follows.
+            </p>
+            <div
+              aria-hidden
+              className={`nb flex size-32 items-center justify-center bg-mint transition-transform ease-in-out ${
+                breathOn ? breathScales[breathPhase] : "scale-100"
+              }`}
+              style={{ transitionDuration: breathOn ? ["4s", "7s", "8s"][breathPhase] : "0.3s" }}
+            >
+              <span className="font-display text-lg">
+                {breathOn ? breathLabels[breathPhase] : "Ready?"}
+              </span>
+            </div>
+          </NBPanel>
+
+          <NBPanel className="bg-ink text-paper">
+            <div className="border-b-2 border-paper/20 p-6">
+              <div className="flex items-center gap-2 font-display text-xl">
+                <MessagesSquare className="size-5 text-sun" /> Read the Room
+              </div>
+            </div>
+            <div className="p-6">
+              <p className="text-sm leading-relaxed text-paper/80">
+                No mic for this one. A tricky text, a loaded question, a
+                “got a minute?” — pick the reply you'd actually send and see
+                what it would broadcast.
+              </p>
+              <Link to="/quiz" className="mt-6 inline-block">
+                <NBButton variant="sun" className="text-xs">
+                  Today's scenario <ArrowRight className="size-3.5" />
+                </NBButton>
+              </Link>
+            </div>
+          </NBPanel>
         </section>
 
         {/* Reframe lab + history */}

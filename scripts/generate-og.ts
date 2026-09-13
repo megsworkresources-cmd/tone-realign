@@ -175,7 +175,7 @@ drawText(
   [109, 90, 72], // muted-foreground #6d5a48
 );
 drawText(
-  "DO YOU KNOW HOW YOU SOUND?",
+  "BUT DO YOU KNOW HOW YOU SOUND?",
   90,
   wmY + 140,
   5,
