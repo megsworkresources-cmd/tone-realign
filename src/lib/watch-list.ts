@@ -59,6 +59,20 @@ export const WATCH_LIST: WatchVideo[] = [
     color: "bg-sun",
     practice: "steady-ground",
   },
+  {
+    id: "RvjR9GM2kX8",
+    title: "Instantly Read Any Room (and Hack Your Discipline)",
+    meta: "A Navy interrogator's guide to what your posture, pace, and pauses broadcast before you say a word.",
+    color: "bg-mint",
+    practice: "unruffled",
+  },
+  {
+    id: "uRQAhWZ1bxs",
+    title: "The Blueprint for Mastering Every Conversation",
+    meta: "Jay Shetty and Jefferson Fisher on why the first move isn't talking — it's deciding which conversation you're in.",
+    color: "bg-coral",
+    practice: "steady-ground",
+  },
 ];
 
 export function videoThumb(id: string): string {

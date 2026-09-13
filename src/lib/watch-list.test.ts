@@ -5,13 +5,15 @@ import { WATCH_LIST, videoThumb } from "./watch-list";
 const YT_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 
 describe("WATCH_LIST", () => {
-  test("contains the five curated videos in curation order", () => {
+  test("contains the seven curated videos in curation order", () => {
     expect(WATCH_LIST.map((v) => v.id)).toEqual([
       "ZcvbDuTeEhQ",
       "bNIPVejCzyY",
       "3tR-2fnzUEo",
       "Jp2SBS1LTuk",
       "FD3H1dpPGtk",
+      "RvjR9GM2kX8",
+      "uRQAhWZ1bxs",
     ]);
   });
 
@@ -23,24 +25,21 @@ describe("WATCH_LIST", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  test("only Jefferson Fisher and Vanessa Van Edwards videos are curated", () => {
+  test("only the curated experts' videos are listed", () => {
     const allowed = new Set([
       "ZcvbDuTeEhQ",
       "bNIPVejCzyY",
       "3tR-2fnzUEo", // Jefferson Fisher
       "Jp2SBS1LTuk",
       "FD3H1dpPGtk", // Vanessa Van Edwards
+      "RvjR9GM2kX8", // Chase Hughes
+      "uRQAhWZ1bxs", // Jay Shetty × Jefferson Fisher
     ]);
     for (const v of WATCH_LIST) {
       expect(allowed.has(v.id)).toBe(true);
     }
-    // Mel Robbins + the Jay Shetty / Nicholeen Peck removals stay out
-    const removed = new Set([
-      "QMSTcIaa74Q",
-      "5hvVjOqk_4o",
-      "uRQAhWZ1bxs",
-      "XfVcnrNcBz4",
-    ]);
+    // Mel Robbins and Nicholeen Peck stay out
+    const removed = new Set(["QMSTcIaa74Q", "5hvVjOqk_4o", "XfVcnrNcBz4"]);
     const ids = WATCH_LIST.map((v) => v.id);
     expect(ids).toEqual(ids.filter((id) => !removed.has(id)));
   });
@@ -60,7 +59,7 @@ describe("WATCH_LIST", () => {
     }
   });
 
-  test("the five videos cover at least four distinct drills", () => {
+  test("the seven videos cover at least four distinct drills", () => {
     const pairs = new Set(WATCH_LIST.map((v) => v.practice));
     expect(pairs.size).toBeGreaterThanOrEqual(4);
   });
@@ -76,7 +75,7 @@ describe("WATCH_LIST", () => {
   });
 
   test("durations are only present where verified (no Short or unverified card gets a chip)", () => {
-    const shortsAndUnverified = new Set(["Jp2SBS1LTuk", "FD3H1dpPGtk"]);
+    const shortsAndUnverified = new Set(["Jp2SBS1LTuk", "FD3H1dpPGtk", "RvjR9GM2kX8", "uRQAhWZ1bxs"]);
     for (const v of WATCH_LIST) {
       if (shortsAndUnverified.has(v.id)) {
         expect(v.minutes).toBeUndefined();

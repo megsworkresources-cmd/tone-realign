@@ -11,6 +11,8 @@ describe("reading list curation", () => {
       "www.youtube.com", // TED-Ed official channel upload
       "ted.com",
       "gottman.com",
+      "www.scienceofpeople.com", // Van Edwards' official research lab
+      "www.chasehughesofficial.com", // Hughes' official site
     ];
     for (const r of READING_LIST) {
       const host = new URL(r.url).hostname;

@@ -26,12 +26,30 @@ export const READING_LIST: ReadingResource[] = [
     kind: "book",
   },
   {
+    title: "Cues: Master the Secret Language of Charismatic Communication",
+    source: "Vanessa Van Edwards · book",
+    blurb:
+      "The research lab behind the app's warmth drills. Cues decodes exactly which vocal and facial signals build — or spend — trust.",
+    url: "https://www.scienceofpeople.com/cues/",
+    color: "bg-mint",
+    kind: "book",
+  },
+  {
+    title: "The Ellipsis Manual",
+    source: "Chase Hughes · book",
+    blurb:
+      "The behavior-profiling manual from the Navy trainer who taught interrogation teams to read tone, tempo, and tension in real time.",
+    url: "https://www.chasehughesofficial.com/",
+    color: "bg-coral",
+    kind: "book",
+  },
+  {
     title: "How to Speak So That People Want to Listen",
     source: "Julian Treasure · TED · 9:44",
     blurb:
       "The seven deadly sins of speaking, and the four foundations — HAIL. Fifty-one million people have watched it for a reason.",
     url: "https://www.ted.com/talks/julian_treasure_how_to_speak_so_that_people_want_to_listen",
-    color: "bg-mint",
+    color: "bg-paper",
     kind: "article",
   },
   {
@@ -40,7 +58,7 @@ export const READING_LIST: ReadingResource[] = [
     blurb:
       "Good listening isn't silence — it's questions that promote discovery and suggestions that build self-esteem. Backed by Zenger Folkman's data.",
     url: "https://hbr.org/2016/07/what-great-listeners-actually-do",
-    color: "bg-coral",
+    color: "bg-sun",
     kind: "article",
   },
   {
@@ -49,7 +67,7 @@ export const READING_LIST: ReadingResource[] = [
     blurb:
       "Gottman's lab found repair attempts — any move that stops negativity escalating — predict relationship survival. The Skill exists; it can be practiced.",
     url: "https://www.gottman.com/blog/r-is-for-repair/",
-    color: "bg-paper",
+    color: "bg-mint",
     kind: "research",
   },
   {
@@ -58,7 +76,7 @@ export const READING_LIST: ReadingResource[] = [
     blurb:
       "The animated origin story of every “that's not what I meant” — and why the tone channel carries the blame.",
     url: "https://www.youtube.com/watch?v=gCfzeONu3Mo",
-    color: "bg-sun",
+    color: "bg-coral",
     kind: "article",
   },
 ];
