@@ -1,4 +1,5 @@
 import { NBBadge, NBButton, NBPanel, NBStat } from "@/components/nb";
+import { BreathReset } from "@/components/BreathReset";
 import logo from "@/assets/logo.svg";
 import { DRILLS } from "@/lib/drills";
 import { dailyLabel, getDailyChallenge } from "@/lib/daily";
@@ -16,10 +17,8 @@ import {
   Sparkles,
   Timer,
   Trophy,
-  Wind,
 } from "lucide-react";
 import { useQuery } from "convex/react";
-import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
 export default function Dashboard() {
@@ -31,21 +30,6 @@ export default function Dashboard() {
   const drillStats = useQuery(api.sessions.drillStats);
 
   const daily = getDailyChallenge();
-
-  // 4-7-8 breathing pacer: 4 in, 7 hold, 8 out — the reset before a hard take
-  const [breathPhase, setBreathPhase] = useState<0 | 1 | 2>(0);
-  const [breathOn, setBreathOn] = useState(false);
-  useEffect(() => {
-    if (!breathOn) return;
-    const durations = [4000, 7000, 8000];
-    const t = setTimeout(
-      () => setBreathPhase((p) => (((p + 1) % 3) as 0 | 1 | 2)),
-      durations[breathPhase],
-    );
-    return () => clearTimeout(t);
-  }, [breathOn, breathPhase]);
-  const breathLabels = ["Breathe in", "Hold it", "Breathe out"] as const;
-  const breathScales = ["scale-100", "scale-100", "scale-75"];
 
   const handleSignOut = async () => {
     await signOut();
@@ -204,38 +188,7 @@ export default function Dashboard() {
 
         {/* Reset + quiz: the between-sessions rituals */}
         <section className="grid gap-6 lg:grid-cols-2">
-          <NBPanel className="flex flex-col items-center justify-center gap-4 p-6">
-            <div className="flex w-full items-center justify-between">
-              <div className="flex items-center gap-2 font-display text-xl">
-                <Wind className="size-5" /> Reset before you talk
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setBreathOn((on) => !on);
-                  setBreathPhase(0);
-                }}
-                className="nb nb-press bg-coral px-3 py-1.5 text-xs font-bold uppercase tracking-widest"
-              >
-                {breathOn ? "Stop" : "Start 4·7·8"}
-              </button>
-            </div>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Four in, seven held, eight out. Two rounds is usually enough to
-              drop your shoulders — and your pitch follows.
-            </p>
-            <div
-              aria-hidden
-              className={`nb flex size-32 items-center justify-center bg-mint transition-transform ease-in-out ${
-                breathOn ? breathScales[breathPhase] : "scale-100"
-              }`}
-              style={{ transitionDuration: breathOn ? ["4s", "7s", "8s"][breathPhase] : "0.3s" }}
-            >
-              <span className="font-display text-lg">
-                {breathOn ? breathLabels[breathPhase] : "Ready?"}
-              </span>
-            </div>
-          </NBPanel>
+          <BreathReset />
 
           <NBPanel className="bg-ink text-paper">
             <div className="border-b-2 border-paper/20 p-6">

@@ -1,8 +1,17 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import { REFRAME_SCENARIOS } from "@/lib/drills";
+import { LENSES } from "@/lib/perspectives";
 import { api } from "@/convex/_generated/api";
-import { ArrowLeft, Dices, Loader2, Shuffle } from "lucide-react";
+import {
+  ArrowLeft,
+  Dices,
+  Eye,
+  Loader2,
+  RotateCcw,
+  Shuffle,
+} from "lucide-react";
 import { useAction, useMutation } from "convex/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
@@ -22,6 +31,10 @@ export default function Reframe() {
 
   const reframeAction = useAction(api.ai.reframe);
   const saveReframe = useMutation(api.reframes.save);
+
+  // Perspective lens: flip through readings of the same situation
+  const [lensIdx, setLensIdx] = useState(0);
+  const lens = LENSES[lensIdx];
 
   const randomScenario = () => {
     const pick =
@@ -164,6 +177,86 @@ export default function Reframe() {
           </div>
         </NBPanel>
 
+        {/* Perspective lens — the same moment, five legitimate readings */}
+        <NBPanel className="overflow-hidden">
+          <div className="flex items-center justify-between border-b-2 border-ink bg-paper px-5 py-3">
+            <div className="flex items-center gap-2 font-display text-xl">
+              <Eye className="size-5" /> Change the lens, change the moment
+            </div>
+            <span className="hidden text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:block">
+              Not spin — other true things
+            </span>
+          </div>
+
+          <div className="p-6">
+            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+              A narrow perception says there's one obvious reading of what
+              happened. There isn't — and practicing the other readings is
+              where the freedom is. Flip through the lenses; keep whatever
+              makes your shoulders drop.
+            </p>
+
+            {/* Lens tabs */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {LENSES.map((l, i) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => setLensIdx(i)}
+                  className={`nb nb-press px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${
+                    i === lensIdx ? `${l.color} text-ink` : "bg-card text-muted-foreground hover:text-ink"
+                  }`}
+                >
+                  {l.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Active lens */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={lens.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22 }}
+                className="mt-5"
+              >
+                <div className={`nb inline-block px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${lens.color}`}>
+                  Through {lens.name}
+                </div>
+                <p className="mt-3 text-base leading-relaxed">{lens.idea}</p>
+                <p className="nb mt-3 bg-secondary p-3 font-display text-lg leading-snug">
+                  {lens.question}
+                </p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {lens.seed}
+                </p>
+
+                {/* Scratchpad: capture what surfaced */}
+                <LensScratchpad lensId={lens.id} />
+              </motion.div>
+            </AnimatePresence>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <NBButton
+                variant="paper"
+                className="text-xs"
+                onClick={() => setLensIdx((i) => (i + 1) % LENSES.length)}
+              >
+                <Shuffle className="size-3.5" /> Next lens
+              </NBButton>
+              <NBButton
+                variant="paper"
+                className="text-xs"
+                onClick={() => setLensIdx((i) => (i - 1 + LENSES.length) % LENSES.length)}
+              >
+                <RotateCcw className="size-3.5" /> Previous
+              </NBButton>
+            </div>
+          </div>
+        </NBPanel>
+
         {result && (
           <NBPanel className="p-6">
             <div className="flex items-center justify-between">
@@ -200,5 +293,19 @@ export default function Reframe() {
         )}
       </div>
     </main>
+  );
+}
+
+/** Per-lens scratchpad: one private note per lens, session-persistent. */
+function LensScratchpad({ lensId }: { lensId: string }) {
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  return (
+    <textarea
+      value={notes[lensId] ?? ""}
+      onChange={(e) => setNotes((n) => ({ ...n, [lensId]: e.target.value }))}
+      placeholder="What surfaced through this lens? (Stays on this screen)"
+      rows={2}
+      className="nb mt-4 w-full bg-card p-3 text-sm outline-none placeholder:text-muted-foreground"
+    />
   );
 }
