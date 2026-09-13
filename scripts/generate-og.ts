@@ -166,13 +166,20 @@ const wmY = 448;
 drawText("SHIFTED", 88, wmY, 10, INK, null);
 drawText("TONE", 88 + textWidth("SHIFTED ", 10), wmY, 10, CORAL, null);
 
-// ---- Tagline under the wordmark ----
+// ---- Slogan under the wordmark (two lines) ----
 drawText(
-  "TRAIN THE TONE THAT SAYS IT",
+  "YOU KNOW WHAT YOU SAID.",
   90,
-  wmY + 96,
+  wmY + 92,
   5,
   [109, 90, 72], // muted-foreground #6d5a48
+);
+drawText(
+  "DO YOU KNOW HOW YOU SOUND?",
+  90,
+  wmY + 140,
+  5,
+  CORAL,
 );
 
 // ---- Headline chips (top right): tilted look via stepped rows ----

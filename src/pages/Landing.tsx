@@ -142,10 +142,10 @@ export default function Landing() {
               The voice tone gym
             </div>
             <h1 className="mt-6 font-display text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">
-              You can't take back{" "}
-              <span className="nb bg-sun px-2 inline-block -rotate-1">how it came out</span>
-              . But you can{" "}
-              <span className="nb bg-mint px-2 inline-block rotate-1">train it</span>.
+              You know{" "}
+              <span className="nb bg-sun px-2 inline-block -rotate-1">what you said</span>
+              . Do you know{" "}
+              <span className="nb bg-mint px-2 inline-block rotate-1">how you sounded</span>?
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
               Everyone has a voice they use when they're caught off guard.
