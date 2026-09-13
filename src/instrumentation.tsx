@@ -154,10 +154,12 @@ class ErrorBoundary extends React.Component<
       // You can render any custom fallback UI
       return (
         <ErrorDialog
-          error={{
-            error: "An error occurred",
-            stack: "",
-          }}
+          error={
+            this.state.error ?? {
+              error: "An error occurred",
+              stack: "",
+            }
+          }
           setError={() => {}}
         />
       );
@@ -176,6 +178,10 @@ export function InstrumentationProvider({
 
   useEffect(() => {
     const handleError = async (event: ErrorEvent) => {
+      // Resource-loading failures (img/css/script — e.g. a blocked YouTube
+      // thumbnail) also surface here, without an Error object. They are not
+      // runtime errors and shouldn't pop the dialog.
+      if (!event.error) return;
       try {
         console.log(event);
         event.preventDefault();
@@ -205,16 +211,25 @@ export function InstrumentationProvider({
       try {
         console.error(event);
 
+        const reason: unknown = event.reason;
+        const message =
+          reason instanceof Error
+            ? reason.message
+            : typeof reason === "string" && reason.length > 0
+              ? reason
+              : "Unhandled promise rejection";
+        const stack = reason instanceof Error ? (reason.stack ?? "") : "";
+
         if (import.meta.env.VITE_VLY_APP_ID) {
           await reportErrorToVly({
-            error: event.reason.message,
-            stackTrace: event.reason.stack,
+            error: message,
+            stackTrace: stack,
           });
         }
 
         setError({
-          error: event.reason.message,
-          stack: event.reason.stack,
+          error: message,
+          stack,
         });
       } catch (error) {
         console.error("Error in handleRejection:", error);
