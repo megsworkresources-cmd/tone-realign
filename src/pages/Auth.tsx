@@ -109,8 +109,9 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             <span className="text-sun">Train it.</span>
           </h2>
           <p className="mt-5 max-w-sm text-sm leading-relaxed text-paper/70">
-            Sign in to keep your practice log, streak, and reframe history. Your
-            audio stays on your device — only the scores are saved.
+            Sign in so your takes, streak, and reframes are here when you come
+            back. Your audio never leaves your device — we keep the scores, not
+            the recordings.
           </p>
           <div className="mt-8 flex items-center gap-3">
             <div className="flex h-10 items-end gap-1" aria-hidden>
@@ -150,10 +151,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   />
                   <div>
                     <p className="font-display text-xl leading-none">
-                      Get started
+                      Welcome in
                     </p>
                     <p className="mt-1 text-xs font-medium text-muted-foreground">
-                      Log in or sign up — free
+                      Log in or make an account — it's free
                     </p>
                   </div>
                 </div>
@@ -211,7 +212,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     onClick={handleGuestLogin}
                     disabled={isLoading}
                   >
-                    <UserX className="size-4" /> Continue as guest
+                    <UserX className="size-4" /> Just looking — continue as guest
                   </NBButton>
                 </div>
               </form>
@@ -221,7 +222,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               <div className="border-b-2 border-ink bg-mint px-6 py-4">
                 <p className="font-display text-xl leading-none">Check your email</p>
                 <p className="mt-1 text-xs font-medium text-muted-foreground">
-                  We sent a 6-digit code to {step.email}
+                  Just sent a 6-digit code to {step.email}
                 </p>
               </div>
               <form onSubmit={handleOtpSubmit}>
@@ -269,7 +270,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       </>
                     ) : (
                       <>
-                        Verify code <ArrowRight className="size-4" />
+                        That's the one <ArrowRight className="size-4" />
                       </>
                     )}
                   </NBButton>
@@ -278,7 +279,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     onClick={() => setStep("signIn")}
                     className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-ink"
                   >
-                    ← Use a different email
+                    ← Wrong email? Go back
                   </button>
                 </div>
               </form>

@@ -91,17 +91,17 @@ export default function Dashboard() {
               className="bg-sun"
             />
             <NBStat
-              label="Minutes voiced"
+              label="Minutes talking"
               value={summary?.totalMinutes ?? 0}
               suffix="min"
             />
             <NBStat
-              label="Avg score"
+              label="Average"
               value={summary?.avgOverall ?? 0}
               className="bg-mint"
             />
             <NBStat
-              label="Best score"
+              label="Personal best"
               value={summary?.bestOverall ?? 0}
               suffix={summary?.bestOverall ? "/100" : undefined}
             />
@@ -113,7 +113,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <h2 className="font-display text-2xl">Today's drills</h2>
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Mic on. One take at a time.
+              Mic on. One honest take at a time.
             </p>
           </div>
           <div className="mt-5 grid gap-5 md:grid-cols-3">
@@ -164,9 +164,9 @@ export default function Dashboard() {
             </div>
             <div className="p-6">
               <p className="text-sm leading-relaxed text-paper/80">
-                Something set you off this week? Bring the trigger, see the
-                automatic reaction, and practice the response that stays in
-                alignment.
+                Something get under your skin this week? Bring it here, look at
+                what you almost said, and try the version you'd rather have
+                said.
               </p>
               <ul className="mt-4 flex flex-col gap-2 text-xs uppercase tracking-widest text-paper/60">
                 {(reframeLogs ?? []).slice(0, 2).map((log) => (
@@ -195,7 +195,7 @@ export default function Dashboard() {
               )}
               {recentSessions?.length === 0 && (
                 <p className="p-6 text-sm text-muted-foreground">
-                  No takes yet. Your first drill is one click away.
+                  Nothing here yet. Your first take is one click away.
                 </p>
               )}
               {recentSessions?.map((s) => (
@@ -233,8 +233,8 @@ export default function Dashboard() {
           <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
             <Flame className="size-4" />
             {summary?.streakDays
-              ? `${summary.streakDays} day${summary.streakDays > 1 ? "s" : ""} in a row — keep the chain unbroken`
-              : "One take today starts the chain"}
+              ? `${summary.streakDays} day${summary.streakDays > 1 ? "s" : ""} in a row. Don't break the chain.`
+              : "One take today gets the chain going"}
           </p>
           <Link to={`/practice/${DRILLS[0].id}`}>
             <NBButton variant="ink" className="text-xs">

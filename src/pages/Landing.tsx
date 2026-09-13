@@ -30,19 +30,19 @@ const STEPS = [
   {
     icon: Mic,
     title: "01 · Speak",
-    body: "Pick a drill. Talk into your mic for 45 seconds — a real prompt, not a script.",
+    body: "Pick a drill and talk like you would to a real person. We hand you the prompt; you bring the honesty.",
     color: "bg-sun",
   },
   {
     icon: Activity,
     title: "02 · See",
-    body: "The analyzer reads pitch, pace, pressure and stability live, then scores your take.",
+    body: "While you talk, we listen for pitch, pace, and pressure — then show you the numbers and what they mean.",
     color: "bg-mint",
   },
   {
     icon: Brain,
     title: "03 · Rewire",
-    body: "Get the tone label, the coaching note, and drills that reprogram the default reaction.",
+    body: "You get a straight read on how you sounded and one thing to try next time. Small reps change the default.",
     color: "bg-coral",
   },
 ];
@@ -52,19 +52,19 @@ const DRILLS_PREVIEW = [
     name: "Steady Ground",
     tag: "Calm under pressure",
     color: "bg-sun",
-    body: "Describe a frustrating morning without complaint. Then ask for one fix.",
+    body: "Walk through an annoying morning without turning it into a complaint. Then ask for one fix.",
   },
   {
     name: "Warm Open",
     tag: "Warmth & presence",
     color: "bg-mint",
-    body: "Greet someone you haven't seen in months and mean every word.",
+    body: "Greet someone you actually miss and tell them one true thing you appreciate.",
   },
   {
     name: "Firm & Clear",
     tag: "Boundaries",
     color: "bg-coral",
-    body: "Say no without trailing off. Hold the two-second silence after.",
+    body: "Say no without trailing off — and let the silence afterward sit there.",
   },
 ];
 
@@ -76,7 +76,7 @@ export default function Landing() {
       {/* Announcement strip */}
       <div className="border-b-2 border-ink bg-ink py-2 text-paper">
         <p className="text-center text-xs font-bold uppercase tracking-widest">
-          Your voice reacts before you do — train it
+          Your voice reacts before you do. Here's where you catch it.
         </p>
       </div>
 
@@ -142,35 +142,35 @@ export default function Landing() {
               The voice tone gym
             </div>
             <h1 className="mt-6 font-display text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">
-              Don't say the{" "}
-              <span className="nb bg-sun px-2 inline-block -rotate-1">wrong thing</span>
-              . Train the{" "}
-              <span className="nb bg-mint px-2 inline-block rotate-1">tone</span> that
-              says it.
+              You can't take back{" "}
+              <span className="nb bg-sun px-2 inline-block -rotate-1">how it came out</span>
+              . But you can{" "}
+              <span className="nb bg-mint px-2 inline-block rotate-1">train it</span>.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              ShiftedTone listens to how you speak — pitch, pace, pressure,
-              stability — scores it, and coaches you to reprogram the automatic
-              reactions that leak into every hard conversation.
+              Everyone has a voice they use when they're caught off guard.
+              ShiftedTone listens for yours, shows you what it's doing, and
+              helps you practice something better before the real moment
+              arrives.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <Link to="/auth">
                 <NBButton variant="sun" className="px-6 py-3 text-base">
-                  Take your first read <ArrowRight className="size-4" />
+                  Try your first read <ArrowRight className="size-4" />
                 </NBButton>
               </Link>
               <a href="#how">
                 <NBButton variant="paper" className="px-6 py-3 text-base">
-                  See how it works
+                  Show me how it works
                 </NBButton>
               </a>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <span className="flex items-center gap-2">
-                <ShieldCheck className="size-4" /> Audio never leaves your device
+                <ShieldCheck className="size-4" /> Your audio stays with you
               </span>
               <span className="flex items-center gap-2">
-                <Timer className="size-4" /> 45-second takes
+                <Timer className="size-4" /> 45 seconds, that's it
               </span>
             </div>
           </motion.div>
@@ -224,8 +224,7 @@ export default function Landing() {
                     Coach note
                   </p>
                   <p className="mt-1 text-sm">
-                    "Good pressure control. Let the last word land — don't push
-                    through the pause."
+                    "Better. Let the last word land before you push on."
                   </p>
                 </div>
               </div>
@@ -260,11 +259,11 @@ export default function Landing() {
               transition={{ duration: 0.45 }}
               className="font-display text-3xl sm:text-4xl"
             >
-              The loop that rewires
+              How it actually works
             </motion.h2>
             <p className="max-w-md text-sm text-muted-foreground">
-              Reaction reprogramming isn't insight — it's reps. Every take is a
-              measurable rep with feedback you can feel.
+              Self-awareness doesn't change anything on its own. Reps do. Every
+              take is one.
             </p>
           </div>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
@@ -299,11 +298,11 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-4 py-16 lg:py-20">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <h2 className="font-display text-3xl sm:text-4xl">
-              Three drills. One default voice.
+              Three drills for the moments that get to you
             </h2>
             <p className="max-w-md text-sm text-muted-foreground">
-              Each drill targets a tone mode you'll actually need: calm under
-              pressure, warmth on purpose, and a no that holds.
+              Calm when you're annoyed, warmth when you mean it, and a no that
+              doesn't wobble.
             </p>
           </div>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
@@ -351,8 +350,8 @@ export default function Landing() {
               </h2>
             </div>
             <p className="max-w-md text-sm text-paper/70">
-              ShiftedTone gives you the reps. These are the ideas — hand-picked
-              videos on tone, delivery, and keeping conversations alive.
+              The reps happen here. The ideas come from people who've spent
+              their careers studying how we talk to each other.
             </p>
           </div>
 
@@ -418,17 +417,17 @@ export default function Landing() {
                 Catch it. Reframe it. Rehearse it.
               </h2>
               <p className="mt-5 max-w-lg leading-relaxed text-muted-foreground">
-                The reframe lab is where reaction reprogramming happens. Write
-                the trigger that set you off and what you almost said. The coach
-                hands you the version of you that stays in alignment — and the
-                delivery note for how to say it out loud.
+                We all have a reply we regret the second it leaves our mouth.
+                Write down what set you off and what you almost said — the lab
+                helps you find the version you'd actually be proud of, plus a
+                note on how to say it out loud.
               </p>
               <ul className="mt-6 flex flex-col gap-3">
                 {[
-                  "Name the trigger without judgment",
-                  "See the automatic reaction on paper",
-                  "Get a grounded alternative, in your voice",
-                  "Rehearse it with the tone drill",
+                  "Name what happened — no judgment",
+                  "See your gut reaction in writing",
+                  "Get a calmer version, in your own words",
+                  "Then practice saying it",
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-3 text-sm">
                     <RefreshCcw className="size-4 shrink-0 text-coral" />
@@ -459,7 +458,8 @@ export default function Landing() {
                   Automatic reaction
                 </p>
                 <p className="nb mt-1.5 bg-secondary p-3 text-sm">
-                  "Great, what now." Heart racing, typing a defensive paragraph.
+                  "Great, what now." Heart pounding, thumbs already typing a
+                  defense.
                 </p>
                 <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   Reframed response
@@ -472,7 +472,7 @@ export default function Landing() {
                     Delivery note
                   </p>
                   <p className="mt-1 text-sm">
-                    Flat, warm, unhurried. You're asking for logistics, not
+                    Even and unhurried. You're asking a question, not asking
                     permission.
                   </p>
                 </div>
@@ -486,10 +486,12 @@ export default function Landing() {
       <section className="nb-rays border-b-2 border-ink bg-sun">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-16 text-center lg:py-20">
           <h2 className="max-w-2xl font-display text-3xl sm:text-4xl">
-            The next conversation is already scheduled. How will you sound?
+            The next hard conversation is already on your calendar. What
+            version of you shows up?
           </h2>
           <p className="max-w-xl text-ink/70">
-            Free to start. No equipment but the microphone you already own.
+            It's free to start. The only equipment is the microphone you
+            already own.
           </p>
           <Link to="/auth">
             <NBButton variant="ink" className="px-8 py-4 text-lg">
@@ -515,7 +517,7 @@ export default function Landing() {
             </span>
           </div>
           <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Train the tone. Keep the truth.
+            Train the tone. Keep what you mean.
           </p>
         </div>
       </footer>

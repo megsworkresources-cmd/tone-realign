@@ -15,8 +15,8 @@ export default function NotFound() {
         />
         <h1 className="mt-6 font-display text-6xl">404</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Off-key. This page doesn't exist — but your next take is still
-          waiting.
+          Off-key. There's nothing at this address — but your next take is
+          still waiting.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link to="/">

@@ -23,7 +23,7 @@ export default function Practice() {
       <main className="nb-dots min-h-screen bg-paper px-4 py-10">
         <div className="mx-auto max-w-3xl">
           <NBPanel className="p-8 text-center">
-            <p className="font-display text-xl">Drill not found</p>
+            <p className="font-display text-xl">We couldn't find that drill</p>
             <Link to="/dashboard" className="mt-4 inline-block">
               <NBButton variant="paper">Back to dashboard</NBButton>
             </Link>
@@ -119,7 +119,7 @@ function PracticeRunner({ drill }: { drill: Drill }) {
 
             {state === "recording" && (
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Live pitch · {livePitchHz ? `${Math.round(livePitchHz)} Hz` : "listening…"}
+                Live pitch · {livePitchHz ? `${Math.round(livePitchHz)} Hz` : "listening for you…"}
               </p>
             )}
 
@@ -131,12 +131,12 @@ function PracticeRunner({ drill }: { drill: Drill }) {
             <div className="flex items-center gap-3">
               {state === "idle" && (
                 <NBButton onClick={start} variant="coral">
-                  <Mic className="size-4" /> Start take
+                  <Mic className="size-4" /> Start my take
                 </NBButton>
               )}
               {state === "recording" && (
                 <NBButton onClick={stop} variant="ink">
-                  <Square className="size-4" /> Stop & analyze
+                  <Square className="size-4" /> Done — score it
                 </NBButton>
               )}
               {state === "analyzing" && (
@@ -145,9 +145,9 @@ function PracticeRunner({ drill }: { drill: Drill }) {
                 </NBButton>
               )}
               {state === "done" && (
-                <NBButton onClick={reset} variant="paper">
-                  New take
-                </NBButton>
+          <NBButton onClick={reset} variant="paper">
+            Go again
+          </NBButton>
               )}
             </div>
           </div>
@@ -244,7 +244,7 @@ function PracticeRunner({ drill }: { drill: Drill }) {
         {/* Tips */}
         <NBPanel className="bg-secondary p-6">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Coach's notes
+            Before you start
           </p>
           <ul className="mt-3 flex flex-col gap-2">
             {drill.tips.map((tip, i) => (
@@ -299,10 +299,10 @@ function SaveRow({
         voicedRatio: analysis.voicedRatio,
         dominantTone: analysis.dominantTone,
       });
-      toast.success("Take saved to your log");
+      toast.success("Saved. It's in your log.");
       onSaved();
     } catch {
-      toast.error("Could not save the take. Try again.");
+      toast.error("Couldn't save that one. Give it another go.");
     } finally {
       setSaving(false);
     }
@@ -312,7 +312,7 @@ function SaveRow({
     <div className="mt-5 flex flex-wrap items-center gap-3">
       {!saved ? (
         <NBButton onClick={handleSave} disabled={saving} variant="mint">
-          {saving ? "Saving…" : "Save to log"}
+          {saving ? "Saving…" : "Add to my log"}
         </NBButton>
       ) : (
         <span className="nb inline-flex items-center gap-1 bg-mint px-3 py-2 text-sm font-bold">
@@ -320,7 +320,7 @@ function SaveRow({
         </span>
       )}
       <NBButton onClick={onRetry} variant="paper">
-        Try again
+        Not my best — again
       </NBButton>
     </div>
   );

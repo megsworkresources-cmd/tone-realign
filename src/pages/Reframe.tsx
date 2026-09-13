@@ -67,10 +67,10 @@ export default function Reframe() {
         reframe: result.reframe,
         toneNote: result.toneNote,
       });
-      toast.success("Reframe saved to your log");
+      toast.success("Kept. It's in your log.");
       setSaved(true);
     } catch {
-      toast.error("Could not save. Try again.");
+      toast.error("That didn't save. One more try?");
     } finally {
       setSaving(false);
     }
@@ -89,10 +89,10 @@ export default function Reframe() {
         </div>
 
         <NBPanel className="p-6">
-          <h1 className="font-display text-2xl">Reprogram the response</h1>
+          <h1 className="font-display text-2xl">Say it better this time</h1>
           <p className="mt-2 max-w-lg text-sm text-muted-foreground">
-            The trigger fires. The automatic reaction comes out. Catch it here,
-            and practice what you'd rather say instead.
+            The trigger fires. The old reply comes out. This is where you slow
+            it down and write the version you actually want to say.
           </p>
 
           <div className="mt-6 flex flex-col gap-4">
@@ -105,7 +105,7 @@ export default function Reframe() {
                   onClick={randomScenario}
                   className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-ink"
                 >
-                  <Dices className="size-3.5" /> Random
+                  <Dices className="size-3.5" /> Surprise me
                 </button>
               </div>
               <textarea
@@ -124,7 +124,7 @@ export default function Reframe() {
               <textarea
                 value={reaction}
                 onChange={(e) => setReaction(e.target.value)}
-                placeholder="What would you blurt out, or swallow? Be honest — nobody sees this."
+                placeholder="What would you blurt out — or swallow? Be honest, this stays between us."
                 className="nb w-full bg-card p-3 text-sm outline-none placeholder:text-muted-foreground"
                 rows={3}
               />
@@ -137,7 +137,7 @@ export default function Reframe() {
               <input
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
-                placeholder="e.g. stay calm, hold the boundary, repair the moment"
+                placeholder="like: stay calm, hold my ground, fix it without groveling"
                 className="nb w-full bg-card px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
@@ -150,11 +150,11 @@ export default function Reframe() {
               <NBButton onClick={coach} disabled={loading} variant="sun">
                 {loading ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" /> Coaching…
+                    <Loader2 className="size-4 animate-spin" /> Thinking…
                   </>
                 ) : (
                   <>
-                    <Shuffle className="size-4" /> Reframe it
+                    <Shuffle className="size-4" /> Help me reframe it
                   </>
                 )}
               </NBButton>
@@ -167,7 +167,7 @@ export default function Reframe() {
             <div className="flex items-center justify-between">
               <NBBadge className="bg-sun">COACHED RESPONSE</NBBadge>
               <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Say it like this
+                Try saying it like this
               </span>
             </div>
             <p className="mt-4 text-lg font-medium leading-relaxed">
@@ -181,7 +181,7 @@ export default function Reframe() {
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <NBButton variant="mint" disabled={saving || saved} onClick={handleSave}>
-                {saved ? "Saved" : saving ? "Saving…" : "Save to log"}
+                {saved ? "Saved" : saving ? "Saving…" : "Keep this one"}
               </NBButton>
               <NBButton
                 variant="paper"
