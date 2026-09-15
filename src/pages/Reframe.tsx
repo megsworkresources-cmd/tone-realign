@@ -1,9 +1,9 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
+import { AppShell } from "@/components/AppShell";
 import { REFRAME_SCENARIOS } from "@/lib/drills";
 import { LENSES } from "@/lib/perspectives";
 import { api } from "@/convex/_generated/api";
 import {
-  ArrowLeft,
   Dices,
   Eye,
   Loader2,
@@ -13,7 +13,6 @@ import {
 import { useAction, useMutation } from "convex/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
-import { Link } from "react-router";
 import { toast } from "sonner";
 
 export default function Reframe() {
@@ -31,6 +30,7 @@ export default function Reframe() {
 
   const reframeAction = useAction(api.ai.reframe);
   const saveReframe = useMutation(api.reframes.save);
+  const markReframe = useMutation(api.dailyLog.mark);
 
   // Perspective lens: flip through readings of the same situation
   const [lensIdx, setLensIdx] = useState(0);
@@ -82,6 +82,8 @@ export default function Reframe() {
       });
       toast.success("Kept. It's in your log.");
       setSaved(true);
+      // Keeping a reframe credits today's checklist (idempotent server-side).
+      markReframe({ action: "reframe" }).catch(() => {});
     } catch {
       toast.error("That didn't save. One more try?");
     } finally {
@@ -90,14 +92,9 @@ export default function Reframe() {
   };
 
   return (
-    <main className="nb-dots min-h-screen bg-paper px-4 pb-16 pt-6">
-      <div className="mx-auto flex max-w-3xl flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <Link to="/dashboard">
-            <NBButton variant="paper" className="px-3 py-2">
-              <ArrowLeft className="size-4" /> Dashboard
-            </NBButton>
-          </Link>
+    <AppShell active="reframe">
+      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 pb-16 pt-6">
+        <div className="flex items-center justify-end">
           <NBBadge className="bg-mint">REFRAME LAB</NBBadge>
         </div>
 
@@ -292,7 +289,7 @@ export default function Reframe() {
           </NBPanel>
         )}
       </div>
-    </main>
+    </AppShell>
   );
 }
 

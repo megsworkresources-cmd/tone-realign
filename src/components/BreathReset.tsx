@@ -8,7 +8,9 @@ import {
 } from "@/lib/breath";
 import { RotateCcw, Wind, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useMutation } from "convex/react";
 import { useEffect, useRef, useState } from "react";
+import { api } from "@/convex/_generated/api";
 
 const SUGGESTED_ROUNDS = 3;
 
@@ -18,6 +20,7 @@ const SUGGESTED_ROUNDS = 3;
  * the old mini-pacer — this is a place you go, not a widget you glance at.
  */
 export function BreathReset() {
+  const markReset = useMutation(api.dailyLog.mark);
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [finished, setFinished] = useState(false);
@@ -32,6 +35,8 @@ export function BreathReset() {
       if (t >= BREATH_TOTAL_MS * SUGGESTED_ROUNDS) {
         setRunning(false);
         setFinished(true);
+        // Full reset completed — credit today's checklist (idempotent server-side).
+        markReset({ action: "reset" }).catch(() => {});
         return;
       }
       raf.current = requestAnimationFrame(tick);
@@ -41,7 +46,7 @@ export function BreathReset() {
     return () => {
       if (raf.current != null) cancelAnimationFrame(raf.current);
     };
-  }, [running]);
+  }, [running, markReset]);
 
   const stop = () => {
     setRunning(false);

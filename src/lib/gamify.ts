@@ -1,0 +1,179 @@
+/**
+ * The progression engine — XP, levels, achievements, and the daily checklist.
+ * Pure logic: no React, no Convex. The server computes the same numbers with
+ * these same constants, so the UI can never drift from the backend.
+ */
+
+export type DailyActionId = "take" | "quiz" | "reframe" | "reset";
+
+export interface DailyActionDef {
+  id: DailyActionId;
+  label: string;
+  detail: string;
+  xp: number;
+}
+
+/** XP for each action. Mirrored in convex/dailyLog.ts — keep in sync. */
+export const XP = {
+  take: 30,
+  quiz: 15,
+  reframe: 20,
+  reset: 10,
+  personalBest: 25,
+  dailySweep: 40,
+} as const;
+
+export const DAILY_ACTIONS: DailyActionDef[] = [
+  { id: "take", label: "One honest take", detail: "Any drill, mic on", xp: XP.take },
+  { id: "quiz", label: "Read the Room", detail: "One scenario judged", xp: XP.quiz },
+  { id: "reframe", label: "Reframe something", detail: "One trigger rewritten", xp: XP.reframe },
+  { id: "reset", label: "Take the reset", detail: "One 4-7-8 round set", xp: XP.reset },
+];
+
+/** Percentage of the daily checklist completed (0..100). */
+export function dailyProgressPct(completed: DailyActionId[]): number {
+  const done = new Set(completed);
+  return Math.round((done.size / DAILY_ACTIONS.length) * 100);
+}
+
+// ---- Levels ----
+
+const LEVELS = [
+  { label: "Warm-Up", min: 0 },
+  { label: "Steady Hand", min: 150 },
+  { label: "Clear Signal", min: 400 },
+  { label: "Cool Head", min: 800 },
+  { label: "Calibrated", min: 1400 },
+  { label: "Room Reader", min: 2200 },
+  { label: "Signature Tone", min: 3200 },
+  { label: "Gravitas", min: 4600 },
+] as const;
+
+export interface LevelInfo {
+  level: number;
+  label: string;
+  /** XP earned inside the current level band. */
+  into: number;
+  /** Width of the current band (0 at max level). */
+  needed: number;
+  progressPct: number;
+  xpToNext: number;
+  nextLabel?: string;
+  maxed: boolean;
+}
+
+export function levelInfo(totalXp: number): LevelInfo {
+  let idx = 0;
+  for (let i = 0; i < LEVELS.length; i++) {
+    if (totalXp >= LEVELS[i].min) idx = i;
+  }
+  const next = LEVELS[idx + 1];
+  const current = LEVELS[idx].min;
+  const needed = next ? next.min - current : 0;
+  const into = totalXp - current;
+  return {
+    level: idx + 1,
+    label: LEVELS[idx].label,
+    into,
+    needed,
+    progressPct: next ? Math.min(100, Math.round((into / needed) * 100)) : 100,
+    xpToNext: next ? Math.max(0, next.min - totalXp) : 0,
+    nextLabel: next?.label,
+    maxed: !next,
+  };
+}
+
+// ---- Achievements ----
+
+export interface AchievementStats {
+  totalSessions: number;
+  totalMinutes: number;
+  bestOverall: number;
+  totalQuiz: number;
+  totalReframes: number;
+  totalResets: number;
+  streakDays: number;
+  /** Distinct drills attempted. */
+  drillsTried: number;
+  /** Total drills in the catalog. */
+  drills: number;
+}
+
+export interface AchievementDef {
+  id: string;
+  name: string;
+  detail: string;
+  tier: "bronze" | "silver" | "gold";
+  test: (s: AchievementStats) => boolean;
+}
+
+export const ACHIEVEMENTS: AchievementDef[] = [
+  {
+    id: "first-word",
+    name: "First Word",
+    detail: "Record your very first take",
+    tier: "bronze",
+    test: (s) => s.totalSessions >= 1,
+  },
+  {
+    id: "full-circuit",
+    name: "Full Circuit",
+    detail: "Try every drill in the gym",
+    tier: "gold",
+    test: (s) => s.drills > 0 && s.drillsTried >= s.drills,
+  },
+  {
+    id: "week-streak",
+    name: "Seven Straight",
+    detail: "Practice 7 days in a row",
+    tier: "silver",
+    test: (s) => s.streakDays >= 7,
+  },
+  {
+    id: "high-score",
+    name: "Personal Record",
+    detail: "Score 85+ on any drill",
+    tier: "silver",
+    test: (s) => s.bestOverall >= 85,
+  },
+  {
+    id: "room-reader",
+    name: "Room Reader",
+    detail: "Work through 10 Read-the-Room scenarios",
+    tier: "bronze",
+    test: (s) => s.totalQuiz >= 10,
+  },
+  {
+    id: "reframer",
+    name: "The Reframer",
+    detail: "Reframe 5 triggers with the lab",
+    tier: "silver",
+    test: (s) => s.totalReframes >= 5,
+  },
+  {
+    id: "deep-breaths",
+    name: "Deep Breaths",
+    detail: "Complete 10 full resets",
+    tier: "bronze",
+    test: (s) => s.totalResets >= 10,
+  },
+  {
+    id: "ten-takes",
+    name: "Ten Takes Deep",
+    detail: "Log 10 practice takes",
+    tier: "bronze",
+    test: (s) => s.totalSessions >= 10,
+  },
+  {
+    id: "sixty-minutes",
+    name: "The Sixty",
+    detail: "Sixty total minutes of practice",
+    tier: "gold",
+    test: (s) => s.totalMinutes >= 60,
+  },
+];
+
+/** Ids of every achievement the stats satisfy. */
+export function earnedAchievements(stats: AchievementStats): string[] {
+  return ACHIEVEMENTS.filter((a) => a.test(stats)).map((a) => a.id);
+}

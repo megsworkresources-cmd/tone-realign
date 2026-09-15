@@ -6,7 +6,7 @@ import { TONE_LABELS, type ToneAnalysis } from "@/lib/tone-analyzer";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { api } from "@/convex/_generated/api";
 import { ArrowLeft, Check, Mic, Square } from "lucide-react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { toast } from "sonner";
@@ -44,6 +44,8 @@ export default function Practice() {
 function PracticeRunner({ drill }: { drill: Drill }) {
   const capture = useToneCapture();
   const [saved, setSaved] = useState(false);
+  const drillStats = useQuery(api.sessions.drillStats);
+  const bestByDrill = new Map((drillStats ?? []).map((s) => [s.drill, s]));
 
   const { state, error, level, livePitchHz, elapsedMs, analysis, transcript, start, stop, reset } =
     capture;
@@ -246,6 +248,7 @@ function PracticeRunner({ drill }: { drill: Drill }) {
               saved={saved}
               onSaved={() => setSaved(true)}
               onRetry={reset}
+              drillStats={bestByDrill.get(drill.id)}
             />
           </NBPanel>
         )}
@@ -279,6 +282,7 @@ function SaveRow({
   saved,
   onSaved,
   onRetry,
+  drillStats,
 }: {
   analysis: ToneAnalysis;
   drillId: string;
@@ -287,14 +291,24 @@ function SaveRow({
   saved: boolean;
   onSaved: () => void;
   onRetry: () => void;
+  drillStats?: { bestScore: number; attemptCount: number };
 }) {
   const saveSession = useMutation(api.sessions.saveSession);
+  const markTake = useMutation(api.dailyLog.mark);
+  const addBonus = useMutation(api.dailyLog.addBonus);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<Id<"practiceSessions"> | null>(null);
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Credit the daily checklist + a personal-best bonus when earned.
+      try {
+        await markTake({ action: "take" });
+      } catch { /* checklist credit is best-effort */ }
+      if (analysis.overallScore >= (drillStats?.bestScore ?? 0)) {
+        addBonus({ amount: 25 }).catch(() => {});
+      }
       const sessionId = await saveSession({
         drill: drillId,
         durationMs: Math.round(elapsedMs),

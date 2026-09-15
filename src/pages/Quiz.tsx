@@ -1,10 +1,12 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
+import { AppShell } from "@/components/AppShell";
 import { QUIZ, type QuizQuestion } from "@/lib/quiz";
 import { dailyLabel, DAILY_ANGLES } from "@/lib/daily";
-import { ArrowLeft, ArrowRight, Check, MessagesSquare, X } from "lucide-react";
+import { ArrowRight, Check, MessagesSquare, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
-import { Link } from "react-router";
+import { useMutation } from "convex/react";
+import { useEffect, useRef, useState } from "react";
+import { api } from "@/convex/_generated/api";
 
 /** Day number for the featured-question rotation (local midnight reset). */
 function todayNumber(): number {
@@ -26,6 +28,16 @@ function QuizCard({
 }) {
   const [phase, setPhase] = useState<Phase>("choosing");
   const [picked, setPicked] = useState<number | null>(null);
+
+  // Answering a scenario counts toward the lifetime total + today's checklist.
+  const countScenario = useMutation(api.dailyLog.countQuizScenario);
+  const countedRef = useRef(false);
+  useEffect(() => {
+    if (phase === "revealed" && !countedRef.current) {
+      countedRef.current = true;
+      countScenario({}).catch(() => {});
+    }
+  }, [phase, countScenario]);
 
   const reset = () => {
     setPhase("choosing");
@@ -148,14 +160,9 @@ export default function Quiz() {
   };
 
   return (
-    <main className="nb-dots min-h-screen bg-paper px-4 pb-16 pt-6">
-      <div className="mx-auto flex max-w-2xl flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <Link to="/dashboard">
-            <NBButton variant="paper" className="px-3 py-2">
-              <ArrowLeft className="size-4" /> Dashboard
-            </NBButton>
-          </Link>
+    <AppShell active="quiz">
+      <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 pb-16 pt-6">
+        <div className="flex items-center justify-end">
           <NBBadge className="bg-mint">READ THE ROOM</NBBadge>
         </div>
 
@@ -209,6 +216,6 @@ export default function Quiz() {
           </NBButton>
         </div>
       </div>
-    </main>
+    </AppShell>
   );
 }

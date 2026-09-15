@@ -34,6 +34,9 @@ const schema = defineSchema(
       // Paid add-on: the metrics-anchored post-take coach. Set by the
       // entitlements module after checkout (see convex/entitlements.ts).
       coachUnlocked: v.optional(v.boolean()),
+
+      // Lifetime Read-the-Room scenarios answered (drives achievements).
+      quizCount: v.optional(v.number()),
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
     // One completed tone practice take (microphone session)
@@ -90,6 +93,17 @@ const schema = defineSchema(
     })
       .index("by_session", ["sessionId"])
       .index("by_user", ["userId"]),
+
+    // One row per user per local day: the daily checklist + XP awards.
+    // Keyed by "YYYY-M-D" in the user's local time so midnight is *their* midnight.
+    dailyLog: defineTable({
+      userId: v.id("users"),
+      day: v.string(),
+      completed: v.array(v.string()), // DailyActionId values already done today
+      xpEarned: v.number(), // XP awarded today (base actions + bonuses)
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_day", ["userId", "day"]),
   },
   {
     schemaValidation: false,
