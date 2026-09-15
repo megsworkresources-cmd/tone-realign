@@ -4,7 +4,7 @@
  * these same constants, so the UI can never drift from the backend.
  */
 
-export type DailyActionId = "take" | "quiz" | "reframe" | "reset";
+export type DailyActionId = "take" | "quiz" | "reframe" | "reset" | "translate";
 
 export interface DailyActionDef {
   id: DailyActionId;
@@ -19,6 +19,7 @@ export const XP = {
   quiz: 15,
   reframe: 20,
   reset: 10,
+  translate: 20,
   personalBest: 25,
   dailySweep: 40,
 } as const;

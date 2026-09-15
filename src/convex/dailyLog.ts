@@ -24,11 +24,12 @@ const ACTION_XP: Record<string, number> = {
   quiz: 15,
   reframe: 20,
   reset: 10,
+  translate: 20,
 };
 
 /** Mark a daily action complete. Idempotent per day; awards XP once. */
 export const mark = mutation({
-  args: { action: v.union(v.literal("take"), v.literal("quiz"), v.literal("reframe"), v.literal("reset")) },
+  args: { action: v.union(v.literal("take"), v.literal("quiz"), v.literal("reframe"), v.literal("reset"), v.literal("translate")) },
   handler: async (ctx, { action }) => {
     const user = await getCurrentUser(ctx);
     if (!user) throw new Error("Not authenticated");

@@ -4,6 +4,7 @@ import { DailyChecklist } from "@/components/DailyChecklist";
 import { BreathReset } from "@/components/BreathReset";
 import { DRILLS } from "@/lib/drills";
 import { dailyLabel, getDailyChallenge } from "@/lib/daily";
+import { arcDaysLeft, arcStageFor } from "@/lib/arc";
 import {
   ACHIEVEMENTS,
   levelInfo,
@@ -84,6 +85,9 @@ export default function Dashboard() {
             />
             </div>
         </section>
+
+        {/* 21-day arc — where you are in the reprogramming program */}
+        <ArcPanel streakDays={stats.streakDays} />
 
         {/* Daily challenge */}
         <section className="nb relative overflow-hidden bg-sun nb-shadow">
@@ -349,5 +353,68 @@ export default function Dashboard() {
         </section>
       </div>
     </AppShell>
+  );
+}
+
+/**
+ * The 21-day reprogramming arc: your streak maps onto a three-week
+ * program (floor → range → translation), so coming back isn't just a
+ * checklist — it's a curriculum with a finish line.
+ */
+function ArcPanel({ streakDays }: { streakDays: number }) {
+  const day = Math.max(1, streakDays);
+  const stage = arcStageFor(day);
+  const left = arcDaysLeft(day);
+  const dayPct = Math.min(100, Math.round((day / 21) * 100));
+
+  return (
+    <NBPanel className="overflow-hidden">
+      <div className="flex items-center justify-between border-b-2 border-ink bg-mint px-5 py-3">
+        <div className="font-display">The 21-day reprogramming arc</div>
+        <NBBadge className="bg-ink text-paper">
+          {left > 0 ? `${left} day${left === 1 ? "" : "s"} to go` : "Arc complete — keep the streak"}
+        </NBBadge>
+      </div>
+      <div className="p-5">
+        <div className="flex flex-wrap items-center gap-5">
+          <div className="nb flex size-14 shrink-0 flex-col items-center justify-center bg-card">
+            <span className="font-display text-xl leading-none">{day}</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">day</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-display text-lg">{stage.name}</span>
+              <span className="text-xs text-muted-foreground">· {stage.promise}</span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              <span className="font-bold text-ink">Today's move:</span> {stage.move}
+            </p>
+          </div>
+        </div>
+
+        {/* Stage track: three blocks across 21 days */}
+        <div className="mt-4 flex gap-1" aria-hidden>
+          {Array.from({ length: 21 }).map((_, i) => {
+            const d = i + 1;
+            const s = arcStageFor(d);
+            const isStage = s.id === stage.id;
+            const isDone = d <= day;
+            return (
+              <span
+                key={i}
+                title={`Day ${d} — ${s.name}`}
+                className={`h-3 flex-1 border border-ink ${
+                  isDone ? (isStage ? "bg-ink" : "bg-muted") : "bg-card"
+                }`}
+              />
+            );
+          })}
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">{stage.why}</p>
+        <div className="mt-3 h-1.5 bg-muted">
+          <div className="h-full bg-ink" style={{ width: `${dayPct}%` }} />
+        </div>
+      </div>
+    </NBPanel>
   );
 }

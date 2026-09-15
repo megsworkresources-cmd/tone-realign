@@ -1,8 +1,9 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import { AppShell } from "@/components/AppShell";
 import { QUIZ, type QuizQuestion } from "@/lib/quiz";
+import { getDailyLeak, type LeakScenario } from "@/lib/leak";
 import { dailyLabel, DAILY_ANGLES } from "@/lib/daily";
-import { ArrowRight, Check, MessagesSquare, X } from "lucide-react";
+import { ArrowRight, Check, Ear, MessagesSquare, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMutation } from "convex/react";
 import { useEffect, useRef, useState } from "react";
@@ -215,7 +216,71 @@ export default function Quiz() {
             Next scenario <ArrowRight className="size-4" />
           </NBButton>
         </div>
+
+        {/* Ear training — the other side of tone */}
+        <LeakCard scenario={getDailyLeak(todayNumber())} />
       </div>
     </AppShell>
+  );
+}
+
+function LeakCard({ scenario }: { scenario: LeakScenario }) {
+  const [picked, setPicked] = useState<number | null>(null);
+
+  return (
+    <NBPanel className="overflow-hidden">
+      <div className="flex items-center justify-between border-b-2 border-ink bg-ink px-5 py-3 text-paper">
+        <div className="flex items-center gap-2">
+          <Ear className="size-4" />
+          <span className="font-display text-sm">Catch the Leak — ear training</span>
+        </div>
+        <span className="hidden text-[10px] font-bold uppercase tracking-widest text-paper/60 sm:block">
+          What the voice says under the words
+        </span>
+      </div>
+      <div className="p-6">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          From {scenario.from}:
+        </p>
+        <p className="mt-1 font-display text-xl leading-relaxed">{scenario.words}</p>
+        <p className="mt-3 border-l-4 border-ink bg-card px-4 py-2 text-sm text-muted-foreground">
+          <span className="font-bold uppercase tracking-widest text-ink">Delivered:</span>{" "}
+          {scenario.delivered}
+        </p>
+
+        <div className="mt-4 flex flex-col gap-2">
+          {scenario.options.map((opt, i) => {
+            const isAnswer = i === scenario.answer;
+            const isPicked = picked === i;
+            const showState = picked !== null && (isPicked || isAnswer);
+            return (
+              <button
+                key={i}
+                onClick={() => setPicked(i)}
+                disabled={picked !== null}
+                className={`nb nb-press px-4 py-3 text-left text-sm font-medium transition-colors ${
+                  showState
+                    ? isAnswer
+                      ? "bg-mint text-ink"
+                      : "bg-coral text-ink"
+                    : "bg-card"
+                }`}
+              >
+                {showState && (isAnswer ? <Check className="mr-1.5 inline size-4" /> : <X className="mr-1.5 inline size-4" />)}
+                {opt.text}
+                {showState && (
+                  <span className="mt-1 block text-xs font-normal text-ink/80">{opt.note}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {picked !== null && picked !== scenario.answer && (
+          <p className="mt-3 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Everyone misses this one. That's why it trains.
+          </p>
+        )}
+      </div>
+    </NBPanel>
   );
 }

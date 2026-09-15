@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import {
   Check,
   Flame,
+  Languages,
   MessageSquareText,
   Mic,
   Shuffle,
@@ -24,6 +25,7 @@ const ACTION_META: Record<
   quiz: { icon: MessageSquareText, to: "/quiz" },
   reframe: { icon: Shuffle, to: "/reframe" },
   reset: { icon: Wind, to: undefined },
+  translate: { icon: Languages, to: "/translate" },
 };
 
 /**
