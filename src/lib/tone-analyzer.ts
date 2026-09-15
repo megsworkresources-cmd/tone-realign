@@ -7,7 +7,10 @@
  *  - voiced/silence ratio, speaking pace estimate
  *
  * From these it computes coaching scores (0..100): calm, energy, clarity,
- * stability, and an overall score, plus a dominant tone label.
+ * stability, and an overall score, plus a dominant tone label — including
+ * how the delivery *lands* socially (irritated, passive-aggressive,
+ * holding back, confused, suspicious) based on how pitch and pressure
+ * drift across the take.
  */
 
 export interface ToneFrame {
@@ -22,6 +25,10 @@ export interface ToneAnalysis {
   pitchRangeHz: number;
   avgVolume: number;
   volumeVariability: number;
+  /** Relative drift of pitch across the take: (2nd-half mean − 1st-half mean) / 1st-half mean. */
+  pitchTrend: number;
+  /** Relative drift of volume across the take, same definition. */
+  volumeTrend: number;
   wordsPerMinute: number;
   voicedRatio: number;
   calmScore: number;
@@ -140,6 +147,12 @@ export function analyzeFrames(
       ) / mean;
   }
 
+  // Delivery drift: how pitch and volume move from the first half of the
+  // take to the second. Escalation, trailing off, and the quiet-with-rising-
+  // pitch pattern all live here, not in the averages.
+  const pitchTrend = splitHalfTrend(pitches);
+  const volumeTrend = splitHalfTrend(volumes);
+
   // Speaking pace
   const durationSec = Math.max(durationMs / 1000, 1);
   let wordsPerMinute: number;
@@ -191,6 +204,8 @@ export function analyzeFrames(
     wordsPerMinute,
     pitchRangeHz,
     voicedRatio,
+    pitchTrend,
+    volumeTrend,
   });
 
   const overallScore = Math.round(
@@ -206,6 +221,8 @@ export function analyzeFrames(
     pitchRangeHz: Math.round(pitchRangeHz),
     avgVolume: round2(avgVolume),
     volumeVariability: round2(volumeVariability),
+    pitchTrend: round2(pitchTrend),
+    volumeTrend: round2(volumeTrend),
     wordsPerMinute,
     voicedRatio: round2(voicedRatio),
     calmScore: clampScore(calmScore),
@@ -216,19 +233,53 @@ export function analyzeFrames(
   };
 }
 
+/**
+ * Relative drift of a per-frame value across the take: how much the second
+ * half's mean differs from the first half's, as a fraction of the first.
+ * Returns 0 for short captures where a trend would be noise.
+ */
+function splitHalfTrend(values: number[]): number {
+  if (values.length < 8) return 0;
+  const mid = Math.floor(values.length / 2);
+  const mean = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const first = mean(values.slice(0, mid));
+  const second = mean(values.slice(mid));
+  const base = Math.max(Math.abs(first), 1e-6);
+  return (second - first) / base;
+}
+
 function labelTone(m: {
   avgVolume: number;
   pitchVariability: number;
   wordsPerMinute: number;
   pitchRangeHz: number;
   voicedRatio: number;
+  pitchTrend: number;
+  volumeTrend: number;
 }): string {
   if (m.voicedRatio < 0.12) return "quiet";
   const tense = m.pitchVariability > 0.22 && m.avgVolume > 0.12;
   const rushed = m.wordsPerMinute > 175;
-  const flat = m.pitchRangeHz < 25 && m.pitchVariability < 0.08;
   if (tense) return "tense";
   if (rushed) return "rushed";
+
+  // How the delivery *lands* — the story the trends tell across the take.
+  // Irritated: pitch and pressure climbing together as the take goes on.
+  if (m.pitchTrend > 0.05 && m.volumeTrend > 0.15) return "irritated";
+  // Passive-aggressive: pitch rising while volume fades — "fine, whatever."
+  if (m.pitchTrend > 0.05 && m.volumeTrend < -0.05) return "passive-aggressive";
+  // Holding back: the take audibly trails off — the end of the thought swallowed.
+  if (m.volumeTrend < -0.2) return "holding-back";
+  // Confused: quiet, searching pitch that wanders and drifts upward.
+  if (m.pitchVariability > 0.18 && m.pitchTrend > 0.05 && m.avgVolume < 0.12) {
+    return "confused";
+  }
+  // Suspicious: slow, measured, with pitch sinking — guarded delivery.
+  if (m.wordsPerMinute < 110 && m.pitchTrend < -0.05 && m.pitchRangeHz < 60) {
+    return "suspicious";
+  }
+
+  const flat = m.pitchRangeHz < 25 && m.pitchVariability < 0.08;
   if (flat) return "flat";
   if (m.wordsPerMinute >= 110 && m.pitchVariability >= 0.08) return "engaged";
   if (m.avgVolume > 0.02 && m.pitchVariability < 0.14) return "calm";
@@ -288,6 +339,31 @@ export const TONE_LABELS: Record<
     label: "RUSHED",
     note: "Fast pacing outruns your listener. Land the period. Then breathe.",
     color: "bg-coral text-ink",
+  },
+  irritated: {
+    label: "IRRITATED",
+    note: "Pitch and pressure climbed together — the take escalated as it went. Exhale, then restart at half the heat.",
+    color: "bg-coral text-ink",
+  },
+  "passive-aggressive": {
+    label: "PASSIVE-AGGRESSIVE",
+    note: "Pitch rose while volume faded — the classic \"fine, whatever.\" Say the true sentence at one even level.",
+    color: "bg-sun text-ink",
+  },
+  "holding-back": {
+    label: "HOLDING BACK",
+    note: "You trailed off — the end of the thought got swallowed. Finish sentences at the volume you started them.",
+    color: "bg-paper text-ink",
+  },
+  confused: {
+    label: "CONFUSED",
+    note: "Quiet, wandering pitch that drifts upward. Pick your last word and land on it — certainty is mostly commitment.",
+    color: "bg-secondary text-ink",
+  },
+  suspicious: {
+    label: "SUSPICIOUS",
+    note: "Slow, measured, with pitch sinking — you sound like you're checking someone. Let the final phrase lift a little.",
+    color: "bg-secondary text-ink",
   },
   flat: {
     label: "FLAT",

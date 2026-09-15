@@ -113,8 +113,86 @@ describe("analyzeFrames", () => {
   });
 
   test("TONE_LABELS covers every emitted tone", () => {
-    for (const tone of ["calm", "engaged", "tense", "rushed", "flat", "quiet", "mixed"]) {
+    for (const tone of [
+      "calm",
+      "engaged",
+      "tense",
+      "rushed",
+      "irritated",
+      "passive-aggressive",
+      "holding-back",
+      "confused",
+      "suspicious",
+      "flat",
+      "quiet",
+      "mixed",
+    ]) {
       expect(TONE_LABELS[tone]).toBeDefined();
     }
+  });
+
+  // ---- Landing tones: how the delivery drifts across the take ----
+
+  test("escalating take (pitch + pressure rising) lands as irritated", () => {
+    const frames = Array.from({ length: 200 }, (_, i) => ({
+      pitchHz: 150 + (40 * i) / 199, // 150 → 190 Hz
+      volume: 0.05 + (0.1 * i) / 199, // 0.05 → 0.15
+      timestamp: now + i * 50,
+    }));
+    const a = analyzeFrames(frames, 10_000, { wordCount: 22 });
+    expect(a.dominantTone).toBe("irritated");
+    expect(a.pitchTrend).toBeGreaterThan(0.05);
+    expect(a.volumeTrend).toBeGreaterThan(0.15);
+  });
+
+  test("rising pitch with fading volume lands as passive-aggressive", () => {
+    const frames = Array.from({ length: 200 }, (_, i) => ({
+      pitchHz: 150 + (40 * i) / 199,
+      volume: 0.15 - (0.09 * i) / 199,
+      timestamp: now + i * 50,
+    }));
+    const a = analyzeFrames(frames, 10_000, { wordCount: 22 });
+    expect(a.dominantTone).toBe("passive-aggressive");
+  });
+
+  test("take that trails off lands as holding-back", () => {
+    const frames = Array.from({ length: 200 }, (_, i) => ({
+      pitchHz: 160,
+      volume: 0.18 - (0.13 * i) / 199,
+      timestamp: now + i * 50,
+    }));
+    const a = analyzeFrames(frames, 10_000, { wordCount: 22 });
+    expect(a.dominantTone).toBe("holding-back");
+  });
+
+  test("quiet wandering upward pitch lands as confused", () => {
+    const frames = Array.from({ length: 200 }, (_, i) => ({
+      pitchHz: 140 + 40 * Math.sin(i / 5) + 0.15 * i,
+      volume: 0.08,
+      timestamp: now + i * 50,
+    }));
+    const a = analyzeFrames(frames, 10_000, { wordCount: 22 });
+    expect(a.dominantTone).toBe("confused");
+  });
+
+  test("slow sinking guarded delivery lands as suspicious", () => {
+    const frames = Array.from({ length: 200 }, (_, i) => ({
+      pitchHz: 170 - (20 * i) / 199, // 170 → 150 Hz
+      volume: 0.12,
+      timestamp: now + i * 50,
+    }));
+    const a = analyzeFrames(frames, 10_000, { wordCount: 15 }); // 90 wpm
+    expect(a.dominantTone).toBe("suspicious");
+  });
+
+  test("splitHalfTrend is 0 for short captures (no noise trends)", () => {
+    const frames = Array.from({ length: 6 }, (_, i) => ({
+      pitchHz: 100 + 100 * i,
+      volume: 0.1,
+      timestamp: now + i * 50,
+    }));
+    const a = analyzeFrames(frames, 1_000, { wordCount: 5 });
+    expect(a.pitchTrend).toBe(0);
+    expect(a.volumeTrend).toBe(0);
   });
 });
