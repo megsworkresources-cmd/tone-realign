@@ -41,9 +41,12 @@ export default function Translate() {
   const startPass = () => {
     // A failed attempt (denied mic, dead take) must not strand the flow on
     // the wrong pass — reset first, and clear any stale banking request.
+    // The peak level of the last live take seeds the adaptive input gain,
+    // so a quiet mic's next pass starts pre-calibrated.
+    const seed = capture.lastPeakRawRms;
     capture.reset();
     setAwaiting(null);
-    capture.start();
+    capture.start(seed);
   };
 
   const finishPass = () => {

@@ -47,7 +47,19 @@ function PracticeRunner({ drill }: { drill: Drill }) {
   const drillStats = useQuery(api.sessions.drillStats);
   const bestByDrill = new Map((drillStats ?? []).map((s) => [s.drill, s]));
 
-  const { state, error, level, livePitchHz, elapsedMs, analysis, transcript, start, stop, reset } =
+  const {
+    state,
+    error,
+    level,
+    livePitchHz,
+    elapsedMs,
+    analysis,
+    transcript,
+    lastPeakRawRms,
+    start,
+    stop,
+    reset,
+  } =
     capture;
 
   return (
@@ -141,7 +153,7 @@ function PracticeRunner({ drill }: { drill: Drill }) {
             {/* Controls */}
             <div className="flex items-center gap-3">
               {state === "idle" && (
-                <NBButton onClick={start} variant="coral">
+                <NBButton onClick={() => start(lastPeakRawRms)} variant="coral">
                   <Mic className="size-4" /> Start my take
                 </NBButton>
               )}

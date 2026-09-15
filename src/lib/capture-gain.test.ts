@@ -1,9 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { analyzeFrames, type ToneFrame } from "./tone-analyzer";
 import {
+  calibrateInputGain,
+  DEAD_TAKE_MESSAGES,
+  deadTakeReason,
   gainedVolume,
+  HOPELESS_RAW_FLOOR,
+  CALIBRATION_WINDOW,
+  initialInputGain,
   isDeadTake,
+  isPeak,
   isSpeechLevel,
+  MAX_INPUT_GAIN,
   MAX_RECORDED_VOLUME,
   MIN_SPEECH_FRAMES,
   SOFTWARE_GAIN,
@@ -11,9 +19,9 @@ import {
 } from "./capture-gain";
 
 /** Build analyzer frames from raw RMS values through the real gain path. */
-function framesFromRaw(raws: number[], pitchHz = 160): ToneFrame[] {
+function framesFromRaw(raws: number[], inputGain = 1, pitchHz = 160): ToneFrame[] {
   return raws.map((r) => {
-    const v = gainedVolume(r);
+    const v = gainedVolume(r, inputGain);
     return {
       pitchHz: isSpeechLevel(v) ? pitchHz : null,
       volume: v,
@@ -80,5 +88,104 @@ describe("capture gain staging", () => {
     // 0.0375. The speech floor must stay above it — otherwise "gating" would
     // feed noise to the detector anyway.
     expect(SPEECH_FLOOR).toBeGreaterThan(0.015 * SOFTWARE_GAIN);
+  });
+});
+
+describe("adaptive input gain", () => {
+  test("gain doubles while loud speech stays below the floor", () => {
+    // Raw 0.012 speech: at gain 1 it lands at 0.03 — under the floor.
+    expect(calibrateInputGain(1, 0.012)).toBe(2);
+    // At gain 2 it reaches 0.06 — over the floor, so calibration stops.
+    expect(calibrateInputGain(2, 0.012)).toBe(2);
+    // A quieter voice needs more headroom: 0.007 settles at ×4.
+    expect(calibrateInputGain(1, 0.007)).toBe(2);
+    expect(calibrateInputGain(2, 0.007)).toBe(4);
+    expect(calibrateInputGain(4, 0.007)).toBe(4);
+  });
+
+  test("gain never rises once speech is above the floor (no chasing)", () => {
+    expect(calibrateInputGain(1, 0.06)).toBe(1);
+    expect(calibrateInputGain(8, 0.06)).toBe(8);
+  });
+
+  test("hot input relaxes the gain instead of doubling it", () => {
+    expect(isPeak(0.2)).toBe(true);
+    expect(isPeak(0.1)).toBe(false);
+    expect(calibrateInputGain(8, 0.2)).toBe(4);
+    // Never relaxes below unity.
+    expect(calibrateInputGain(1, 0.2)).toBe(1);
+  });
+
+  test("MAX_INPUT_GAIN caps the boost", () => {
+    // 0.002 raw never crosses the floor at any legal gain, so calibration
+    // keeps asking for more until the cap holds it at ×8.
+    let gain = 1;
+    for (let i = 0; i < 10; i++) gain = calibrateInputGain(gain, 0.002);
+    expect(gain).toBe(MAX_INPUT_GAIN);
+  });
+
+  test("a very quiet mic becomes audible and scores sanely at its calibrated gain", () => {
+    // Raw 0.012 (the "still says it can't hear me" band): silent at unity…
+    expect(isSpeechLevel(gainedVolume(0.012, 1))).toBe(false);
+    // …audible at the calibrated ×2.
+    expect(isSpeechLevel(gainedVolume(0.012, 2))).toBe(true);
+    const a = analyzeFrames(framesFromRaw(Array(200).fill(0.012), 2), 10_000);
+    expect(a.voicedRatio).toBeGreaterThan(0.9);
+    // A constant-pitch fixture reads low energy by design (monotone), but
+    // audible — not the near-silent degenerate, which would score ~0.
+    expect(a.energyScore).toBeGreaterThan(15);
+  });
+
+  test("initialInputGain converges to the fixed point for a known peak", () => {
+    expect(initialInputGain(null)).toBe(1);
+    expect(initialInputGain(0.012)).toBe(2);
+    expect(initialInputGain(0.007)).toBe(4);
+    expect(initialInputGain(0.05)).toBe(1); // already audible
+    expect(initialInputGain(0.2)).toBe(1); // hot input relaxes to unity
+  });
+
+  test("mid-take recalibration adapts when the speaker leans in", () => {
+    // 40 silent-ish frames (gain unchanged), then audible speech: the
+    // window-40 calibration doubles the gain partway through the take.
+    const raws = [
+      ...Array(40).fill(0.006),
+      ...Array(20).fill(0.012),
+    ];
+    let gain = 1;
+    let speechFrames = 0;
+    let maxRaw = 0;
+    for (let i = 0; i < raws.length; i++) {
+      const raw = raws[i];
+      maxRaw = Math.max(maxRaw, raw);
+      if ((i + 1) % CALIBRATION_WINDOW === 0) {
+        gain = calibrateInputGain(gain, maxRaw);
+      }
+      if (isSpeechLevel(gainedVolume(raw, gain))) speechFrames++;
+    }
+    expect(gain).toBe(2);
+    expect(speechFrames).toBe(20);
+  });
+});
+
+describe("dead-take verdicts", () => {
+  test("each failure mode gets its own honest reason", () => {
+    expect(deadTakeReason(0, 0.0002)).toBe("muted"); // nothing at all
+    expect(deadTakeReason(0, 0.001)).toBe("too-quiet"); // below rescue
+    expect(deadTakeReason(0, 0.006)).toBe("no-speech"); // audio, never gated in
+    expect(deadTakeReason(0, 0.013)).toBe("soft"); // nearly there
+  });
+
+  test("the hopeless floor is exactly where rescue becomes impossible", () => {
+    expect(HOPELESS_RAW_FLOOR).toBeCloseTo(0.0025, 10);
+    expect(deadTakeReason(0, HOPELESS_RAW_FLOOR - 0.0001)).toBe("too-quiet");
+    expect(deadTakeReason(0, HOPELESS_RAW_FLOOR + 0.0001)).toBe("no-speech");
+  });
+
+  test("every verdict has a user-facing message, and none is generic", () => {
+    for (const reason of ["muted", "too-quiet", "soft", "no-speech"] as const) {
+      const msg = DEAD_TAKE_MESSAGES[reason];
+      expect(msg.length).toBeGreaterThan(20);
+      expect(msg).toMatch(/mic|hear|speak|take/);
+    }
   });
 });

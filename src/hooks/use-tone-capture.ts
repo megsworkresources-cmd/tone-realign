@@ -6,9 +6,16 @@ import {
   type ToneFrame,
 } from "@/lib/tone-analyzer";
 import {
+  calibrateInputGain,
+  CALIBRATION_WINDOW,
+  DEAD_TAKE_MESSAGES,
+  deadTakeReason,
   gainedVolume,
+  initialInputGain,
   isDeadTake,
+  isPeak,
   isSpeechLevel,
+  RECALIBRATE_EVERY,
   SOFTWARE_GAIN,
 } from "@/lib/capture-gain";
 
@@ -23,7 +30,13 @@ interface UseToneCapture {
   analysis: ToneAnalysis | null;
   /** Best-effort live speech-to-text of the take (empty when unsupported). */
   transcript: string;
-  start: () => Promise<void>;
+  /** Max raw mic level of the previous take, or null before the first one.
+   * Pass it back into start() to pre-calibrate the input gain. */
+  lastPeakRawRms: number | null;
+  /** Pass the previous take's max raw mic level (capture.lastPeakRawRms)
+   * to begin with its calibrated gain — the second take on a quiet mic
+   * is heard immediately instead of being another dead take. */
+  start: (lastPeakRawRms?: number | null) => Promise<void>;
   stop: () => void;
   reset: () => void;
 }
@@ -77,6 +90,9 @@ export function useToneCapture(): UseToneCapture {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [analysis, setAnalysis] = useState<ToneAnalysis | null>(null);
   const [transcript, setTranscript] = useState("");
+  /** Peak raw mic level of the previous take — the calibration seed for the
+   * next start(). State, not a ref, so consumers re-render with the new seed. */
+  const [lastPeakRawRms, setLastPeakRawRms] = useState<number | null>(null);
 
   const framesRef = useRef<ToneFrame[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -100,6 +116,14 @@ export function useToneCapture(): UseToneCapture {
   const analyzeTimerRef = useRef<number | null>(null);
   const lastUiAtRef = useRef(0);
   const lastPitchRef = useRef<number | null>(null);
+  /** Adaptive input gain (see capture-gain.ts) — raised when loud speech
+   * still lands below the speech floor, relaxed on hot input. */
+  const inputGainRef = useRef(1);
+  /** Loudest raw sample since the last calibration pass, and across the
+   * whole take (drives the dead-take verdict). */
+  const windowMaxRawRef = useRef(0);
+  const maxRawRef = useRef(0);
+  const framesSinceCalibrationRef = useRef(0);
 
   const cleanup = useCallback(() => {
     if (rafRef.current !== null) {
@@ -138,7 +162,7 @@ export function useToneCapture(): UseToneCapture {
     [cleanup],
   );
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (lastPeakRawRms?: number | null) => {
     // Double-start guard: rAF covers the recording phase; startingRef covers
     // the async window before it (permission prompt, getUserMedia) where
     // state is still "idle" and the Start button is still clickable — a
@@ -162,6 +186,10 @@ export function useToneCapture(): UseToneCapture {
     setElapsedMs(0);
     setTranscript("");
     transcriptRef.current = "";
+    inputGainRef.current = 1;
+    windowMaxRawRef.current = 0;
+    maxRawRef.current = 0;
+    framesSinceCalibrationRef.current = 0;
     // Deterministic first frame: no stale pitch from the previous take
     // flashing on the meter before speech arrives.
     lastPitchRef.current = null;
@@ -214,6 +242,12 @@ export function useToneCapture(): UseToneCapture {
       const timeBuf = new Float32Array(analyser.fftSize);
       const gainedBuf = new Float32Array(analyser.fftSize);
       gainedBufRef.current = gainedBuf;
+      // Fresh take starts from the caller-supplied calibrated gain, not a
+      // leftover value — and resets the calibration accumulators.
+      inputGainRef.current = initialInputGain(lastPeakRawRms ?? null);
+      windowMaxRawRef.current = 0;
+      maxRawRef.current = 0;
+      framesSinceCalibrationRef.current = 0;
       startedAtRef.current = performance.now();
       lastFrameAtRef.current = 0;
       setState("recording");
@@ -254,7 +288,9 @@ export function useToneCapture(): UseToneCapture {
         let sum = 0;
         for (let i = 0; i < timeBuf.length; i++) sum += timeBuf[i] * timeBuf[i];
         const rms = Math.sqrt(sum / timeBuf.length);
-        const gainedRms = gainedVolume(rms);
+        maxRawRef.current = Math.max(maxRawRef.current, rms);
+        windowMaxRawRef.current = Math.max(windowMaxRawRef.current, rms);
+        const gainedRms = gainedVolume(rms, inputGainRef.current);
 
         // Frame capture at fixed cadence for analysis
         if (now - lastFrameAtRef.current >= FRAME_INTERVAL_MS) {
@@ -264,6 +300,11 @@ export function useToneCapture(): UseToneCapture {
           // speech floor, so silence can't produce garbage "pitch" and
           // dilute the voiced ratio.
           if (isSpeechLevel(gainedRms)) {
+            // Loud peaks mean the input is hot — relax before clamping
+            // squeezes every loud syllable to the same ceiling.
+            if (isPeak(rms)) {
+              inputGainRef.current = calibrateInputGain(inputGainRef.current, rms);
+            }
             speechFramesRef.current += 1;
             for (let i = 0; i < timeBuf.length; i++) {
               gainedBuf[i] = timeBuf[i] * SOFTWARE_GAIN;
@@ -276,6 +317,23 @@ export function useToneCapture(): UseToneCapture {
             volume: gainedRms,
             timestamp: now,
           });
+
+          // Mid-take calibration: if a full window has passed and their
+          // loudest moment still lands below the floor, raise the gain —
+          // a quiet speaker gets heard partway through the same take.
+          framesSinceCalibrationRef.current += 1;
+          if (
+            framesSinceCalibrationRef.current >= CALIBRATION_WINDOW &&
+            framesRef.current.length % RECALIBRATE_EVERY === 0 &&
+            !isPeak(windowMaxRawRef.current)
+          ) {
+            inputGainRef.current = calibrateInputGain(
+              inputGainRef.current,
+              windowMaxRawRef.current,
+            );
+            windowMaxRawRef.current = 0;
+            framesSinceCalibrationRef.current = 0;
+          }
         }
 
         // React updates at ~30fps instead of every animation frame: the
@@ -312,15 +370,19 @@ export function useToneCapture(): UseToneCapture {
     if (rafRef.current === null) return;
     cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
+    // Record the take's peak before any early return — the next start()
+    // uses it to begin pre-calibrated, so a quiet mic's second take is
+    // heard immediately instead of failing twice.
+    setLastPeakRawRms(maxRawRef.current);
 
     // Dead-mic check: if the take never contained speech-level frames,
-    // the "analysis" would be noise dressed up as scores. Say so instead.
+    // the "analysis" would be noise dressed up as scores. Say why, based
+    // on what was actually measured — muted, too quiet, faint, or short.
     if (isDeadTake(speechFramesRef.current)) {
+      const reason = deadTakeReason(speechFramesRef.current, maxRawRef.current);
       cleanup();
       setState("idle");
-      setError(
-        "We couldn't hear you — check that the right mic is selected, move closer, and speak up.",
-      );
+      setError(DEAD_TAKE_MESSAGES[reason]);
       return;
     }
 
@@ -378,6 +440,7 @@ export function useToneCapture(): UseToneCapture {
     elapsedMs,
     analysis,
     transcript,
+    lastPeakRawRms,
     start,
     stop,
     reset,
