@@ -53,7 +53,7 @@ export default function Library() {
                     whileHover={{ y: -4 }}
                     className="group block"
                   >
-                    <NBPanel className="overflow-hidden border-paper text-paper">
+                    <NBPanel className="overflow-hidden border-paper bg-ink text-paper">
                       <div className="relative border-b-2 border-ink">
                         <img
                           src={videoThumb(video.id)}
