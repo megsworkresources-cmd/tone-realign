@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { NAV_ITEMS, PUBLIC_ROUTES } from "./site-nav";
+import { NAV_ITEMS, PAGE_ORDER, PUBLIC_ROUTES, tourStops } from "./site-nav";
 import { readFileSync } from "node:fs";
 
 describe("site nav config", () => {
@@ -17,6 +17,43 @@ describe("site nav config", () => {
     const palette = /^bg-(sun|mint|coral|paper|card|secondary|ink)$/;
     for (const n of NAV_ITEMS) {
       expect(n.dot).toMatch(palette);
+    }
+  });
+});
+
+describe("page tour (back/forward pager)", () => {
+  test("tour covers every public route exactly once, in order", () => {
+    const tourPaths = PAGE_ORDER.map((p) => p.to);
+    expect(new Set(tourPaths).size).toBe(tourPaths.length);
+    expect(tourPaths).toEqual(PUBLIC_ROUTES);
+  });
+
+  test("every tour stop has a label and a blurb", () => {
+    for (const stop of PAGE_ORDER) {
+      expect(stop.label.length).toBeGreaterThan(0);
+      expect(stop.blurb.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("tourStops: middle page has both neighbors", () => {
+    const { prev, next } = tourStops("/tone-check");
+    expect(prev?.to).toBe("/how");
+    expect(next?.to).toBe("/drills");
+  });
+
+  test("tourStops: home opens the tour (no back), library closes it (no next)", () => {
+    const home = tourStops("/");
+    expect(home.prev).toBeNull();
+    expect(home.next?.to).toBe("/how");
+    const library = tourStops("/library");
+    expect(library.prev?.to).toBe("/drills");
+    expect(library.next).toBeNull();
+  });
+
+  test("every public page renders the pager", () => {
+    for (const page of ["Home", "HowItWorks", "ToneCheck", "Drills", "Library"]) {
+      const src = readFileSync(new URL(`../pages/${page}.tsx`, import.meta.url), "utf8");
+      expect(src).toContain("PagePager");
     }
   });
 });

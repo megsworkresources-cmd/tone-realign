@@ -1,5 +1,6 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
+import { PagePager } from "@/components/PagePager";
 import { WATCH_LIST, videoThumb } from "@/lib/watch-list";
 import { READING_LIST } from "@/lib/reading-list";
 import { getDrill } from "@/lib/drills";
@@ -174,6 +175,7 @@ export default function Library() {
           </Link>
         </div>
       </section>
+      <PagePager />
     </PublicLayout>
   );
 }

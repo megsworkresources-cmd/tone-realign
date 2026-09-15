@@ -1,5 +1,6 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
+import { PagePager } from "@/components/PagePager";
 import { DRILLS } from "@/lib/drills";
 import { getDailyChallenge } from "@/lib/daily";
 import { ArrowRight, Check, Mic, Sparkles } from "lucide-react";
@@ -116,6 +117,7 @@ export default function Drills() {
           </div>
         </div>
       </section>
+      <PagePager />
     </PublicLayout>
   );
 }

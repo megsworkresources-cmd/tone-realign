@@ -1,5 +1,6 @@
 import { NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
+import { PagePager } from "@/components/PagePager";
 import { useAuth } from "@/hooks/use-auth";
 import {
   ArrowRight,
@@ -401,6 +402,7 @@ export default function Home() {
           </Link>
         </div>
       </section>
+      <PagePager />
     </PublicLayout>
   );
 }

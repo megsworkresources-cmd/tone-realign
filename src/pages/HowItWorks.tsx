@@ -1,5 +1,6 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
+import { PagePager } from "@/components/PagePager";
 import { getDailyChallenge } from "@/lib/daily";
 import {
   Activity,
@@ -124,6 +125,7 @@ export default function HowItWorks() {
           </div>
         </div>
       </section>
+      <PagePager />
     </PublicLayout>
   );
 }

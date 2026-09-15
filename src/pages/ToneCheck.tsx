@@ -1,5 +1,6 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
+import { PagePager } from "@/components/PagePager";
 import {
   ARCHETYPES,
   TONE_CHECK,
@@ -113,6 +114,7 @@ export default function ToneCheck() {
           </p>
         </div>
       </section>
+      <PagePager />
     </PublicLayout>
   );
 }
