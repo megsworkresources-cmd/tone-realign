@@ -5,6 +5,12 @@ import {
   type ToneAnalysis,
   type ToneFrame,
 } from "@/lib/tone-analyzer";
+import {
+  gainedVolume,
+  isDeadTake,
+  isSpeechLevel,
+  SOFTWARE_GAIN,
+} from "@/lib/capture-gain";
 
 export type CaptureState = "idle" | "recording" | "analyzing" | "done";
 
@@ -24,19 +30,9 @@ interface UseToneCapture {
 
 const FRAME_INTERVAL_MS = 50;
 /**
- * Analysis-only software gain. autoGainControl is off (it would smear the
- * dynamics we're measuring), but raw laptop-mic levels then sit around
- * 0.02–0.05 RMS — below the analyzer's speech floors. Scaling the captured
- * buffer before analysis puts normal speech in the range the scores expect.
- * Pitch detection is scale-invariant, so the gain only moves loudness math.
+ * Gain staging, speech gating, and dead-mic thresholds live in
+ * src/lib/capture-gain.ts (pure + unit-tested); the hook applies them.
  */
-const SOFTWARE_GAIN = 2.5;
-/** Loudest volume we'll record, so loud mics don't saturate the scores. */
-const MAX_RECORDED_VOLUME = 0.8;
-/** Gained RMS below which a frame counts as silence for pitch purposes. */
-const SPEECH_FLOOR = 0.05;
-/** Fewer speech-level frames than this ≈ the mic never heard you. */
-const MIN_SPEECH_FRAMES = 5;
 
 // Minimal structural typing for the Web Speech API (not in lib.dom for all
 // browsers, and webkit prefixes the constructor) — no `any` escapes here.
@@ -195,7 +191,7 @@ export function useToneCapture(): UseToneCapture {
         let sum = 0;
         for (let i = 0; i < timeBuf.length; i++) sum += timeBuf[i] * timeBuf[i];
         const rms = Math.sqrt(sum / timeBuf.length);
-        const gainedRms = Math.min(rms * SOFTWARE_GAIN, MAX_RECORDED_VOLUME);
+        const gainedRms = gainedVolume(rms);
         setLevel(Math.min(gainedRms * 4, 1));
 
         // Frame capture at fixed cadence for analysis
@@ -205,7 +201,7 @@ export function useToneCapture(): UseToneCapture {
           // Speech-gate the pitch detector: room tone gains below the
           // speech floor, so silence can't produce garbage "pitch" and
           // dilute the voiced ratio.
-          if (gainedRms >= SPEECH_FLOOR) {
+          if (isSpeechLevel(gainedRms)) {
             speechFramesRef.current += 1;
             for (let i = 0; i < timeBuf.length; i++) {
               gainedBuf[i] = timeBuf[i] * SOFTWARE_GAIN;
@@ -247,7 +243,7 @@ export function useToneCapture(): UseToneCapture {
 
     // Dead-mic check: if the take never contained speech-level frames,
     // the "analysis" would be noise dressed up as scores. Say so instead.
-    if (speechFramesRef.current < MIN_SPEECH_FRAMES) {
+    if (isDeadTake(speechFramesRef.current)) {
       cleanup();
       setState("idle");
       setError(

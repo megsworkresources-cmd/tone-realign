@@ -1,0 +1,84 @@
+import { describe, expect, test } from "bun:test";
+import { analyzeFrames, type ToneFrame } from "./tone-analyzer";
+import {
+  gainedVolume,
+  isDeadTake,
+  isSpeechLevel,
+  MAX_RECORDED_VOLUME,
+  MIN_SPEECH_FRAMES,
+  SOFTWARE_GAIN,
+  SPEECH_FLOOR,
+} from "./capture-gain";
+
+/** Build analyzer frames from raw RMS values through the real gain path. */
+function framesFromRaw(raws: number[], pitchHz = 160): ToneFrame[] {
+  return raws.map((r) => {
+    const v = gainedVolume(r);
+    return {
+      pitchHz: isSpeechLevel(v) ? pitchHz : null,
+      volume: v,
+      timestamp: 0,
+    };
+  });
+}
+
+describe("capture gain staging", () => {
+  test("typical laptop-mic speech lands above the speech floor", () => {
+    // Quiet-mic speech: raw RMS 0.02–0.05 (documented quiet-mic band)
+    for (const raw of [0.02, 0.03, 0.04, 0.05]) {
+      expect(isSpeechLevel(gainedVolume(raw))).toBe(true);
+    }
+    // Room tone must stay below it
+    for (const raw of [0.001, 0.005, 0.01, 0.015]) {
+      expect(isSpeechLevel(gainedVolume(raw))).toBe(false);
+    }
+  });
+
+  test("gain is clamped so loud mics never saturate", () => {
+    expect(gainedVolume(0.5)).toBe(MAX_RECORDED_VOLUME);
+    expect(gainedVolume(10)).toBe(MAX_RECORDED_VOLUME);
+    expect(gainedVolume(0)).toBe(0);
+    expect(gainedVolume(0.1)).toBeCloseTo(0.25, 10);
+  });
+
+  test("raw speech through the gain path produces healthy voiced ratio", () => {
+    // A raw take that pre-fix would have been half noise-gated:
+    const raws = Array.from({ length: 100 }, (_, i) =>
+      i % 2 === 0 ? 0.03 : 0.008, // alternating syllable / room tone
+    );
+    const frames = framesFromRaw(raws);
+    const voiced = frames.filter((f) => f.pitchHz !== null).length;
+    // Syllable frames voiced, room tone not — the gate works
+    expect(voiced).toBe(50);
+    const a = analyzeFrames(frames, 5_000);
+    expect(a.voicedRatio).toBe(0.5);
+  });
+
+  test("quiet-mic take scores in a sane range (not the all-silence degenerate)", () => {
+    const raws = Array.from({ length: 200 }, () => 0.035);
+    const a = analyzeFrames(framesFromRaw(raws), 10_000);
+    // Pre-fix, these frames would all sit at 0.035 RMS: pitch-less, and the
+    // volume-based scores would read the take as near-silent.
+    expect(a.voicedRatio).toBeGreaterThan(0.9);
+    expect(a.energyScore).toBeGreaterThan(20);
+    expect(a.calmScore).toBeGreaterThan(40);
+    for (const s of [a.calmScore, a.energyScore, a.clarityScore, a.stabilityScore]) {
+      expect(s).toBeGreaterThanOrEqual(0);
+      expect(s).toBeLessThanOrEqual(100);
+    }
+  });
+
+  test("dead-mic detection: silence and near-silence are dead takes", () => {
+    expect(isDeadTake(0)).toBe(true);
+    expect(isDeadTake(MIN_SPEECH_FRAMES - 1)).toBe(true);
+    expect(isDeadTake(MIN_SPEECH_FRAMES)).toBe(false);
+    expect(isDeadTake(50)).toBe(false);
+  });
+
+  test("SPEECH_FLOOR sits above detectPitch's silence floor so gating is meaningful", () => {
+    // detectPitch returns null below raw RMS 0.015; after ×2.5 gain that is
+    // 0.0375. The speech floor must stay above it — otherwise "gating" would
+    // feed noise to the detector anyway.
+    expect(SPEECH_FLOOR).toBeGreaterThan(0.015 * SOFTWARE_GAIN);
+  });
+});
