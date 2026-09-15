@@ -43,8 +43,12 @@ export const mark = mutation({
     if (existing) {
       if (existing.completed.includes(action)) return existing._id;
       const completed = [...existing.completed, action];
-      // Sweep bonus: all four habits in one day pays an extra +40 once.
-      const swept = completed.length === 4;
+      // Sweep bonus: the four core habits (translate excluded) in one day
+      // pays an extra +40 once. Server-side count must match the client's
+      // CHECKLIST_ACTIONS contract — translate awards XP but never sweeps.
+      const swept =
+        action !== "translate" &&
+        completed.filter((c) => c !== "translate").length === 4;
       await ctx.db.patch(existing._id, {
         completed,
         xpEarned: existing.xpEarned + ACTION_XP[action] + (swept ? 40 : 0),
@@ -110,9 +114,12 @@ export const countQuizScenario = mutation({
       .withIndex("by_user_day", (q) => q.eq("userId", user._id).eq("day", day))
       .unique();
     if (row && !row.completed.includes("quiz")) {
+      const completed = [...row.completed, "quiz"];
+      // Same sweep contract as `mark`: the four core habits only.
+      const swept = completed.filter((c) => c !== "translate").length === 4;
       await ctx.db.patch(row._id, {
-        completed: [...row.completed, "quiz"],
-        xpEarned: row.xpEarned + ACTION_XP.quiz,
+        completed,
+        xpEarned: row.xpEarned + ACTION_XP.quiz + (swept ? 40 : 0),
       });
     } else if (!row) {
       await ctx.db.insert("dailyLog", {

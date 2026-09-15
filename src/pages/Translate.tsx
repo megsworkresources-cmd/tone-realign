@@ -39,20 +39,30 @@ export default function Translate() {
   const done = reflexAnalysis !== null && intendedAnalysis !== null;
 
   const startPass = () => {
+    // A failed attempt (denied mic, dead take) must not strand the flow on
+    // the wrong pass — reset first, and clear any stale banking request.
     capture.reset();
+    setAwaiting(null);
     capture.start();
   };
 
   const finishPass = () => {
     // stop() is void — the analysis arrives in hook state a beat later,
-    // and the render-adjust below banks it the moment it differs.
+    // and the render-adjust below banks it the moment it differs. A failed
+    // stop (dead mic) re-enters idle *without* an analysis, which the same
+    // render-adjust treats as the all-clear below.
     capture.stop();
     setAwaiting(pass);
   };
 
   // Bank each pass's analysis during render as the hook produces it
   // (React's "adjust state when a prop changes" pattern — no effect).
-  if (awaiting && capture.analysis && capture.analysis !== lastSeen) {
+  // A failed stop (dead mic / denied permission) returns to idle with no
+  // analysis — clear the wait so the button comes back and the pass can be
+  // retried, with the hook's specific error shown below.
+  if (awaiting && capture.state === "idle" && !capture.analysis) {
+    setAwaiting(null);
+  } else if (awaiting && capture.analysis && capture.analysis !== lastSeen) {
     const banked = capture.analysis;
     setLastSeen(banked);
     if (awaiting === "reflex") {
@@ -175,6 +185,9 @@ export default function Translate() {
             )}
             {capture.state === "analyzing" && (
               <div className="mt-5 text-center font-display">Analyzing…</div>
+            )}
+            {capture.error && (
+              <p className="nb mt-5 bg-coral px-3 py-2 text-sm font-medium">{capture.error}</p>
             )}
           </NBPanel>
         )}

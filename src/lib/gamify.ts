@@ -31,10 +31,17 @@ export const DAILY_ACTIONS: DailyActionDef[] = [
   { id: "reset", label: "Take the reset", detail: "One 4-7-8 round set", xp: XP.reset },
 ];
 
+/**
+ * The daily checklist is intentionally the four core habits — `translate`
+ * awards its own XP but does not count toward the sweep, so the checklist
+ * stays a fixed 4-slot contract (the server sweep math depends on it).
+ */
+export const CHECKLIST_ACTIONS: DailyActionId[] = DAILY_ACTIONS.map((a) => a.id);
+
 /** Percentage of the daily checklist completed (0..100). */
 export function dailyProgressPct(completed: DailyActionId[]): number {
-  const done = new Set(completed);
-  return Math.round((done.size / DAILY_ACTIONS.length) * 100);
+  const done = new Set(completed.filter((c): c is DailyActionId => CHECKLIST_ACTIONS.includes(c as DailyActionId)));
+  return Math.round((done.size / CHECKLIST_ACTIONS.length) * 100);
 }
 
 // ---- Levels ----

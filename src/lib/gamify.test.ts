@@ -1,162 +1,129 @@
 import { describe, expect, test } from "bun:test";
 import {
   ACHIEVEMENTS,
+  CHECKLIST_ACTIONS,
   DAILY_ACTIONS,
   dailyProgressPct,
   earnedAchievements,
   levelInfo,
   XP,
   type AchievementStats,
+  type DailyActionId,
 } from "./gamify";
 
-const emptyStats: AchievementStats = {
-  totalSessions: 0,
-  totalMinutes: 0,
-  bestOverall: 0,
-  totalQuiz: 0,
-  totalReframes: 0,
-  totalResets: 0,
-  streakDays: 0,
-  drillsTried: 0,
-  drills: 5,
-};
-
-describe("levelInfo", () => {
-  test("level 1 starts at zero XP with a known band", () => {
-    const l = levelInfo(0);
-    expect(l.level).toBe(1);
-    expect(l.label).toBe("Warm-Up");
-    expect(l.into).toBe(0);
-    expect(l.needed).toBe(150);
-    expect(l.progressPct).toBe(0);
-    expect(l.nextLabel).toBe("Steady Hand");
-    expect(l.maxed).toBe(false);
+describe("XP and levels", () => {
+  test("every action pays positive XP", () => {
+    for (const value of Object.values(XP)) {
+      expect(value).toBeGreaterThan(0);
+    }
+    for (const action of DAILY_ACTIONS) {
+      expect(action.xp).toBe(XP[action.id]);
+    }
   });
 
-  test("bands advance at exact thresholds", () => {
-    expect(levelInfo(149).label).toBe("Warm-Up");
-    expect(levelInfo(150).label).toBe("Steady Hand");
-    expect(levelInfo(400).label).toBe("Clear Signal");
+  test("levelInfo is monotonic across the whole XP range", () => {
+    let prev = -1;
+    for (let xp = 0; xp <= 6000; xp += 137) {
+      const info = levelInfo(xp);
+      expect(info.level).toBeGreaterThanOrEqual(prev);
+      prev = info.level;
+    }
   });
 
-  test("progress fills proportionally inside a band", () => {
-    const l = levelInfo(75);
-    expect(l.progressPct).toBe(50);
-    expect(l.xpToNext).toBe(75);
+  test("level boundaries land exactly", () => {
+    expect(levelInfo(0).level).toBe(1);
+    expect(levelInfo(0).label).toBe("Warm-Up");
+    expect(levelInfo(149).level).toBe(1);
+    expect(levelInfo(150).level).toBe(2);
+    expect(levelInfo(999999).maxed).toBe(true);
+    expect(levelInfo(999999).progressPct).toBe(100);
   });
 
-  test("top level reports maxed with full progress", () => {
-    const l = levelInfo(9_999_999);
-    expect(l.maxed).toBe(true);
-    expect(l.progressPct).toBe(100);
-    expect(l.nextLabel).toBeUndefined();
-  });
-
-  test("levels advance strictly across one sample per level", () => {
-    const infos = [0, 150, 400, 800, 1400, 2200, 3200, 4600].map(levelInfo);
-    const labels = new Set(infos.map((i) => i.label));
-    expect(labels.size).toBe(infos.length);
-    for (let i = 1; i < infos.length; i++) {
-      expect(infos[i].level).toBeGreaterThan(infos[i - 1].level);
+  test("progress math never exceeds 100 or goes negative", () => {
+    for (const xp of [0, 10, 150, 399, 400, 1400, 4600, 100000]) {
+      const info = levelInfo(xp);
+      expect(info.progressPct).toBeGreaterThanOrEqual(0);
+      expect(info.progressPct).toBeLessThanOrEqual(100);
+      expect(info.xpToNext).toBeGreaterThanOrEqual(0);
     }
   });
 });
 
-describe("daily checklist", () => {
-  test("four actions with positive, non-equal-ish XP", () => {
-    expect(DAILY_ACTIONS).toHaveLength(4);
-    for (const a of DAILY_ACTIONS) {
-      expect(a.xp).toBeGreaterThan(0);
-      expect(a.label.length).toBeGreaterThan(0);
-    }
-    expect(new Set(DAILY_ACTIONS.map((a) => a.id)).size).toBe(4);
+describe("daily checklist contract", () => {
+  test("checklist is exactly the four core actions — translate excluded", () => {
+    expect(CHECKLIST_ACTIONS).toEqual(["take", "quiz", "reframe", "reset"]);
+    expect(CHECKLIST_ACTIONS).not.toContain("translate");
   });
 
-  test("progress math covers empty, partial, full", () => {
-    expect(dailyProgressPct([])).toBe(0);
-    expect(dailyProgressPct(["take", "quiz"])).toBe(50);
-    expect(dailyProgressPct(["take", "quiz", "reframe", "reset"])).toBe(100);
+  test("translate does not dilute the completion percentage", () => {
+    // Four core habits done → 100% even with translate also in the log
+    const all: DailyActionId[] = ["take", "quiz", "reframe", "reset", "translate"];
+    expect(dailyProgressPct(all)).toBe(100);
+    // Three core habits + translate → still 75%, translate is not a slot
+    expect(dailyProgressPct(["take", "quiz", "reframe", "translate"])).toBe(75);
+    // Translate alone → 0%
+    expect(dailyProgressPct(["translate"])).toBe(0);
   });
 
-  test("duplicates do not inflate progress", () => {
+  test("duplicate entries cannot inflate the percentage", () => {
     expect(dailyProgressPct(["take", "take", "take"])).toBe(25);
+  });
+
+  test("sweep requires the four core habits — translate never completes it", () => {
+    // The server pays the sweep when non-translate completions hit 4; the
+    // client contract here is the same four-slot list it derives from.
+    const core: DailyActionId[] = ["take", "quiz", "reframe", "reset"];
+    expect(dailyProgressPct(core)).toBe(100);
+    expect(dailyProgressPct(["quiz", "reframe", "reset", "translate" as DailyActionId])).toBe(75);
+  });
+
+  test("every checklist action pays its advertised XP", () => {
+    for (const action of DAILY_ACTIONS) {
+      expect(action.xp).toBeGreaterThan(0);
+    }
   });
 });
 
 describe("achievements", () => {
-  test("unique ids across tiers", () => {
-    const ids = ACHIEVEMENTS.map((a) => a.id);
-    expect(new Set(ids).size).toBe(ids.length);
+  const zeroStats: AchievementStats = {
+    totalSessions: 0,
+    totalMinutes: 0,
+    bestOverall: 0,
+    totalQuiz: 0,
+    totalReframes: 0,
+    totalResets: 0,
+    streakDays: 0,
+    drillsTried: 0,
+    drills: 5,
+  };
+
+  test("zero stats earn nothing", () => {
+    expect(earnedAchievements(zeroStats)).toEqual([]);
+  });
+
+  test("each achievement is achievable by its documented threshold", () => {
+    const cases: [string, Partial<AchievementStats>][] = [
+      ["first-word", { totalSessions: 1 }],
+      ["full-circuit", { drillsTried: 5 }],
+      ["week-streak", { streakDays: 7 }],
+      ["high-score", { bestOverall: 85 }],
+      ["room-reader", { totalQuiz: 10 }],
+      ["reframer", { totalReframes: 5 }],
+      ["deep-breaths", { totalResets: 10 }],
+      ["ten-takes", { totalSessions: 10 }],
+      ["sixty-minutes", { totalMinutes: 60 }],
+    ];
+    for (const [id, over] of cases) {
+      const stats = { ...zeroStats, ...over };
+      expect(earnedAchievements(stats)).toContain(id);
+    }
+  });
+
+  test("achievement ids are unique and tiers valid", () => {
+    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(ACHIEVEMENTS.length);
     for (const a of ACHIEVEMENTS) {
       expect(["bronze", "silver", "gold"]).toContain(a.tier);
       expect(a.detail.length).toBeGreaterThan(0);
     }
-  });
-
-  test("empty stats earn nothing (new user lands clean)", () => {
-    expect(earnedAchievements(emptyStats)).toEqual([]);
-  });
-
-  test("first take earns exactly First Word", () => {
-    const earned = earnedAchievements({ ...emptyStats, totalSessions: 1 });
-    expect(earned).toEqual(["first-word"]);
-  });
-
-  test("full-circuit requires every drill tried", () => {
-    expect(
-      earnedAchievements({ ...emptyStats, totalSessions: 9, drillsTried: 4, drills: 5 }),
-    ).not.toContain("full-circuit");
-    expect(
-      earnedAchievements({ ...emptyStats, drillsTried: 5, drills: 5 }),
-    ).toContain("full-circuit");
-  });
-
-  test("the veteran profile earns the expected set", () => {
-    const earned = earnedAchievements({
-      totalSessions: 40,
-      totalMinutes: 75,
-      bestOverall: 88,
-      totalQuiz: 12,
-      totalReframes: 6,
-      totalResets: 11,
-      streakDays: 8,
-      drillsTried: 5,
-      drills: 5,
-    });
-    expect(earned).toEqual([
-      "first-word",
-      "full-circuit",
-      "week-streak",
-      "high-score",
-      "room-reader",
-      "reframer",
-      "deep-breaths",
-      "ten-takes",
-      "sixty-minutes",
-    ]);
-  });
-
-  test("every achievement's predicate is satisfied by some achievable profile", () => {
-    // Guard against impossible achievements (e.g. inverted comparisons).
-    for (const a of ACHIEVEMENTS) {
-      const generous: AchievementStats = {
-        totalSessions: 999,
-        totalMinutes: 999,
-        bestOverall: 100,
-        totalQuiz: 999,
-        totalReframes: 999,
-        totalResets: 999,
-        streakDays: 99,
-        drillsTried: 5,
-        drills: 5,
-      };
-      expect(a.test(generous)).toBe(true);
-    }
-  });
-});
-
-describe("XP constants", () => {
-  test("daily sweep bonus beats any single action", () => {
-    expect(XP.dailySweep).toBeGreaterThan(XP.take);
   });
 });

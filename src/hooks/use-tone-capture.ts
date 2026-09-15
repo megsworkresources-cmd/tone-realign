@@ -106,6 +106,10 @@ export function useToneCapture(): UseToneCapture {
   useEffect(() => cleanup, [cleanup]);
 
   const start = useCallback(async () => {
+    // Double-start guard: a second click while awaiting getUserMedia would
+    // orphan the first stream (its tracks are only stopped via cleanup of
+    // the refs it would overwrite). Ignore re-entry.
+    if (rafRef.current !== null) return;
     setError(null);
     setAnalysis(null);
     framesRef.current = [];
