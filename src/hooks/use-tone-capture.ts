@@ -125,6 +125,15 @@ export function useToneCapture(): UseToneCapture {
       // nothing left to stop it.
       sessionRef.current += 1;
       cleanup();
+      // The speech recognizer holds the mic independently of our stream —
+      // leaving it running after unmount keeps the browser's mic indicator
+      // alive on a page the user already left.
+      try {
+        recognitionRef.current?.abort();
+      } catch {
+        // transcript is best-effort
+      }
+      recognitionRef.current = null;
     },
     [cleanup],
   );
@@ -153,6 +162,10 @@ export function useToneCapture(): UseToneCapture {
     setElapsedMs(0);
     setTranscript("");
     transcriptRef.current = "";
+    // Deterministic first frame: no stale pitch from the previous take
+    // flashing on the meter before speech arrives.
+    lastPitchRef.current = null;
+    lastUiAtRef.current = 0;
 
     try {
       // Create the AudioContext synchronously, inside the click gesture.
@@ -353,6 +366,8 @@ export function useToneCapture(): UseToneCapture {
     transcriptRef.current = "";
     framesRef.current = [];
     speechFramesRef.current = 0;
+    lastPitchRef.current = null;
+    lastUiAtRef.current = 0;
   }, [cleanup]);
 
   return {
