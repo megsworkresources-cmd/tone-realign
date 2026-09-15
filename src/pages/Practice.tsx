@@ -130,6 +130,7 @@ function PracticeRunner({ drill }: { drill: Drill }) {
             {state === "recording" && (
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Live pitch · {livePitchHz ? `${Math.round(livePitchHz)} Hz` : "listening for you…"}
+                {level < 0.06 && elapsedMs > 3000 && " · we can barely hear you — move closer"}
               </p>
             )}
 

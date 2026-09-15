@@ -23,6 +23,20 @@ interface UseToneCapture {
 }
 
 const FRAME_INTERVAL_MS = 50;
+/**
+ * Analysis-only software gain. autoGainControl is off (it would smear the
+ * dynamics we're measuring), but raw laptop-mic levels then sit around
+ * 0.02–0.05 RMS — below the analyzer's speech floors. Scaling the captured
+ * buffer before analysis puts normal speech in the range the scores expect.
+ * Pitch detection is scale-invariant, so the gain only moves loudness math.
+ */
+const SOFTWARE_GAIN = 2.5;
+/** Loudest volume we'll record, so loud mics don't saturate the scores. */
+const MAX_RECORDED_VOLUME = 0.8;
+/** Gained RMS below which a frame counts as silence for pitch purposes. */
+const SPEECH_FLOOR = 0.05;
+/** Fewer speech-level frames than this ≈ the mic never heard you. */
+const MIN_SPEECH_FRAMES = 5;
 
 // Minimal structural typing for the Web Speech API (not in lib.dom for all
 // browsers, and webkit prefixes the constructor) — no `any` escapes here.
@@ -72,25 +86,25 @@ export function useToneCapture(): UseToneCapture {
   const streamRef = useRef<MediaStream | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef(0);
   const lastFrameAtRef = useRef(0);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const transcriptRef = useRef("");
+  /** Gained copy of the analyser buffer, reused per frame (no per-frame alloc). */
+  const gainedBufRef = useRef<Float32Array | null>(null);
+  /** Speech-level frames captured this take — drives dead-mic detection. */
+  const speechFramesRef = useRef(0);
 
   const cleanup = useCallback(() => {
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    if (timerRef.current !== null) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     ctxRef.current?.close().catch(() => {});
     ctxRef.current = null;
+    gainedBufRef.current = null;
   }, []);
 
   useEffect(() => cleanup, [cleanup]);
@@ -99,11 +113,23 @@ export function useToneCapture(): UseToneCapture {
     setError(null);
     setAnalysis(null);
     framesRef.current = [];
+    speechFramesRef.current = 0;
     setLevel(0);
     setLivePitchHz(null);
     setElapsedMs(0);
     setTranscript("");
     transcriptRef.current = "";
+
+    // Create the AudioContext synchronously, inside the click gesture.
+    // Creating it after the `await getUserMedia` below breaks user
+    // activation — Chrome then returns a *suspended* context and the
+    // analyser reads pure silence for the whole take.
+    const AudioCtx =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    const ctx = new AudioCtx();
+    ctxRef.current = ctx;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -115,12 +141,11 @@ export function useToneCapture(): UseToneCapture {
       });
       streamRef.current = stream;
 
-      const AudioCtx =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
-      const ctx = new AudioCtx();
-      ctxRef.current = ctx;
+      // Some browsers still park the context in "suspended" (Safari, or a
+      // permission prompt that ate the gesture) — nudge it to running.
+      if (ctx.state !== "running") {
+        await ctx.resume().catch(() => {});
+      }
 
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
@@ -128,6 +153,8 @@ export function useToneCapture(): UseToneCapture {
       source.connect(analyser);
 
       const timeBuf = new Float32Array(analyser.fftSize);
+      const gainedBuf = new Float32Array(analyser.fftSize);
+      gainedBufRef.current = gainedBuf;
       startedAtRef.current = performance.now();
       lastFrameAtRef.current = 0;
       setState("recording");
@@ -164,17 +191,32 @@ export function useToneCapture(): UseToneCapture {
         const now = performance.now();
         analyser.getFloatTimeDomainData(timeBuf);
 
-        // RMS level for the live meter
+        // RMS level for the live meter (gained so quiet mics feel alive)
         let sum = 0;
         for (let i = 0; i < timeBuf.length; i++) sum += timeBuf[i] * timeBuf[i];
         const rms = Math.sqrt(sum / timeBuf.length);
-        setLevel(Math.min(rms * 3, 1));
+        const gainedRms = Math.min(rms * SOFTWARE_GAIN, MAX_RECORDED_VOLUME);
+        setLevel(Math.min(gainedRms * 4, 1));
 
         // Frame capture at fixed cadence for analysis
         if (now - lastFrameAtRef.current >= FRAME_INTERVAL_MS) {
           lastFrameAtRef.current = now;
-          const pitch = detectPitch(timeBuf, ctx.sampleRate);
-          framesRef.current.push({ pitchHz: pitch, volume: rms, timestamp: now });
+          let pitch: number | null = null;
+          // Speech-gate the pitch detector: room tone gains below the
+          // speech floor, so silence can't produce garbage "pitch" and
+          // dilute the voiced ratio.
+          if (gainedRms >= SPEECH_FLOOR) {
+            speechFramesRef.current += 1;
+            for (let i = 0; i < timeBuf.length; i++) {
+              gainedBuf[i] = timeBuf[i] * SOFTWARE_GAIN;
+            }
+            pitch = detectPitch(gainedBuf, ctx.sampleRate);
+          }
+          framesRef.current.push({
+            pitchHz: pitch,
+            volume: gainedRms,
+            timestamp: now,
+          });
           setLivePitchHz(pitch);
         }
 
@@ -185,10 +227,15 @@ export function useToneCapture(): UseToneCapture {
     } catch (e) {
       cleanup();
       setState("idle");
+      const name = e instanceof Error ? e.name : "";
       setError(
-        e instanceof Error && e.name === "NotAllowedError"
-          ? "Microphone access was blocked. Enable it in your browser settings and try again."
-          : "Could not access your microphone. Check that one is connected and try again.",
+        name === "NotAllowedError" || name === "SecurityError"
+          ? "Microphone access was blocked. Enable it for this site in your browser settings and try again."
+          : name === "NotFoundError" || name === "DevicesNotFoundError"
+            ? "No microphone found. Connect one (or pick the right input in your browser's site settings) and try again."
+            : name === "NotReadableError" || name === "TrackStartError"
+              ? "Your microphone is busy — close other apps that might be using it and try again."
+              : "Could not access your microphone. Check that one is connected and try again.",
       );
     }
   }, [cleanup]);
@@ -197,10 +244,18 @@ export function useToneCapture(): UseToneCapture {
     if (rafRef.current === null) return;
     cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
-    if (timerRef.current !== null) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+
+    // Dead-mic check: if the take never contained speech-level frames,
+    // the "analysis" would be noise dressed up as scores. Say so instead.
+    if (speechFramesRef.current < MIN_SPEECH_FRAMES) {
+      cleanup();
+      setState("idle");
+      setError(
+        "We couldn't hear you — check that the right mic is selected, move closer, and speak up.",
+      );
+      return;
     }
+
     try {
       recognitionRef.current?.stop();
     } catch {
@@ -236,6 +291,7 @@ export function useToneCapture(): UseToneCapture {
     setTranscript("");
     transcriptRef.current = "";
     framesRef.current = [];
+    speechFramesRef.current = 0;
   }, [cleanup]);
 
   return {
