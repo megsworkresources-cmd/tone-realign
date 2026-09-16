@@ -4,7 +4,8 @@ import { ACHIEVEMENTS, levelInfo, type AchievementStats } from "@/lib/gamify";
 import { TRENDS_UNLOCK, buildToneTrends, isUnlocked, type UnlockStats } from "@/lib/unlocks";
 import { TONE_LABELS } from "@/lib/tone-analyzer";
 import { DRILLS } from "@/lib/drills";
-import { api } from "@/convex/_generated/api";import {
+import { api } from "@/convex/_generated/api";
+import {
   History,
   Lock,
   Minus,

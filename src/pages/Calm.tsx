@@ -1,6 +1,7 @@
 import { NBButton, NBPanel } from "@/components/nb";
 import { AppShell } from "@/components/AppShell";
 import { GroundingKit } from "@/components/GroundingKit";
+import { GROUNDING_EXERCISES } from "@/lib/grounding";
 import { api } from "@/convex/_generated/api";
 import {
   ArrowRight,
@@ -30,9 +31,9 @@ export default function Calm() {
             The <span className="italic text-mint">calm</span> side of the gym
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            Six grounding exercises — breath pacers and attention guides —
-            plus the no-mic practices. Come here before a hard conversation,
-            or after one.
+            {GROUNDING_EXERCISES.length} grounding exercises — breath pacers
+            and attention guides — plus the no-mic practices. Come here
+            before a hard conversation, or after one.
           </p>
         </section>
 

@@ -7,6 +7,7 @@ import {
   appTourStops,
   tourStops,
 } from "./site-nav";
+import { GROUNDING_EXERCISES } from "./grounding";
 import { readFileSync } from "node:fs";
 
 describe("site nav config", () => {
@@ -144,6 +145,72 @@ describe("nav ↔ router parity", () => {
     for (const path of ["/auth", "/dashboard", "/gym", "/calm", "/progress", "/reframe", "/quiz", "/practice/:drillId"]) {
       expect(main).toContain(`path="${path}"`);
     }
+  });
+});
+
+describe("page split contracts", () => {
+  const src = (page: string) =>
+    readFileSync(new URL(`../pages/${page}.tsx`, import.meta.url), "utf8");
+
+  test("every daily-challenge surface uses the accessible pick, never the raw calendar pick", () => {
+    const surfaces = ["Dashboard", "Gym", "Practice", "Drills", "HowItWorks"];
+    for (const page of surfaces) {
+      const s = src(page);
+      expect(s).toContain("getAccessibleDailyChallenge");
+      // The raw pick dead-ends on the lock screen — it must not be back.
+      expect(s).not.toMatch(/\bgetDailyChallenge\b/);
+    }
+  });
+
+  test("pages that show lock states wait for stats before rendering", () => {
+    // A zeros-frame would flash earned drills as locked or show a wrong
+    // "next unlock" to veterans. Pages either early-return on the raw
+    // query or gate the lock on a lockKnown-style boolean.
+    for (const page of ["Dashboard", "Gym", "Practice"]) {
+      const s = src(page);
+      expect(s).toMatch(
+        /progression === undefined|lockKnown = progression !== undefined/,
+      );
+      expect(s).toContain("Loading your");
+    }
+  });
+
+  test("the grounding exercise count is dynamic wherever it's advertised", () => {
+    const dash = src("Dashboard");
+    const calm = src("Calm");
+    // Copy must derive from the catalog, not a hardcoded number.
+    expect(dash).toContain("GROUNDING_EXERCISES.length");
+    expect(dash).not.toMatch(/"6 exercises"|Six grounding exercises/);
+    expect(calm).toContain("GROUNDING_EXERCISES.length");
+    expect(calm).not.toContain("Six grounding exercises");
+    // And the lib actually backs the claim.
+    expect(GROUNDING_EXERCISES.length).toBe(6);
+  });
+
+  test("calm's no-mic callouts deep-link the two practices", () => {
+    const s = src("Calm");
+    expect(s).toContain('to="/quiz"');
+    expect(s).toContain('to="/reframe"');
+  });
+
+  test("AppShell keeps exactly 5 mobile tab slots (4 tabs + mic FAB)", () => {
+    const shell = readFileSync(
+      new URL("../components/AppShell.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(shell).toContain("grid-cols-5");
+    // Only the tab-flagged destinations feed the bar.
+    const tabs = (shell.match(/tab: true/g) ?? []).length;
+    expect(tabs).toBe(4);
+  });
+
+  test("the level ring still anchors to the progression panel on the dashboard", () => {
+    const shell = readFileSync(
+      new URL("../components/AppShell.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(shell).toContain('to="/dashboard#progress"');
+    expect(src("Dashboard")).toContain('id="progress"');
   });
 });
 

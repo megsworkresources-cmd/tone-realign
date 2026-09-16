@@ -31,6 +31,19 @@ import { Link } from "react-router";
 export default function Gym() {
   const progression = useQuery(api.dailyLog.progression);
   const drillStats = useQuery(api.sessions.drillStats);
+  // Unlocks and bests are computed from live stats; rendering before
+  // progression resolves would flash every earned drill as locked.
+  if (progression === undefined) {
+    return (
+      <AppShell active="gym">
+        <div className="mx-auto max-w-3xl px-4 py-10">
+          <NBPanel className="p-8 text-center">
+            <p className="text-sm text-muted-foreground">Loading your gym…</p>
+          </NBPanel>
+        </div>
+      </AppShell>
+    );
+  }
   const bestByDrill = new Map((drillStats ?? []).map((s) => [s.drill, s]));
   const level = levelInfo(progression?.totalXp ?? 0);
 

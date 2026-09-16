@@ -2,6 +2,7 @@ import { NBButton, NBPanel, NBStat } from "@/components/nb";
 import { AppShell, LevelRing } from "@/components/AppShell";
 import { DailyChecklist } from "@/components/DailyChecklist";
 import { dailyLabel, getAccessibleDailyChallenge } from "@/lib/daily";
+import { GROUNDING_EXERCISES } from "@/lib/grounding";
 import { arcDaysLeft, arcStageFor } from "@/lib/arc";
 import { levelInfo } from "@/lib/gamify";
 import {
@@ -36,7 +37,21 @@ export default function Dashboard() {
   const progression = useQuery(api.dailyLog.progression);
   const drillStats = useQuery(api.sessions.drillStats);
 
-  const level = levelInfo(progression?.totalXp ?? 0);
+  // Stats drive every panel here (level, unlocks, checklist, next-unlock);
+  // render only once they've loaded so a veteran never sees a zeros-frame.
+  if (progression === undefined) {
+    return (
+      <AppShell active="dashboard">
+        <div className="mx-auto max-w-3xl px-4 py-10">
+          <NBPanel className="p-8 text-center">
+            <p className="text-sm text-muted-foreground">Loading your day…</p>
+          </NBPanel>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const level = levelInfo(progression.totalXp);
 
   const stats = {
     totalSessions: progression?.totalSessions ?? 0,
@@ -103,7 +118,7 @@ export default function Dashboard() {
               { to: "/translate", icon: Languages, label: "Translate", sub: "2 passes", color: "bg-sun" },
               { to: "/quiz", icon: MessagesSquare, label: "Read the Room", sub: "1 scenario", color: "bg-mint" },
               { to: "/reframe", icon: Shuffle, label: "Reframe", sub: "2 min", color: "bg-paper" },
-              { to: "/calm", icon: Wind, label: "Grounding", sub: "6 exercises", color: "bg-paper" },
+              { to: "/calm", icon: Wind, label: "Grounding", sub: `${GROUNDING_EXERCISES.length} exercises`, color: "bg-paper" },
             ].map((rep) => {
               const Icon = rep.icon;
               return (
