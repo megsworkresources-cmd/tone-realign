@@ -5,6 +5,7 @@ import {
   DEAD_TAKE_MESSAGES,
   deadTakeMessageFor,
   deadTakeReason,
+  looksLikeMiclessSpeaker,
   gainedVolume,
   HOPELESS_RAW_FLOOR,
   CALIBRATION_WINDOW,
@@ -210,5 +211,36 @@ describe("dead-take verdicts", () => {
         DEAD_TAKE_MESSAGES[reason],
       );
     }
+  });
+
+  describe("looksLikeMiclessSpeaker", () => {
+    test("common Bluetooth speaker names are detected", () => {
+      expect(looksLikeMiclessSpeaker("JBL Flip 5")).toBe(true);
+      expect(looksLikeMiclessSpeaker("JBL Charge 4")).toBe(true);
+      expect(looksLikeMiclessSpeaker("Bose SoundLink Flex")).toBe(true);
+      expect(looksLikeMiclessSpeaker("Anker Soundcore 2")).toBe(true);
+      expect(looksLikeMiclessSpeaker("Sony SRS-XB23")).toBe(true);
+      expect(looksLikeMiclessSpeaker("UE MEGABOOM 3")).toBe(true);
+      expect(looksLikeMiclessSpeaker("Sonos Roam")).toBe(true);
+    });
+
+    test("normal microphones are not flagged", () => {
+      expect(looksLikeMiclessSpeaker("iPhone Microphone")).toBe(false);
+      expect(looksLikeMiclessSpeaker("AirPods Pro")).toBe(false);
+      expect(looksLikeMiclessSpeaker("MacBook Pro Microphone")).toBe(false);
+      expect(looksLikeMiclessSpeaker("Built-in Microphone")).toBe(false);
+      expect(looksLikeMiclessSpeaker("Stereo Mix")).toBe(false);
+      expect(looksLikeMiclessSpeaker("")).toBe(false);
+    });
+  });
+
+  test("a dead take from a speaker explains why, with the route fix", () => {
+    const msg = deadTakeMessageFor("muted", false, "JBL Flip 5");
+    // Names the device and the root cause…
+    expect(msg).toContain("JBL Flip 5");
+    expect(msg).toMatch(/no usable microphone/i);
+    // …and gives the phone-specific fix, not the in-app-picker one.
+    expect(msg).toMatch(/audio-route|unpair/i);
+    expect(msg).not.toContain("switch it below");
   });
 });

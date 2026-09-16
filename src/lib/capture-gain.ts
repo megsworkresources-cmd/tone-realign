@@ -105,13 +105,38 @@ export const DEAD_TAKE_MESSAGES: Record<DeadTakeReason, string> = {
 };
 
 /**
+ * Heuristic: does this device label look like a Bluetooth speaker without
+ * a usable microphone? Phones expose speakers as the audio route even
+ * though they can't record (JBL Flip/Charge, Bose SoundLink, Sony SRS…),
+ * so a take "opens fine" and delivers pure silence. A false positive
+ * costs one extra sentence in a warning; a false negative costs another
+ * silently wasted take.
+ */
+const SPEAKER_HINT_RE =
+  /\b(jbl|flip ?\d?|charge ?\d?|soundlink|soundcore|flare ?\d?|sonos|roam|move|megaboom|wonderboom|boom ?\d?|xtreme ?\d?|partybox|srs-?\w*|speakers?|lautsprecher|altavoz)\b/;
+
+export function looksLikeMiclessSpeaker(label: string): boolean {
+  return SPEAKER_HINT_RE.test(label.toLowerCase());
+}
+
+/** The message for a take recorded from an input that looks like a speaker. */
+function speakerTakeMessage(trackLabel: string): string {
+  return (
+    `That take was recorded from “${trackLabel}” — a speaker, which has no usable microphone, so nothing you said reached the app. ` +
+    "Power the speaker off or unpair it (on iPhone: Control Center → tap the audio-route button → iPhone), then record again and your phone's built-in mic will be used."
+  );
+}
+
+/**
  * The final dead-take message, enriched with what the stream itself
  * reported. Pure so the enrichment rules are unit-testable:
  * * a track that says it's muted points at the OS privacy layer or
  *   another app holding the mic — the generic "check settings" text
  *   would mislead;
+ * * a device label that looks like a Bluetooth speaker gets the specific
+ *   "speakers can't record" fix — the top silent-take cause on phones;
  * * a known device label names the input that heard nothing — a virtual
- *   cable or "Stereo Mix" is the top wrong-device culprit;
+ *   cable or "Stereo Mix" is the top wrong-device culprit on desktop;
  * * anything else keeps the base verdict unchanged.
  */
 export function deadTakeMessageFor(
@@ -122,6 +147,9 @@ export function deadTakeMessageFor(
   if (reason !== "muted") return DEAD_TAKE_MESSAGES[reason];
   if (trackMuted) {
     return "Your microphone opened but reported itself muted the whole take. Check the OS microphone privacy setting for your browser, close apps that may hold the mic (Zoom, Teams, Discord), then try again.";
+  }
+  if (trackLabel && looksLikeMiclessSpeaker(trackLabel)) {
+    return speakerTakeMessage(trackLabel);
   }
   if (trackLabel) {
     return (

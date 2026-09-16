@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Mic } from "lucide-react";
 import { NBBadge } from "@/components/nb";
+import { looksLikeMiclessSpeaker } from "@/lib/capture-gain";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "shiftedtone:micDeviceId";
@@ -113,6 +114,13 @@ export function MicPicker({
         <span className="max-w-[220px] truncate text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           Last used: {activeLabel}
         </span>
+      )}
+      {activeLabel && looksLikeMiclessSpeaker(activeLabel) && (
+        <p className="nb w-full bg-sun px-2.5 py-2 text-xs font-medium">
+          “{activeLabel}” looks like a Bluetooth speaker — most can't record.
+          If the next take comes back empty, power the speaker off or switch
+          your phone's audio output back to the phone, then record.
+        </p>
       )}
     </div>
   );
