@@ -17,6 +17,10 @@ export interface ToneFrame {
   pitchHz: number | null; // null when unvoiced
   volume: number; // RMS 0..1
   timestamp: number;
+  /** Optional spectral flatness (0..1) of this frame — 1 = white noise,
+   * near 0 = tonal. Present when the capture hook feeds it (voice activity
+   * check); absent in older fixtures, where voicing falls back to pitch. */
+  flatness?: number;
 }
 
 export interface ToneAnalysis {
@@ -42,57 +46,147 @@ const MIN_PITCH = 60;
 const MAX_PITCH = 400;
 const WPM_ASSUMED_SYLLABLES_PER_WORD = 1.6;
 
-/** Autocorrelation pitch detection on a time-domain buffer. Returns null if unvoiced. */
+/**
+ * YIN pitch detection (de Cheveigné & Kawahara, 2002) on a time-domain
+ * buffer. Returns null when the frame isn't a clear periodic signal.
+ *
+ * Steps: cumulative-mean-normalized difference function → first local
+ * minimum under the absolute threshold → parabolic interpolation. Unlike
+ * plain autocorrelation with peak-picking, YIN's normalization resists
+ * octave jumps (picking the 2nd harmonic's lag) and formant-dominated
+ * frames, which is where naive autocorrelation produces garbage pitch on
+ * real speech.
+ */
 export function detectPitch(buffer: Float32Array, sampleRate: number): number | null {
   const size = buffer.length;
+  if (size < 256) return null;
+
   let rms = 0;
   for (let i = 0; i < size; i++) rms += buffer[i] * buffer[i];
   rms = Math.sqrt(rms / size);
   if (rms < 0.015) return null; // silence / noise floor
 
-  // Trim low-amplitude edges for a cleaner correlation window
-  let start = 0;
-  let end = size - 1;
-  const threshold = 0.2;
-  while (start < size / 2 && Math.abs(buffer[start]) < threshold) start++;
-  while (end > size / 2 && Math.abs(buffer[end]) < threshold) end--;
-  if (end - start < 2) return null;
+  const tauMin = Math.max(2, Math.floor(sampleRate / MAX_PITCH));
+  const tauMax = Math.min(Math.floor(size / 2) - 1, Math.ceil(sampleRate / MIN_PITCH));
+  if (tauMax <= tauMin) return null;
+  const W = Math.floor(size / 2); // integration window
 
-  const window = buffer.slice(start, end);
-  const n = window.length;
-  const c = new Float32Array(n).fill(0);
-  for (let lag = 0; lag < n; lag++) {
+  // Difference function d(tau)
+  const diff = new Float32Array(tauMax + 1);
+  for (let tau = tauMin; tau <= tauMax; tau++) {
     let sum = 0;
-    for (let i = 0; i < n - lag; i++) {
-      sum += window[i] * window[i + lag];
+    for (let i = 0; i < W; i++) {
+      const delta = buffer[i] - buffer[i + tau];
+      sum += delta * delta;
     }
-    c[lag] = sum;
+    diff[tau] = sum;
   }
 
-  let d = 0;
-  while (d < n - 1 && c[d] > c[d + 1]) d++;
-  let maxVal = -1;
-  let maxPos = -1;
-  for (let i = d; i < n; i++) {
-    if (c[i] > maxVal) {
-      maxVal = c[i];
-      maxPos = i;
+  // Cumulative mean normalized difference d'(tau)
+  const cmnd = new Float32Array(tauMax + 1);
+  let running = 0;
+  cmnd[0] = 1;
+  for (let tau = tauMin; tau <= tauMax; tau++) {
+    running += diff[tau];
+    cmnd[tau] = running === 0 ? 1 : (diff[tau] * (tau - tauMin + 1)) / running;
+  }
+
+  // First local minimum below the absolute threshold (octave-safe)
+  const THRESHOLD = 0.15;
+  let tauEstimate = -1;
+  for (let tau = tauMin + 1; tau < tauMax; tau++) {
+    if (cmnd[tau] < THRESHOLD) {
+      while (tau + 1 < tauMax && cmnd[tau + 1] < cmnd[tau]) tau++;
+      tauEstimate = tau;
+      break;
     }
   }
-  if (maxPos <= 0) return null;
+  // Fallback: global minimum, but only if it's a genuinely low dip —
+  // aperiodic noise bottoms out well above the threshold.
+  if (tauEstimate < 0) {
+    let minVal = Infinity;
+    let minTau = -1;
+    for (let tau = tauMin + 1; tau < tauMax; tau++) {
+      if (cmnd[tau] < minVal) {
+        minVal = cmnd[tau];
+        minTau = tau;
+      }
+    }
+    if (minTau > 0 && minVal < 0.5) tauEstimate = minTau;
+  }
+  if (tauEstimate < 0) return null;
 
-  let T0 = maxPos;
-  // Parabolic interpolation around the peak for sub-sample accuracy
-  const x1 = c[T0 - 1] ?? 0;
-  const x2 = c[T0];
-  const x3 = c[T0 + 1] ?? 0;
-  const a = (x1 + x3 - 2 * x2) / 2;
-  const b = (x3 - x1) / 2;
-  if (a) T0 = T0 - b / (2 * a);
+  // Parabolic interpolation for sub-lag accuracy
+  const x1 = cmnd[tauEstimate - 1];
+  const x2 = cmnd[tauEstimate];
+  const x3 = cmnd[tauEstimate + 1] ?? x2;
+  const denom = 2 * (2 * x2 - x1 - x3);
+  const shift = denom !== 0 ? (x3 - x1) / denom : 0;
 
-  const pitchHz = sampleRate / T0;
+  const pitchHz = sampleRate / (tauEstimate + shift);
   if (pitchHz < MIN_PITCH || pitchHz > MAX_PITCH) return null;
   return pitchHz;
+}
+
+/**
+ * Spectral flatness (geometric mean / arithmetic mean of the spectrum):
+ * 1 ≈ white noise, ≈0 ≈ pure tone. Computed on the hook side from an FFT
+ * magnitude array and attached to frames as `flatness`. Zero bins are
+ * floored to an epsilon so a single-dominant-bin spectrum reads as tonal
+ * (near 0) rather than degenerating to 1.
+ */
+export function spectralFlatness(magnitudes: ArrayLike<number>): number {
+  const EPS = 1e-10;
+  const n = magnitudes.length;
+  if (n === 0) return 1;
+  let logSum = 0;
+  let sum = 0;
+  for (let i = 0; i < n; i++) {
+    const m = Math.max(magnitudes[i], EPS);
+    logSum += Math.log(m);
+    sum += m;
+  }
+  if (sum <= 0) return 1;
+  return Math.min(1, Math.max(0, Math.exp(logSum / n) / (sum / n)));
+}
+
+/**
+ * Median-filter the voiced-pitch sequence (window 5) to kill single-frame
+ * octave jumps before any statistic consumes it. Real pitch glides
+ * survive a 5-tap median; a lone doubled-halved outlier does not.
+ */
+function medianFilterPitches(pitches: number[]): number[] {
+  if (pitches.length < 5) return pitches;
+  const out: number[] = [];
+  for (let i = 0; i < pitches.length; i++) {
+    const lo = Math.max(0, i - 2);
+    const hi = Math.min(pitches.length, i + 3);
+    const win = pitches.slice(lo, hi).sort((a, b) => a - b);
+    out.push(win[Math.floor(win.length / 2)]);
+  }
+  return out;
+}
+
+/** Mean absolute pitch delta between consecutive voiced frames, in semitones — pitch jitter. */
+function jitterSemitones(pitches: number[]): number {
+  if (pitches.length < 3) return 0;
+  let sum = 0;
+  for (let i = 1; i < pitches.length; i++) {
+    sum += Math.abs(12 * Math.log2(pitches[i] / pitches[i - 1]));
+  }
+  return sum / (pitches.length - 1);
+}
+
+/** Mean absolute loudness delta between consecutive voiced frames, in dB — shimmer. */
+function shimmerDb(volumes: number[]): number {
+  if (volumes.length < 3) return 0;
+  let sum = 0;
+  for (let i = 1; i < volumes.length; i++) {
+    const a = Math.max(volumes[i - 1], 1e-5);
+    const b = Math.max(volumes[i], 1e-5);
+    sum += Math.abs(20 * Math.log10(b / a));
+  }
+  return sum / (volumes.length - 1);
 }
 
 export interface AnalyzeOptions {
@@ -106,12 +200,26 @@ export function analyzeFrames(
   durationMs: number,
   options: AnalyzeOptions = {},
 ): ToneAnalysis {
-  const pitches = frames
+  const rawPitches = frames
     .map((f) => f.pitchHz)
     .filter((p): p is number => p !== null);
+  // Octave-jump outliers corrupt every downstream stat — median-filter first.
+  const pitches = medianFilterPitches(rawPitches);
   const volumes = frames.map((f) => f.volume);
   const voicedFrames = frames.filter((f) => f.pitchHz !== null).length;
   const voicedRatio = frames.length > 0 ? voicedFrames / frames.length : 0;
+  // Mean spectral flatness over frames that carried the measurement —
+  // near 1 means the "voice" was mostly broadband hiss.
+  const flatFrames = frames.filter((f) => typeof f.flatness === "number");
+  const spectralFlat =
+    flatFrames.length > 0
+      ? flatFrames.reduce((acc, f) => acc + (f.flatness ?? 1), 0) /
+        flatFrames.length
+      : null;
+  const jitter = jitterSemitones(pitches);
+  const shimmer = shimmerDb(
+    frames.filter((f) => f.pitchHz !== null).map((f) => f.volume),
+  );
 
   const avgPitchHz =
     pitches.length > 0
@@ -181,18 +289,27 @@ export function analyzeFrames(
   const presenceScore = Math.min(avgVolume / 0.15, 1);
   const energyScore = Math.round(100 * (0.55 * rangeScore + 0.45 * presenceScore));
 
-  // Clarity: steadiness of volume, adequate voicing, sane pace
+  // Clarity: steadiness of volume, adequate voicing, sane pace, and a
+  // spectral signature that is tonal rather than hiss. When the capture
+  // hook supplies flatness, a noise-dominated take can't score as clear.
   const steadyVolume = Math.min(volumeVariability / 0.09, 1); // lower = steadier
   const paceClarity = wordsPerMinute > 190 || wordsPerMinute < 70 ? 0.4 : 1;
+  const tonalScore =
+    spectralFlat === null ? 1 : 1 - Math.min(Math.max((spectralFlat - 0.45) / 0.35, 0), 1);
   const clarityScore = Math.round(
     100 *
-      (0.4 * (1 - Math.abs(steadyVolume - 0.35)) +
-        0.35 * Math.min(voicedRatio / 0.6, 1) +
-        0.25 * paceClarity),
+      (0.35 * (1 - Math.abs(steadyVolume - 0.35)) +
+        0.3 * Math.min(voicedRatio / 0.6, 1) +
+        0.2 * paceClarity +
+        0.15 * tonalScore),
   );
 
-  // Stability: how consistently pitch holds (relative spread)
-  const stabilityRaw = 1 - Math.min(pitchVariability / 0.35, 1);
+  // Stability: how consistently pitch holds — relative spread plus frame-to-
+  // frame jitter (semitone deltas). Jitter catches the shakiness that a
+  // wide-but-smooth range would otherwise hide.
+  const spreadPenalty = Math.min(pitchVariability / 0.35, 1);
+  const jitterPenalty = Math.min(jitter / 2.2, 1); // 2.2 st/frame ≈ severe wobble
+  const stabilityRaw = 1 - (0.55 * spreadPenalty + 0.3 * jitterPenalty + 0.15 * (1 - Math.min(voicedRatio / 0.5, 1)));
   const stabilityScore = Math.round(
     100 * (voicedRatio > 0.15 ? stabilityRaw : 0.2),
   );
@@ -315,6 +432,168 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+// ---------------------------------------------------------------------------
+// Personalized feedback: per-factor status, your own numbers, and one concrete
+// drill. This is the layer between the raw scores and the UI — every sentence
+// is derived from this take's measurements, so two different takes never
+// produce the same paragraph.
+// ---------------------------------------------------------------------------
+
+export type FactorKey = "calm" | "energy" | "clarity" | "stability";
+
+export interface FactorFeedback {
+  key: FactorKey;
+  /** "strong" | "decent" | "wobbly" | "rough" — drives the UI color. */
+  status: "strong" | "decent" | "wobbly" | "rough";
+  /** How this factor's rating actually came across in THIS take. */
+  read: string;
+  /** The numbers behind the read, formatted for display. */
+  yourNumbers: string;
+  /** One concrete thing to do next time — specific to the weakest component. */
+  tip: string;
+}
+
+const paceIdeal = 130; // wpm — mirrors the calm scoring formula above
+
+function paceVerdict(wpm: number): string {
+  if (wpm > 190) return `Very fast — ${wpm} wpm outruns most listeners`;
+  if (wpm > 165) return `Brisk at ${wpm} wpm`;
+  if (wpm >= 100) return `Comfortable conversational pace (${wpm} wpm)`;
+  if (wpm >= 70) return `Measured pace (${wpm} wpm)`;
+  return `Slow — ${wpm} wpm can read as uncertain`;
+}
+
+function statusFor(score: number): FactorFeedback["status"] {
+  if (score >= 80) return "strong";
+  if (score >= 65) return "decent";
+  if (score >= 45) return "wobbly";
+  return "rough";
+}
+
+/**
+ * Build per-factor personalized feedback from one analysis. Pure and
+ * deterministic — every string traces back to a measured value.
+ */
+export function buildFactorFeedback(a: ToneAnalysis): Record<FactorKey, FactorFeedback> {
+  const trending =
+    Math.abs(a.volumeTrend) >= 0.2
+      ? a.volumeTrend < 0
+        ? " and your volume faded as you went"
+        : " and your volume climbed as you went"
+      : "";
+
+  const calm: FactorFeedback = {
+    key: "calm",
+    status: statusFor(a.calmScore),
+    read:
+      `${paceVerdict(a.wordsPerMinute)}` +
+      (a.avgVolume > 0.28
+        ? ", and your level ran hot — that much pressure reads as intensity"
+        : a.avgVolume > 0
+          ? ", at a controlled level"
+          : "") +
+      trending +
+      ".",
+    yourNumbers: `${a.wordsPerMinute} wpm · avg level ${Math.round(a.avgVolume * 100)}% · ${Math.round(a.voicedRatio * 100)}% voiced`,
+    tip:
+      a.wordsPerMinute > 165
+        ? `You were moving fast (${a.wordsPerMinute} wpm). Practice: end every sentence with a full stop — one silent beat before the next thought starts.`
+        : a.wordsPerMinute < 90
+          ? `At ${a.wordsPerMinute} wpm, gaps between thoughts read as hesitation. Practice: rehearse the sentence once out loud, then say it without re-deciding mid-way.`
+          : a.avgVolume > 0.28
+            ? "Your level ran hot. Practice: speak at 80% of what feels natural — listeners hear calm at the level you think is too quiet."
+            : trending
+              ? "Your pace drifted across the take. Practice: pick one tempo and hold it for the first two sentences before allowing any change."
+              : "Pace and pressure are in the pocket. Practice: keep this baseline and add deliberate pauses where the point lands.",
+  };
+
+  const energy: FactorFeedback = {
+    key: "energy",
+    status: statusFor(a.energyScore),
+    read:
+      a.pitchRangeHz < 25
+        ? `Your pitch stayed inside a ${a.pitchRangeHz} Hz window — that's a near-monotone delivery, which reads as checked-out even when you're not.`
+        : a.pitchRangeHz > 120
+          ? `Your pitch covered ${a.pitchRangeHz} Hz — a wide, expressive range that reads as lively.`
+          : `Your pitch moved ${a.pitchRangeHz} Hz across the take — some lift, but the big moments could travel further.` + trending,
+    yourNumbers: `${a.pitchRangeHz} Hz range · avg ${a.avgPitchHz} Hz · level ${Math.round(a.avgVolume * 100)}%`,
+    tip:
+      a.pitchRangeHz < 25
+        ? "Practice: take one sentence and exaggerate — stress two nouns and one verb so hard it feels theatrical, then dial back 20%. That's your real range."
+        : a.avgVolume < 0.08
+          ? "Practice: record from a hand-span away. Presence comes from consistent closeness to the mic, not from pushing your voice."
+          : a.pitchRangeHz < 60
+            ? "Practice: pick the single most important word in each sentence and let your pitch rise on it. One word per sentence is enough."
+            : "Your range is working. Practice: put the movement on your point words — first and last word of the key phrase — and let connective tissue stay level.",
+  };
+
+  const clarity: FactorFeedback = {
+    key: "clarity",
+    status: statusFor(a.clarityScore),
+    read:
+      a.volumeVariability > 0.09
+        ? `Your force wobbled — loudness swung ${Math.round(a.volumeVariability * 100)}% around its average, so some syllables arrive much harder than others.`
+        : `Your force stayed steady (loudness held within ${Math.round(a.volumeVariability * 100)}%), which is what makes words feel landed rather than thrown.` +
+          (a.voicedRatio < 0.5
+            ? ` Only ${Math.round(a.voicedRatio * 100)}% of the take was clearly voiced — the rest sat in the noise between words.`
+            : ""),
+    yourNumbers: `loudness wobble ±${Math.round(a.volumeVariability * 100)}% · ${Math.round(a.voicedRatio * 100)}% voiced`,
+    tip:
+      a.volumeVariability > 0.09
+        ? "Practice: read the same sentence three times, keeping your belly at the same tension. The variation usually comes from breath, not intent."
+        : a.voicedRatio < 0.5
+          ? "Practice: close the gaps — finish each word fully before the pause instead of letting endings dissolve into air."
+          : a.wordsPerMinute > 190 || a.wordsPerMinute < 70
+            ? `At ${a.wordsPerMinute} wpm you're outside the intelligible band. Practice: target 120–140 — roughly two words per second.`
+            : "Pressure control is solid. Practice: keep it while varying pitch — steady force + moving pitch is the whole 'confident' sound.",
+  };
+
+  const stability: FactorFeedback = {
+    key: "stability",
+    status: statusFor(a.stabilityScore),
+    read:
+      a.pitchTrend > 0.05
+        ? `Your pitch drifted upward across the take (${Math.round(a.pitchTrend * 100)}%) — the sound of tension accumulating rather than a choice.`
+        : a.pitchTrend < -0.05
+          ? `Your pitch sank ${Math.round(-a.pitchTrend * 100)}% across the take — statements started sounding like doubts.`
+          : `Your pitch held its center (${Math.round(a.avgPitchHz)} Hz average, ${Math.round(a.pitchRangeHz)} Hz of movement) — you stayed on your chosen note.` +
+            (a.voicedRatio < 0.15 ? " With more voiced audio this measure gets far more reliable." : ""),
+    yourNumbers: `drift ${a.pitchTrend > 0 ? "+" : ""}${Math.round(a.pitchTrend * 100)}% · center ${a.avgPitchHz} Hz`,
+    tip:
+      a.pitchTrend > 0.05
+        ? "Practice: start your take deliberately LOW — a full step below comfortable. Upward drift has nowhere to go, and low starts read as authority."
+        : a.pitchTrend < -0.05
+          ? "Practice: rehearse the final sentence separately and give its last three words a small upward step. Endings set how certain you sound."
+          : a.pitchRangeHz < 25
+            ? "Holding steady is good — now add movement. Practice: keep the center, move the edges."
+            : "Pitch discipline is there. Practice: keep it under interruption — have someone cut you off mid-sentence and resume at the same note.",
+  };
+
+  return { calm, energy, clarity, stability };
+}
+
+/**
+ * The single highest-leverage next action: the weakest factor's tip.
+ * Deliberately ONE item — a list of four gets ignored; one gets done.
+ */
+export function biggestLever(a: ToneAnalysis): { factor: FactorKey; tip: string } {
+  const fb = buildFactorFeedback(a);
+  const weakest = (Object.values(fb) as FactorFeedback[]).reduce((min, f) =>
+    scoreOf(f.key, a) < scoreOf(min.key, a) ? f : min,
+  );
+  return { factor: weakest.key, tip: weakest.tip };
+}
+
+function scoreOf(key: FactorKey, a: ToneAnalysis): number {
+  return key === "calm"
+    ? a.calmScore
+    : key === "energy"
+      ? a.energyScore
+      : key === "clarity"
+        ? a.clarityScore
+        : a.stabilityScore;
+}
+
 /**
  * Per-factor explanations for the results UI: how each score is computed
  * (honest, matching the formulas above) and what good delivery sounds
@@ -339,13 +618,13 @@ export const TONE_FACTORS: Record<
   clarity: {
     label: "Clarity",
     color: "bg-paper text-ink",
-    how: "Rewards steady force (volume that doesn't wobble), a healthy voiced ratio, and pace inside the intelligible band. Wobbling pressure and endings that trail off cost the most.",
+    how: "Rewards steady force (volume that doesn't wobble), a healthy voiced ratio, pace inside the intelligible band, and a tonal — not hissy — spectrum. Wobbling pressure and noise-dominated frames cost the most.",
     goal: "Hold the same force from your first three words to your last three — nothing swallowed, nothing rushed past the listener.",
   },
   stability: {
     label: "Stability",
     color: "bg-secondary text-ink",
-    how: "Measures how consistently your pitch holds — the relative spread of your voiced frames. If too little of the take is voiced, it scores low rather than guessing from noise.",
+    how: "Measures how consistently your pitch holds — the relative spread of your voiced frames plus frame-to-frame pitch jitter. If too little of the take is voiced, it scores low rather than guessing from noise.",
     goal: "Choose an ending pitch before you start and land on it. Wander less, and never let the last word fall away.",
   },
 };

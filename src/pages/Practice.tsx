@@ -5,8 +5,11 @@ import { CoachNote } from "@/components/CoachNote";
 import { getDrill, type Drill } from "@/lib/drills";
 import { getDailyChallenge } from "@/lib/daily";
 import {
+  biggestLever,
+  buildFactorFeedback,
   TONE_FACTORS,
   TONE_LABELS,
+  type FactorFeedback,
   type ToneAnalysis,
 } from "@/lib/tone-analyzer";
 import { useToneCapture } from "@/hooks/use-tone-capture";
@@ -202,6 +205,15 @@ function PracticeRunner({ drill }: { drill: Drill }) {
         {/* Results */}
         {state === "done" && analysis && (
           <NBPanel className="p-6">
+            {/* The one highest-leverage fix for next time. */}
+            <div className="nb mb-5 bg-sun p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest">
+                Biggest lever — work this one thing next take
+              </p>
+              <p className="mt-1 text-sm font-medium">
+                {biggestLever(analysis).tip}
+              </p>
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <NBBadge
@@ -263,15 +275,50 @@ function PracticeRunner({ drill }: { drill: Drill }) {
                     </button>
                     <NBMeter value={score} className="mt-2" />
                     {open && (
-                      <div className="mt-3 flex flex-col gap-2 border-t-2 border-dashed border-ink/20 pt-3 text-sm">
-                        <p>
-                          <span className="font-bold">How it's rated: </span>
-                          <span className="text-muted-foreground">{factor.how}</span>
-                        </p>
-                        <p>
-                          <span className="font-bold">The goal: </span>
-                          <span className="text-muted-foreground">{factor.goal}</span>
-                        </p>
+                      <div className="mt-3 flex flex-col gap-3 border-t-2 border-dashed border-ink/20 pt-3 text-sm">
+                        {(() => {
+                          const fb: FactorFeedback =
+                            buildFactorFeedback(analysis)[key];
+                          const STATUS_STYLES: Record<
+                            FactorFeedback["status"],
+                            string
+                          > = {
+                            strong: "bg-mint",
+                            decent: "bg-sun",
+                            wobbly: "bg-paper",
+                            rough: "bg-coral",
+                          };
+                          return (
+                            <>
+                              <p>
+                                <span
+                                  className={cn(
+                                    "nb mr-2 inline-block bg-card px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest",
+                                    STATUS_STYLES[fb.status],
+                                  )}
+                                >
+                                  {fb.status}
+                                </span>
+                                <span>{fb.read}</span>
+                              </p>
+                              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                                Your numbers: {fb.yourNumbers}
+                              </p>
+                              <p>
+                                <span className="font-bold">Practice this: </span>
+                                <span className="text-muted-foreground">{fb.tip}</span>
+                              </p>
+                              <p>
+                                <span className="font-bold">How it's rated: </span>
+                                <span className="text-muted-foreground">{factor.how}</span>
+                              </p>
+                              <p>
+                                <span className="font-bold">The goal: </span>
+                                <span className="text-muted-foreground">{factor.goal}</span>
+                              </p>
+                            </>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>

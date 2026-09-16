@@ -44,6 +44,41 @@ export function isSpeechLevel(gainedRms: number): boolean {
   return gainedRms >= SPEECH_FLOOR;
 }
 
+/**
+ * Exponential-minimum tracker for the room's noise floor (raw RMS domain).
+ * Drops fast onto quieter signal (that IS the floor), rises very slowly
+ * against speech (speech is not the floor), so the gate adapts to fan
+ * hum, quiet offices, and loud cafés without ever gating real speech.
+ */
+export function updateNoiseFloor(currentFloor: number, rawRms: number): number {
+  if (!(rawRms > 0)) return currentFloor;
+  let next: number;
+  if (rawRms < currentFloor) {
+    next = currentFloor * 0.7 + rawRms * 0.3; // fast drop onto new floor
+  } else {
+    next = currentFloor * 1.001 + rawRms * 0.0005; // very slow rise
+  }
+  return Math.max(0.0001, Math.min(0.05, next));
+}
+
+/** Raw signal counts as speech this far above the tracked room floor. */
+export const NOISE_FLOOR_SPEECH_RATIO = 3.5;
+
+/**
+ * The per-frame voicing gate: the gained signal clears the calibrated
+ * speech floor (normal case), OR the raw signal stands well above the
+ * room's own tracked floor (a very quiet mic under adaptive gain, or a
+ * loud room where the fixed floor would stay too low).
+ */
+export function isSpeechFrame(
+  rawRms: number,
+  gainedRms: number,
+  noiseFloor: number,
+): boolean {
+  if (isSpeechLevel(gainedRms)) return true;
+  return noiseFloor > 1e-4 && rawRms > noiseFloor * NOISE_FLOOR_SPEECH_RATIO;
+}
+
 /** A take whose frames never reached speech level is a dead-mic take. */
 export function isDeadTake(speechFrameCount: number): boolean {
   return speechFrameCount < MIN_SPEECH_FRAMES;

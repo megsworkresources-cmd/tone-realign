@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   analyzeFrames,
   detectPitch,
+  spectralFlatness,
   type ToneAnalysis,
   type ToneFrame,
 } from "@/lib/tone-analyzer";
@@ -14,9 +15,10 @@ import {
   initialInputGain,
   isDeadTake,
   isPeak,
-  isSpeechLevel,
+  isSpeechFrame,
   RECALIBRATE_EVERY,
   SOFTWARE_GAIN,
+  updateNoiseFloor,
 } from "@/lib/capture-gain";
 
 export type CaptureState = "idle" | "recording" | "analyzing" | "done";
@@ -302,13 +304,25 @@ export function useToneCapture(): UseToneCapture {
       }
 
       const source = ctx.createMediaStreamSource(stream);
+      // High-pass at 70 Hz: kills desk rumble, handling noise, and HVAC
+      // hum before any measurement — plosives and pitch are unaffected,
+      // and the pitch detector stops chasing sub-voicing noise.
+      const highpass = ctx.createBiquadFilter();
+      highpass.type = "highpass";
+      highpass.frequency.value = 70;
+      highpass.Q.value = 0.7;
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 2048;
-      source.connect(analyser);
+      analyser.smoothingTimeConstant = 0.6;
+      source.connect(highpass);
+      highpass.connect(analyser);
 
       const timeBuf = new Float32Array(analyser.fftSize);
       const gainedBuf = new Float32Array(analyser.fftSize);
+      const freqBuf = new Uint8Array(analyser.frequencyBinCount);
       gainedBufRef.current = gainedBuf;
+      // Room noise floor (raw RMS domain), tracked by the adaptive gate.
+      let noiseFloor = 0.002;
       // Fresh take starts from the caller-supplied calibrated gain, not a
       // leftover value — and resets the calibration accumulators.
       inputGainRef.current = initialInputGain(lastPeakRawRms ?? null);
@@ -359,6 +373,12 @@ export function useToneCapture(): UseToneCapture {
 
       const loop = () => {
         const now = performance.now();
+        // A device that ends mid-take (Bluetooth out of range, unplug) must
+        // stop the loop — otherwise we record empty frames forever.
+        if (trackRef.current?.readyState === "ended") {
+          stop();
+          return;
+        }
         analyser.getFloatTimeDomainData(timeBuf);
 
         // RMS level for the live meter (gained so quiet mics feel alive)
@@ -373,10 +393,11 @@ export function useToneCapture(): UseToneCapture {
         if (now - lastFrameAtRef.current >= FRAME_INTERVAL_MS) {
           lastFrameAtRef.current = now;
           let pitch: number | null = null;
-          // Speech-gate the pitch detector: room tone gains below the
-          // speech floor, so silence can't produce garbage "pitch" and
-          // dilute the voiced ratio.
-          if (isSpeechLevel(gainedRms)) {
+          let flatness: number | undefined;
+          // Dual voicing gate: the calibrated speech floor (normal case)
+          // OR well above the room's tracked noise floor (quiet mics,
+          // loud rooms). Adaptive floor updates on every frame.
+          if (isSpeechFrame(rms, gainedRms, noiseFloor)) {
             // Loud peaks mean the input is hot — relax before clamping
             // squeezes every loud syllable to the same ceiling.
             if (isPeak(rms)) {
@@ -387,12 +408,19 @@ export function useToneCapture(): UseToneCapture {
               gainedBuf[i] = timeBuf[i] * SOFTWARE_GAIN;
             }
             pitch = detectPitch(gainedBuf, ctx.sampleRate);
+            // Spectral flatness of the frequency data — near 1 means this
+            // frame is broadband noise, not a voice. The analyzer uses it
+            // to keep hiss from scoring as clarity.
+            analyser.getByteFrequencyData(freqBuf);
+            flatness = spectralFlatness(freqBuf);
           }
+          noiseFloor = updateNoiseFloor(noiseFloor, rms);
           lastPitchRef.current = pitch;
           framesRef.current.push({
             pitchHz: pitch,
             volume: gainedRms,
             timestamp: now,
+            flatness,
           });
 
           // Mid-take calibration: if a full window has passed and their
