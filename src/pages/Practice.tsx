@@ -4,13 +4,18 @@ import { MicPicker, getSavedMicDeviceId } from "@/components/MicPicker";
 import { CoachNote } from "@/components/CoachNote";
 import { getDrill, type Drill } from "@/lib/drills";
 import { getDailyChallenge } from "@/lib/daily";
-import { TONE_LABELS, type ToneAnalysis } from "@/lib/tone-analyzer";
+import {
+  TONE_FACTORS,
+  TONE_LABELS,
+  type ToneAnalysis,
+} from "@/lib/tone-analyzer";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { api } from "@/convex/_generated/api";
 import { ArrowLeft, Check, Mic, Square } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -46,6 +51,9 @@ export default function Practice() {
 function PracticeRunner({ drill }: { drill: Drill }) {
   const capture = useToneCapture();
   const [saved, setSaved] = useState(false);
+  const [expandedFactor, setExpandedFactor] = useState<
+    "calm" | "energy" | "clarity" | "stability" | null
+  >(null);
   const drillStats = useQuery(api.sessions.drillStats);
   const bestByDrill = new Map((drillStats ?? []).map((s) => [s.drill, s]));
 
@@ -221,22 +229,54 @@ function PracticeRunner({ drill }: { drill: Drill }) {
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               {(
                 [
-                  ["Calm", analysis.calmScore],
-                  ["Energy", analysis.energyScore],
-                  ["Clarity", analysis.clarityScore],
-                  ["Stability", analysis.stabilityScore],
+                  ["calm", analysis.calmScore],
+                  ["energy", analysis.energyScore],
+                  ["clarity", analysis.clarityScore],
+                  ["stability", analysis.stabilityScore],
                 ] as const
-              ).map(([label, score]) => (
-                <div key={label} className="nb bg-card p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-widest">
-                      {label}
-                    </span>
-                    <span className="font-display text-xl">{score}</span>
+              ).map(([key, score]) => {
+                const factor = TONE_FACTORS[key];
+                const open = expandedFactor === key;
+                return (
+                  <div key={key} className="nb bg-card p-3">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedFactor(open ? null : key)}
+                      aria-expanded={open}
+                      className="flex w-full items-center justify-between text-left"
+                    >
+                      <span className="text-xs font-bold uppercase tracking-widest">
+                        {factor.label}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="font-display text-xl">{score}</span>
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "text-[10px] font-bold transition-transform",
+                            open && "rotate-180",
+                          )}
+                        >
+                          ▼
+                        </span>
+                      </span>
+                    </button>
+                    <NBMeter value={score} className="mt-2" />
+                    {open && (
+                      <div className="mt-3 flex flex-col gap-2 border-t-2 border-dashed border-ink/20 pt-3 text-sm">
+                        <p>
+                          <span className="font-bold">How it's rated: </span>
+                          <span className="text-muted-foreground">{factor.how}</span>
+                        </p>
+                        <p>
+                          <span className="font-bold">The goal: </span>
+                          <span className="text-muted-foreground">{factor.goal}</span>
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <NBMeter value={score} className="mt-2" />
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">

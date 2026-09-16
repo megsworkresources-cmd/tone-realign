@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { analyzeFrames, detectPitch, TONE_LABELS } from "./tone-analyzer";
+import {
+  analyzeFrames,
+  detectPitch,
+  TONE_FACTORS,
+  TONE_LABELS,
+} from "./tone-analyzer";
 
 /** Synthesize a time-domain buffer of a sine wave at the given frequency. */
 function sineBuffer(hz: number, seconds: number, sampleRate = 8000): Float32Array {
@@ -36,6 +41,42 @@ describe("detectPitch", () => {
   test("returns null for out-of-range frequency (25Hz rumble)", () => {
     const buf = sineBuffer(25, 0.5);
     expect(detectPitch(buf, 8000)).toBeNull();
+  });
+});
+
+describe("TONE_FACTORS", () => {
+  const FACTOR_KEYS = ["calm", "energy", "clarity", "stability"] as const;
+
+  test("covers exactly the four scored factors", () => {
+    expect(Object.keys(TONE_FACTORS).sort()).toEqual(
+      [...FACTOR_KEYS].sort(),
+    );
+  });
+
+  test("every factor explains how it's rated and what the goal is", () => {
+    for (const key of FACTOR_KEYS) {
+      const f = TONE_FACTORS[key];
+      expect(f.label.length).toBeGreaterThan(2);
+      expect(f.how.length).toBeGreaterThan(40);
+      expect(f.goal.length).toBeGreaterThan(30);
+      expect(f.color).toMatch(/^bg-/); // theme token, renderable
+    }
+  });
+
+  test("explanations match the actual scoring math", () => {
+    // Honest copy: each factor's 'how' must reference the mechanism its
+    // formula really uses (checked loosely by keyword).
+    expect(TONE_FACTORS.calm.how).toMatch(/130 wpm/);
+    expect(TONE_FACTORS.calm.how).toMatch(/voiced/i);
+    expect(TONE_FACTORS.energy.how).toMatch(/pitch|volume/i);
+    expect(TONE_FACTORS.clarity.how).toMatch(/volume|voiced|pace/i);
+    expect(TONE_FACTORS.stability.how).toMatch(/spread|pitch/i);
+  });
+
+  test("goal copy never uses generic therapy filler", () => {
+    for (const key of FACTOR_KEYS) {
+      expect(TONE_FACTORS[key].goal).not.toMatch(/journey|healing|valid/i);
+    }
   });
 });
 

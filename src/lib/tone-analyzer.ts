@@ -315,6 +315,41 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+/**
+ * Per-factor explanations for the results UI: how each score is computed
+ * (honest, matching the formulas above) and what good delivery sounds
+ * like. Kept beside the scoring code so the two can't drift apart.
+ */
+export const TONE_FACTORS: Record<
+  "calm" | "energy" | "clarity" | "stability",
+  { label: string; how: string; goal: string; color: string }
+> = {
+  calm: {
+    label: "Calm",
+    color: "bg-mint text-ink",
+    how: "Rates your pace against a ~130 wpm conversational ideal, your average loudness, and how much of the take was actually voiced. Rushing, overpowering volume, or dropping into unvoiced gaps all cost points.",
+    goal: "Even conversational pace, moderate volume, and staying voiced — the sound of someone with nothing to prove.",
+  },
+  energy: {
+    label: "Energy",
+    color: "bg-sun text-ink",
+    how: "Blends how far your pitch traveled across the take with how much presence your volume carried. A flat, faint delivery reads as low energy even when the words are good.",
+    goal: "Let pitch genuinely move on the words that matter, and keep your voice audible from the first word to the last.",
+  },
+  clarity: {
+    label: "Clarity",
+    color: "bg-paper text-ink",
+    how: "Rewards steady force (volume that doesn't wobble), a healthy voiced ratio, and pace inside the intelligible band. Wobbling pressure and endings that trail off cost the most.",
+    goal: "Hold the same force from your first three words to your last three — nothing swallowed, nothing rushed past the listener.",
+  },
+  stability: {
+    label: "Stability",
+    color: "bg-secondary text-ink",
+    how: "Measures how consistently your pitch holds — the relative spread of your voiced frames. If too little of the take is voiced, it scores low rather than guessing from noise.",
+    goal: "Choose an ending pitch before you start and land on it. Wander less, and never let the last word fall away.",
+  },
+};
+
 /** Tone label + friendly description for display. */
 export const TONE_LABELS: Record<
   string,
