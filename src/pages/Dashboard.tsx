@@ -1,7 +1,7 @@
 import { NBBadge, NBButton, NBPanel, NBStat } from "@/components/nb";
 import { AppShell, LevelRing } from "@/components/AppShell";
 import { DailyChecklist } from "@/components/DailyChecklist";
-import { BreathReset } from "@/components/BreathReset";
+import { GroundingKit } from "@/components/GroundingKit";
 import { DRILLS } from "@/lib/drills";
 import { dailyLabel, getAccessibleDailyChallenge } from "@/lib/daily";
 import { arcDaysLeft, arcStageFor } from "@/lib/arc";
@@ -100,7 +100,7 @@ export default function Dashboard() {
 
   return (
     <AppShell active="dashboard">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6">
         {/* Greeting + headline stats */}
         <section className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -159,32 +159,32 @@ export default function Dashboard() {
         {/* 21-day arc — where you are in the reprogramming program */}
         <ArcPanel streakDays={stats.streakDays} />
 
-        {/* Daily challenge */}
-        <section className="nb relative overflow-hidden bg-sun nb-shadow">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <span className="nb flex size-12 shrink-0 items-center justify-center bg-card">
-                <Sparkles className="size-6" />
-              </span>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest">
-                  Today's challenge
-                </p>
-                <h2 className="font-display text-xl leading-tight sm:text-2xl">
-                  {daily.drill.name} — {daily.angle.toLowerCase()}
-                </h2>
+        {/* Daily challenge + next unlock — the two live goals, side by side */}
+        <section className="grid gap-4 lg:grid-cols-[1.15fr_1fr]">
+          <div className="nb relative overflow-hidden bg-sun nb-shadow">
+            <div className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+              <div className="flex items-center gap-4">
+                <span className="nb flex size-12 shrink-0 items-center justify-center bg-card">
+                  <Sparkles className="size-6" />
+                </span>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest">
+                    Today's challenge
+                  </p>
+                  <h2 className="font-display text-lg leading-tight sm:text-xl">
+                    {daily.drill.name} — {daily.angle.toLowerCase()}
+                  </h2>
+                </div>
               </div>
+              <Link to={`/practice/${daily.drill.id}`}>
+                <NBButton variant="ink" className="text-xs">
+                  <Mic className="size-3.5" /> Do today's take
+                </NBButton>
+              </Link>
             </div>
-            <Link to={`/practice/${daily.drill.id}`}>
-              <NBButton variant="ink" className="text-xs">
-                <Mic className="size-3.5" /> Do today's take
-              </NBButton>
-            </Link>
           </div>
+          {next && <NextUnlockPanel next={next} />}
         </section>
-
-        {/* Next unlock — the one concrete thing to chase next */}
-        {next && <NextUnlockPanel next={next} />}
 
         {/* Checklist + progression center */}
         <section className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
@@ -247,17 +247,24 @@ export default function Dashboard() {
           </NBPanel>
         </section>
 
-        {/* Achievements */}
-        <section>
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-2xl">
-              Trophy <span className="italic text-coral">shelf</span>
-            </h2>
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              {earned.size} of {ACHIEVEMENTS.length} earned
-            </p>
-          </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Achievements — collapsed by default so the shelf rewards a visit
+            instead of adding another wall of cards to scroll past */}
+        <details className="nb group bg-card nb-shadow">
+          <summary className="flex cursor-pointer list-none items-center justify-between border-b-2 border-ink px-6 py-4 [&::-webkit-details-marker]:hidden">
+            <div className="flex items-center gap-2 font-display text-xl">
+              <Trophy className="size-5" /> Trophy shelf
+              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                {earned.size} of {ACHIEVEMENTS.length} earned
+              </span>
+            </div>
+            <span
+              aria-hidden
+              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-transform group-open:rotate-180"
+            >
+              open ▼
+            </span>
+          </summary>
+          <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
             {ACHIEVEMENTS.map((a) => {
               const has = earned.has(a.id);
               return (
@@ -286,7 +293,7 @@ export default function Dashboard() {
               );
             })}
           </div>
-        </section>
+        </details>
 
         {/* Drills */}
         <section>
@@ -359,9 +366,9 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Rituals */}
+        {/* Rituals — grounding first, then the no-mic practices */}
         <section className="grid gap-6 lg:grid-cols-3">
-          <BreathReset />
+          <GroundingKit />
           <NBPanel className="bg-ink text-paper">
             <div className="border-b-2 border-paper/20 p-6">
               <div className="flex items-center gap-2 font-display text-xl">
@@ -449,8 +456,8 @@ export default function Dashboard() {
  */
 function NextUnlockPanel({ next }: { next: NextUnlock }) {
   return (
-    <section className="nb bg-card nb-shadow">
-      <div className="flex flex-wrap items-center justify-between gap-4 p-5">
+    <div className="nb bg-card nb-shadow">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
         <div className="flex items-center gap-4">
           <span className="nb flex size-11 shrink-0 items-center justify-center bg-ink text-paper">
             <Lock className="size-5" />
@@ -473,7 +480,7 @@ function NextUnlockPanel({ next }: { next: NextUnlock }) {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 

@@ -1,41 +1,71 @@
-import { NBButton, NBPanel } from "@/components/nb";
+import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import {
-  BREATH_CUES,
-  BREATH_LABELS,
-  BREATH_TOTAL_MS,
-  breathStateAt,
-  orbScaleFor,
-} from "@/lib/breath";
-import { RotateCcw, Wind, X } from "lucide-react";
+  GROUNDING_EXERCISES,
+  groundingRoundMs,
+  groundingStateAt,
+  groundingTotalMs,
+  orbScaleForStep,
+  type GroundingExercise,
+} from "@/lib/grounding";
+import {
+  Eye,
+  RotateCcw,
+  ScanLine,
+  Square,
+  Timer,
+  Waves,
+  Wind,
+  X,
+} from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMutation } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
+import { cn } from "@/lib/utils";
 
-const SUGGESTED_ROUNDS = 3;
+const ICONS = {
+  wind: Wind,
+  box: Square,
+  waves: Waves,
+  eye: Eye,
+  scan: ScanLine,
+  timer: Timer,
+} as const;
+
+/** "80s" / "1m 40s" — session length at a glance. */
+function fmtTotal(ms: number): string {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s`;
+  return `${Math.floor(s / 60)}m ${s % 60}s`;
+}
 
 /**
- * The big reset: a full-panel, breath-paced orb with ring progress,
- * live cues, and round counting. Much larger and more interactive than
- * the old mini-pacer — this is a place you go, not a widget you glance at.
+ * The grounding kit — every calm-down exercise in one compact panel.
+ * Six exercises (breath pacers + attention guides), one shared orb
+ * runner. Replaces the old single-pacer Reset; completing any exercise's
+ * suggested rounds still credits the daily checklist's reset.
  */
-export function BreathReset() {
+export function GroundingKit() {
   const markReset = useMutation(api.dailyLog.mark);
+  const [activeId, setActiveId] = useState(GROUNDING_EXERCISES[0].id);
+  const ex =
+    GROUNDING_EXERCISES.find((e) => e.id === activeId) ?? GROUNDING_EXERCISES[0];
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [finished, setFinished] = useState(false);
   const raf = useRef<number | null>(null);
   const startTs = useRef<number>(0);
+  const totalMs = groundingTotalMs(ex);
 
   useEffect(() => {
     if (!running) return;
     const tick = (now: number) => {
       const t = now - startTs.current;
       setElapsed(t);
-      if (t >= BREATH_TOTAL_MS * SUGGESTED_ROUNDS) {
+      if (t >= totalMs) {
         setRunning(false);
         setFinished(true);
-        // Full reset completed — credit today's checklist (idempotent server-side).
+        // Suggested rounds completed — credit today's checklist (idempotent server-side).
         markReset({ action: "reset" }).catch(() => {});
         return;
       }
@@ -46,28 +76,32 @@ export function BreathReset() {
     return () => {
       if (raf.current != null) cancelAnimationFrame(raf.current);
     };
-  }, [running, markReset]);
+  }, [running, totalMs, markReset]);
 
-  const stop = () => {
-    setRunning(false);
-  };
+  const stop = () => setRunning(false);
   const reset = () => {
     setRunning(false);
     setElapsed(0);
     setFinished(false);
   };
+  const switchTo = (id: string) => {
+    setActiveId(id);
+    setRunning(false);
+    setElapsed(0);
+    setFinished(false);
+  };
 
-  const s = breathStateAt(elapsed);
-  const scale = running ? orbScaleFor(s.phase, s.progress) : 0.72;
-  const secondsLeft = running ? Math.ceil(s.msLeftInPhase / 1000) : null;
-  const overall = Math.min(1, elapsed / (BREATH_TOTAL_MS * SUGGESTED_ROUNDS));
+  const s = groundingStateAt(ex, elapsed);
+  const scale = running ? orbScaleForStep(s.step.kind, s.progress) : 0.72;
+  const secondsLeft = running ? Math.ceil(s.msLeftInStep / 1000) : null;
+  const overall = Math.min(1, elapsed / totalMs);
 
   return (
     <NBPanel className="overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between border-b-2 border-ink bg-paper px-5 py-3">
         <div className="flex items-center gap-2 font-display text-xl">
-          <Wind className="size-5" /> The Reset
+          <Wind className="size-5" /> Grounding kit
         </div>
         {running && (
           <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest">
@@ -76,37 +110,69 @@ export function BreathReset() {
               transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
               className="size-2 bg-coral nb"
             />
-            Round {s.round} of {SUGGESTED_ROUNDS}
+            Round {s.round} of {ex.rounds}
           </span>
         )}
       </div>
 
-      <div className="p-6">
+      {/* Exercise tabs */}
+      <div className="flex gap-1 overflow-x-auto border-b-2 border-ink bg-secondary/60 p-2">
+        {GROUNDING_EXERCISES.map((e) => {
+          const Icon = ICONS[e.icon];
+          const active = e.id === ex.id;
+          return (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => switchTo(e.id)}
+              aria-pressed={active}
+              className={cn(
+                "nb flex shrink-0 items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors",
+                active ? "bg-ink text-paper" : "bg-card hover:bg-muted",
+              )}
+            >
+              <Icon className="size-3.5 shrink-0" />
+              <span className="whitespace-nowrap">{e.name}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="p-5">
         {!running && !finished && (
-          <div className="flex flex-col items-center gap-5 text-center">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="flex items-center gap-2">
+              <NBBadge className={cn("text-ink", ex.color)}>{ex.tag}</NBBadge>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                {ex.rounds} rounds · {fmtTotal(totalMs)}
+              </span>
+            </div>
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-              Four in. Seven held. Eight out. Two or three rounds drop your
-              shoulders — and your pitch follows your shoulders. Full screen
-              when you want the room to disappear.
+              {ex.intro}
             </p>
             <motion.div
-              animate={{ scale: [1, 1.06, 1] }}
+              animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="nb flex size-24 items-center justify-center bg-mint"
+              className="nb flex size-20 items-center justify-center bg-mint"
             >
-              <span className="font-display text-lg">4·7·8</span>
+              <span className="font-display text-base">
+                {groundingRoundMs(ex) % 10_000 === 0 && ex.id === "box-breathing"
+                  ? "4·4·4·4"
+                  : ex.id === "reset-478"
+                    ? "4·7·8"
+                    : `${ex.steps.length} steps`}
+              </span>
             </motion.div>
             <NBButton variant="coral" onClick={() => setRunning(true)} className="px-6 py-3 text-base">
-              Begin the reset
+              Begin {ex.name.toLowerCase()}
             </NBButton>
           </div>
         )}
 
         {running && (
-          <div className="flex flex-col items-center gap-6">
+          <div className="flex flex-col items-center gap-4">
             {/* The orb with progress ring */}
-            <div className="relative flex size-64 items-center justify-center sm:size-72">
-              {/* Track ring */}
+            <div className="relative flex size-56 items-center justify-center sm:size-64">
               <svg className="absolute inset-0 -rotate-90" viewBox="0 0 100 100" aria-hidden>
                 <circle cx="50" cy="50" r="46" fill="none" strokeWidth="3" className="stroke-ink/15" />
                 <circle
@@ -117,28 +183,28 @@ export function BreathReset() {
                   strokeDashoffset={2 * Math.PI * 46 * (1 - overall)}
                 />
               </svg>
-              {/* Sun backing block for depth */}
               <div
                 aria-hidden
-                className="nb absolute h-[62%] w-[62%] rotate-3 bg-sun"
-                style={{ transform: `translate(6px, 6px) rotate(3deg)` }}
+                className="nb absolute h-[62%] w-[62%] bg-sun"
+                style={{ transform: "translate(6px, 6px) rotate(3deg)" }}
               />
-              {/* The breathing orb */}
               <motion.div
                 animate={{ scale }}
-                transition={{ duration: running ? 0.35 : 0.4, ease: "easeInOut" }}
+                transition={{ duration: 0.35, ease: "easeInOut" }}
                 className="nb flex size-[58%] items-center justify-center bg-mint"
               >
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={s.phase}
+                    key={`${s.round}-${s.stepIndex}`}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.25 }}
-                    className="text-center"
+                    className="px-4 text-center"
                   >
-                    <div className="font-display text-2xl">{BREATH_LABELS[s.phase]}</div>
+                    <div className="font-display text-xl leading-tight sm:text-2xl">
+                      {s.step.label}
+                    </div>
                     {secondsLeft != null && (
                       <div className="mt-1 text-4xl font-bold tabular-nums">{secondsLeft}</div>
                     )}
@@ -150,13 +216,13 @@ export function BreathReset() {
             {/* Live cue */}
             <AnimatePresence mode="wait">
               <motion.p
-                key={s.phase}
+                key={`${s.stepIndex}-${s.step.label}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="min-h-5 text-center text-sm italic text-muted-foreground"
+                className="min-h-10 max-w-sm text-center text-sm italic text-muted-foreground"
               >
-                {BREATH_CUES[s.phase]}
+                {s.step.cue}
               </motion.p>
             </AnimatePresence>
 
@@ -181,15 +247,22 @@ export function BreathReset() {
               Done
             </div>
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-              Three rounds. That's your nervous system told the threat passed.
-              Now say the thing — slower than feels necessary.
+              {ex.rounds} rounds of {ex.name.toLowerCase()}. That's your body
+              told the threat passed — now speak slower than feels necessary.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <NBButton variant="coral" onClick={reset} className="text-sm">
-                <RotateCcw className="size-4" /> Another round
+                <RotateCcw className="size-4" /> Again
               </NBButton>
-              <NBButton variant="ink" onClick={() => setRunning(true)} className="text-sm">
-                Keep going (3 more)
+              <NBButton
+                variant="ink"
+                onClick={() => {
+                  reset();
+                  setRunning(true);
+                }}
+                className="text-sm"
+              >
+                Keep going
               </NBButton>
             </div>
           </motion.div>
@@ -198,3 +271,6 @@ export function BreathReset() {
     </NBPanel>
   );
 }
+
+/** Exported for tests/story reuse if needed. */
+export type { GroundingExercise };
