@@ -1,12 +1,13 @@
 import { NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
 import { PagePager } from "@/components/PagePager";
-import { WatchLearnSection } from "@/components/VideoCard";
+import { VideoCard } from "@/components/VideoCard";
 import { WATCH_LIST } from "@/lib/watch-list";
 import { useAuth } from "@/hooks/use-auth";
 import {
   ArrowRight,
   AudioWaveform,
+  PlaySquare,
   ShieldCheck,
   Timer,
 } from "lucide-react";
@@ -329,18 +330,12 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Watch & learn — curated videos, each paired with a drill */}
-      <WatchLearnSection
-        videos={WATCH_LIST.slice(0, 6)}
-        seeAll={{
-          to: "/library",
-          label: "See all videos in the library",
-        }}
-      />
+      {/* Watch teaser — one featured video; the full shelf lives on /watch */}
+      <FeaturedWatchTeaser />
 
-      {/* Quick routes: three doors into the site */}
+      {/* Quick routes: four doors into the site */}
       <section className="border-b-2 border-ink bg-paper">
-        <div className="mx-auto grid max-w-6xl gap-5 px-4 py-12 sm:grid-cols-3">
+        <div className="mx-auto grid max-w-6xl gap-5 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
           {[
             {
               to: "/tone-check",
@@ -355,10 +350,16 @@ export default function Home() {
               color: "bg-mint",
             },
             {
-              to: "/library",
+              to: "/watch",
               title: "Learn from the pros",
-              body: "Videos and research from the people who study this for a living.",
+              body: "Seven curated videos on tone, delivery, and staying regulated.",
               color: "bg-sun",
+            },
+            {
+              to: "/library",
+              title: "Go deeper",
+              body: "The research shelf — books and studies behind the method.",
+              color: "bg-paper",
             },
           ].map((card, i) => (
             <motion.div
@@ -415,5 +416,52 @@ export default function Home() {
       </section>
       <PagePager />
     </PublicLayout>
+  );
+}
+
+/**
+ * One featured video — a taste of the /watch shelf without the weight
+ * of a six-card grid on the home page. Header strip + single card +
+ * a clear "all seven" link.
+ */
+function FeaturedWatchTeaser() {
+  const featured = WATCH_LIST[0];
+  return (
+    <section className="nb-stripes border-b-2 border-ink bg-ink text-paper">
+      <div className="mx-auto max-w-6xl px-4 py-14">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <span className="nb inline-flex items-center gap-2 bg-coral px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink">
+              <PlaySquare className="size-3.5" /> Watch & learn
+            </span>
+            <h2 className="mt-4 font-display text-3xl leading-tight sm:text-4xl">
+              Learn from the <span className="italic text-sun">pros</span>.
+            </h2>
+          </div>
+          <p className="max-w-md text-sm leading-relaxed text-paper/60">
+            Coaches and researchers on what your voice broadcasts — every
+            video paired with the drill that turns it into a rep.
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
+          <VideoCard video={featured} />
+          <div className="flex flex-col justify-center gap-4">
+            <p className="text-base leading-relaxed text-paper/80">
+              That's one of seven. Jefferson Fisher on getting a conversation
+              unstuck — and the Steady Ground drill that lets you practice it
+              out loud in 45 seconds.
+            </p>
+            <div>
+              <Link to="/watch">
+                <NBButton variant="paper" className="px-6 py-3 text-base">
+                  See all seven videos <ArrowRight className="size-4" />
+                </NBButton>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

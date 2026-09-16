@@ -1,9 +1,7 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
 import { PagePager } from "@/components/PagePager";
-import { WATCH_LIST } from "@/lib/watch-list";
 import { READING_LIST } from "@/lib/reading-list";
-import { WatchLearnSection } from "@/components/VideoCard";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -23,18 +21,12 @@ export default function Library() {
             Reps from you.
           </h1>
           <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Every video here ends the same way: with a drill underneath it.
-            Watch the idea, then use your own voice to make it stick.
+            The research shelf — books, talks, and studies from the people
+            whose work this app stands on. For the videos, the tour's next
+            stop back is Watch.
           </p>
         </div>
       </section>
-
-      {/* Videos */}
-      <WatchLearnSection
-        videos={WATCH_LIST}
-        heading="Videos that change the room"
-        subheading="Real techniques from the people who coach this for a living — and the drill that lets you practice each one out loud."
-      />
 
       {/* Go deeper — the research shelf */}
       <section className="border-b-2 border-ink bg-paper">

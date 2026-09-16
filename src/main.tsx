@@ -16,6 +16,7 @@ const Landing = lazy(() => import("./pages/Landing.tsx"));
 const HowItWorks = lazy(() => import("./pages/HowItWorks.tsx"));
 const ToneCheck = lazy(() => import("./pages/ToneCheck.tsx"));
 const DrillsPage = lazy(() => import("./pages/Drills.tsx"));
+const Watch = lazy(() => import("./pages/Watch.tsx"));
 const Library = lazy(() => import("./pages/Library.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
@@ -75,6 +76,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/how" element={<HowItWorks />} />
               <Route path="/tone-check" element={<ToneCheck />} />
               <Route path="/drills" element={<DrillsPage />} />
+              <Route path="/watch" element={<Watch />} />
               <Route path="/library" element={<Library />} />
               <Route
                 path="/auth"

@@ -53,12 +53,20 @@ describe("page tour (back/forward pager)", () => {
     expect(home.prev).toBeNull();
     expect(home.next?.to).toBe("/how");
     const library = tourStops("/library");
-    expect(library.prev?.to).toBe("/drills");
+    expect(library.prev?.to).toBe("/watch");
     expect(library.next).toBeNull();
   });
 
+  test("watch sits between drills and library", () => {
+    const watch = tourStops("/watch");
+    expect(watch.prev?.to).toBe("/drills");
+    expect(watch.next?.to).toBe("/library");
+    const drills = tourStops("/drills");
+    expect(drills.next?.to).toBe("/watch");
+  });
+
   test("every public page renders the pager", () => {
-    for (const page of ["Home", "HowItWorks", "ToneCheck", "Drills", "Library"]) {
+    for (const page of ["Home", "HowItWorks", "ToneCheck", "Drills", "Watch", "Library"]) {
       const src = readFileSync(new URL(`../pages/${page}.tsx`, import.meta.url), "utf8");
       expect(src).toContain("PagePager");
     }
@@ -129,8 +137,8 @@ describe("nav ↔ router parity", () => {
 });
 
 describe("layout wiring", () => {
-  test("PublicLayout is used by all five public pages", () => {
-    for (const page of ["Home", "HowItWorks", "ToneCheck", "Drills", "Library"]) {
+  test("PublicLayout is used by all six public pages", () => {
+    for (const page of ["Home", "HowItWorks", "ToneCheck", "Drills", "Watch", "Library"]) {
       const src = readFileSync(
         new URL(`../pages/${page}.tsx`, import.meta.url),
         "utf8",
