@@ -1,5 +1,6 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import { AppShell } from "@/components/AppShell";
+import { ResponsePlanner } from "@/components/ResponsePlanner";
 import { REFRAME_SCENARIOS } from "@/lib/drills";
 import { LENSES } from "@/lib/perspectives";
 import { api } from "@/convex/_generated/api";
@@ -106,6 +107,17 @@ export default function Reframe() {
             The trigger fires. The old reply comes out. This is where you slow
             it down and write the version you actually want to say.
           </p>
+
+          {/* The think-through: frame the response before writing it.
+              Tapping a message kind prefills the goal field below. */}
+          <div className="mt-6">
+            <ResponsePlanner
+              title="Frame it before you write it"
+              intro="Answer these four and the response almost writes itself — you'll know what their move was, what the real message is, and what you want them to feel afterward."
+              accent="bg-secondary"
+              onGoalPick={(g) => setGoal(g)}
+            />
+          </div>
 
           <div className="mt-6 flex flex-col gap-4">
             <div>

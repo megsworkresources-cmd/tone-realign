@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { NBBadge, NBButton, NBPanel, NBStat } from "@/components/nb";
 import { MicError } from "@/components/MicError";
 import { MicPicker, getSavedMicDeviceId } from "@/components/MicPicker";
+import { ResponsePlanner } from "@/components/ResponsePlanner";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { api } from "@/convex/_generated/api";
 import {
@@ -160,6 +161,17 @@ export default function Translate() {
             </div>
           </div>
         </NBPanel>
+
+        {/* The think-through: what is take two actually for? Visible
+            before and between the passes — never after, when the teachable
+            moment has already passed. */}
+        {!done && (
+          <ResponsePlanner
+            title={reflexAnalysis ? "Before the intended take — think it through" : "Before you speak — think it through"}
+            intro="Four questions, sixty seconds. The difference between reacting and responding is almost never the words — it's what you decided underneath them."
+            accent="bg-card"
+          />
+        )}
 
         {/* Take flow */}
         {!done && (
