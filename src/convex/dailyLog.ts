@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
+import { DRILLS } from "../lib/drills";
 
 /**
  * The daily checklist + XP ledger. One row per user per local day.
@@ -174,7 +175,7 @@ export const progression = query({
         totalResets: 0,
         streakDays: 0,
         drillsTried: 0,
-        drills: 5,
+        drills: DRILLS.length,
       };
     }
 
@@ -242,7 +243,7 @@ export const progression = query({
       totalResets: logs.filter((l) => l.completed.includes("reset")).length,
       streakDays,
       drillsTried: attempts.length,
-      drills: 5, // DRILLS.length — kept literal to avoid a client import in Convex
+      drills: DRILLS.length,
     };
   },
 });

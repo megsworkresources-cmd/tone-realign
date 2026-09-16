@@ -3,6 +3,7 @@ import { MicError } from "@/components/MicError";
 import { MicPicker, getSavedMicDeviceId } from "@/components/MicPicker";
 import { CoachNote } from "@/components/CoachNote";
 import { getDrill, type Drill } from "@/lib/drills";
+import { UNLOCKABLE_DRILLS, isUnlocked, unlockGoalLine } from "@/lib/unlocks";
 import { getDailyChallenge } from "@/lib/daily";
 import {
   COUNTDOWN_SECONDS,
@@ -21,12 +22,13 @@ import {
 } from "@/lib/tone-analyzer";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { api } from "@/convex/_generated/api";
-import { ArrowLeft, Check, Mic, Square, Target } from "lucide-react";
+import { ArrowLeft, Check, Lock, Mic, Square, Target } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
+import { levelInfo } from "@/lib/gamify";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -39,6 +41,16 @@ function fmtTime(ms: number) {
 export default function Practice() {
   const { drillId } = useParams();
   const drill = drillId ? getDrill(drillId) : undefined;
+  const progression = useQuery(api.dailyLog.progression);
+  const stats = {
+    takes: progression?.totalSessions ?? 0,
+    level: levelInfo(progression?.totalXp ?? 0).level,
+    drillsTried: progression?.drillsTried ?? 0,
+    bestScore: progression?.bestOverall ?? 0,
+    streak: progression?.streakDays ?? 0,
+  };
+  const gate = UNLOCKABLE_DRILLS.find((u) => u.id === drillId);
+  const locked = !!drill && !!gate && !isUnlocked(gate, stats);
 
   if (!drill) {
     return (
@@ -49,6 +61,31 @@ export default function Practice() {
             <Link to="/dashboard" className="mt-4 inline-block">
               <NBButton variant="paper">Back to dashboard</NBButton>
             </Link>
+          </NBPanel>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (locked) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-3xl px-4 py-10">
+          <NBPanel className="p-8 text-center">
+            <Lock className="mx-auto size-8" />
+            <p className="mt-3 font-display text-xl">{drill.name} is still locked</p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+              {gate?.blurb} Unlock it with {gate ? unlockGoalLine(gate, stats) : "practice"} —
+              every honest take counts.
+            </p>
+            <div className="mt-5 flex justify-center gap-3">
+              <Link to="/dashboard">
+                <NBButton variant="paper">Back to dashboard</NBButton>
+              </Link>
+              <Link to="/practice/steady-ground">
+                <NBButton variant="coral">Do an open drill</NBButton>
+              </Link>
+            </div>
           </NBPanel>
         </div>
       </AppShell>

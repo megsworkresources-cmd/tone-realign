@@ -10,6 +10,17 @@ import {
   levelInfo,
   type AchievementStats,
 } from "@/lib/gamify";
+import {
+  UNLOCKABLE_DRILLS,
+  TRENDS_UNLOCK,
+  isUnlocked,
+  unlockGoalLine,
+  unlockProgressPct,
+  nextUnlock,
+  buildToneTrends,
+  type UnlockStats,
+  type NextUnlock,
+} from "@/lib/unlocks";
 import { TONE_LABELS } from "@/lib/tone-analyzer";
 import { api } from "@/convex/_generated/api";
 import {
@@ -19,9 +30,11 @@ import {
   Lock,
   MessagesSquare,
   Mic,
+  Minus,
   Shuffle,
   Sparkles,
   Timer,
+  TrendingDown,
   TrendingUp,
   Trophy,
   Wind,
@@ -37,6 +50,7 @@ const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 export default function Dashboard() {
   const progression = useQuery(api.dailyLog.progression);
   const recentSessions = useQuery(api.sessions.listSessions, { limit: 5 });
+  const trendSessions = useQuery(api.sessions.listSessions, { limit: 10 });
   const reframeLogs = useQuery(api.reframes.list, { limit: 2 });
   const drillStats = useQuery(api.sessions.drillStats);
 
@@ -58,6 +72,17 @@ export default function Dashboard() {
   const earned = new Set(
     ACHIEVEMENTS.filter((a) => a.test(stats)).map((a) => a.id),
   );
+
+  // Progressive unlocks: what's open, and the one next goal to chase.
+  const unlockStats: UnlockStats = {
+    takes: stats.totalSessions,
+    level: level.level,
+    drillsTried: stats.drillsTried,
+    bestScore: stats.bestOverall,
+    streak: stats.streakDays,
+  };
+  const next = nextUnlock(unlockStats);
+  const trendsUnlocked = isUnlocked(TRENDS_UNLOCK, unlockStats);
 
   const maxWeekXp = Math.max(1, ...(progression?.week ?? []).map((w) => w.xp));
   const weekBars = (progression?.week ?? []).map((w) => ({
@@ -150,6 +175,9 @@ export default function Dashboard() {
             </Link>
           </div>
         </section>
+
+        {/* Next unlock — the one concrete thing to chase next */}
+        {next && <NextUnlockPanel next={next} />}
 
         {/* Checklist + progression center */}
         <section className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
@@ -266,31 +294,58 @@ export default function Dashboard() {
           <div className="mt-5 grid gap-5 md:grid-cols-3">
             {DRILLS.map((drill) => {
               const s = bestByDrill.get(drill.id);
+              const gate = UNLOCKABLE_DRILLS.find((u) => u.id === drill.id);
+              const open = !gate || isUnlocked(gate, unlockStats);
               return (
-                <NBPanel key={drill.id} className="flex flex-col">
-                  <div className={`border-b-2 border-ink px-5 py-3 ${drill.color}`}>
-                    <div className="font-display text-lg leading-tight">{drill.name}</div>
+                <NBPanel key={drill.id} className={open ? "flex flex-col" : "flex flex-col bg-card/60"}>
+                  <div className={`border-b-2 border-ink px-5 py-3 ${drill.color} ${open ? "" : "opacity-60"}`}>
+                    <div className="flex items-center justify-between font-display text-lg leading-tight">
+                      {drill.name}
+                      {!open && <Lock className="size-4" />}
+                    </div>
                     <div className="mt-1 text-[10px] font-bold uppercase tracking-widest">
                       {drill.tag}
                     </div>
                   </div>
-                  <p className="flex-1 p-5 text-sm leading-relaxed text-muted-foreground">
-                    {drill.focus}
-                  </p>
-                  <div className="flex items-center justify-between border-t-2 border-ink px-5 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
-                      <Timer className="size-3.5" /> {drill.seconds}s
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Trophy className="size-3.5" />
-                      {s ? `Best ${s.bestScore}` : "Untried"}
-                    </span>
-                  </div>
-                  <Link to={`/practice/${drill.id}`} className="border-t-2 border-ink">
-                    <NBButton variant="paper" className="w-full rounded-none py-2.5 text-xs">
-                      Start drill <ArrowRight className="size-3.5" />
-                    </NBButton>
-                  </Link>
+                  {open ? (
+                    <>
+                      <p className="flex-1 p-5 text-sm leading-relaxed text-muted-foreground">
+                        {drill.focus}
+                      </p>
+                      <div className="flex items-center justify-between border-t-2 border-ink px-5 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Timer className="size-3.5" /> {drill.seconds}s
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Trophy className="size-3.5" />
+                          {s ? `Best ${s.bestScore}` : "Untried"}
+                        </span>
+                      </div>
+                      <Link to={`/practice/${drill.id}`} className="border-t-2 border-ink">
+                        <NBButton variant="paper" className="w-full rounded-none py-2.5 text-xs">
+                          Start drill <ArrowRight className="size-3.5" />
+                        </NBButton>
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <p className="flex-1 p-5 text-sm leading-relaxed text-muted-foreground">
+                        {gate!.blurb}
+                      </p>
+                      <div className="border-t-2 border-ink px-5 py-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          Unlocks with
+                        </p>
+                        <p className="mt-0.5 text-sm font-bold">{unlockGoalLine(gate!, unlockStats)}</p>
+                      </div>
+                      <div className="h-1.5 border-t-2 border-ink bg-muted">
+                        <div
+                          className="h-full bg-sun"
+                          style={{ width: `${unlockProgressPct(gate!, unlockStats)}%` }}
+                        />
+                      </div>
+                    </>
+                  )}
                 </NBPanel>
               );
             })}
@@ -343,6 +398,11 @@ export default function Dashboard() {
           </NBPanel>
         </section>
 
+        {/* Tone trends — unlocked after 5 takes; trends need history */}
+        {trendsUnlocked && trendSessions && trendSessions.length >= 2 && (
+          <ToneTrendsPanel sessions={trendSessions} />
+        )}
+
         {/* Recent takes */}
         <section className="nb bg-card nb-shadow">
           <div className="flex items-center justify-between border-b-2 border-ink px-6 py-4">
@@ -372,6 +432,115 @@ export default function Dashboard() {
         </section>
       </div>
     </AppShell>
+  );
+}
+
+/**
+ * The single next unlock: what's behind the lock, the one reachable
+ * to-do, and progress toward it. This is the return hook — there is
+ * always a visible "do this next" on the dashboard.
+ */
+function NextUnlockPanel({ next }: { next: NextUnlock }) {
+  return (
+    <section className="nb bg-card nb-shadow">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-5">
+        <div className="flex items-center gap-4">
+          <span className="nb flex size-11 shrink-0 items-center justify-center bg-ink text-paper">
+            <Lock className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Next unlock
+            </p>
+            <h2 className="font-display text-xl leading-tight">{next.item.name}</h2>
+            <p className="text-sm text-muted-foreground">{next.item.blurb}</p>
+          </div>
+        </div>
+        <div className="min-w-[220px] flex-1 sm:max-w-xs">
+          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <span>{next.goal || "Keep practicing"}</span>
+            <span>{next.progressPct}%</span>
+          </div>
+          <div className="mt-2 h-3 w-full border-2 border-ink bg-muted">
+            <div className="h-full bg-mint" style={{ width: `${next.progressPct}%` }} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Tone trends — the first feature that unlocks with practice. Per-factor
+ * direction over the last 10 takes: which way each score is moving.
+ */
+function ToneTrendsPanel({
+  sessions,
+}: {
+  sessions: {
+    _id: string;
+    calmScore: number;
+    energyScore: number;
+    clarityScore: number;
+    stabilityScore: number;
+  }[];
+}) {
+  // listSessions returns newest-first; trends read oldest → newest.
+  const rows = buildToneTrends([...sessions].reverse());
+  const icons = { up: TrendingUp, down: TrendingDown, flat: Minus } as const;
+  const colors = {
+    up: "text-mint",
+    down: "text-coral",
+    flat: "text-muted-foreground",
+  } as const;
+
+  return (
+    <section className="nb bg-card nb-shadow">
+      <div className="flex items-center justify-between border-b-2 border-ink px-6 py-4">
+        <div className="flex items-center gap-2 font-display text-xl">
+          <TrendingUp className="size-5" /> Tone trends
+        </div>
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          last {rows[0]?.scores.length ?? 0} takes
+        </p>
+      </div>
+      <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-4">
+        {rows.map((r) => {
+          const Icon = icons[r.direction];
+          return (
+            <div key={r.label} className="nb bg-secondary p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-widest">{r.label}</span>
+                <Icon className={cn("size-4", colors[r.direction])} />
+              </div>
+              <div className="mt-1 font-display text-2xl">
+                {r.scores[r.scores.length - 1]}
+                {r.delta !== 0 && (
+                  <span
+                    className={cn(
+                      "ml-2 text-xs font-bold",
+                      r.direction === "up" ? "text-mint" : r.direction === "down" ? "text-coral" : "text-muted-foreground",
+                    )}
+                  >
+                    {r.delta > 0 ? "+" : ""}{r.delta}
+                  </span>
+                )}
+              </div>
+              <div className="mt-2 flex h-8 items-end gap-1" aria-hidden>
+                {r.scores.map((v, i) => (
+                  <div
+                    key={i}
+                    title={`${r.label} ${v}`}
+                    className="min-w-[3px] flex-1 bg-ink/70"
+                    style={{ height: `${Math.max(v, 4)}%` }}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
