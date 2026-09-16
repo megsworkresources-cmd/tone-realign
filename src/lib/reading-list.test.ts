@@ -2,17 +2,17 @@ import { describe, expect, test } from "bun:test";
 import { READING_LIST } from "./reading-list";
 
 describe("reading list curation", () => {
-  test("every resource points at a reputable, direct source", () => {
+  test("every resource is a reputable, free, direct source", () => {
     const trustedHosts = [
-      "charlesduhigg.com",
-      "www.ted.com",
-      "hbr.org",
-      "www.gottman.com",
-      "www.youtube.com", // TED-Ed official channel upload
-      "ted.com",
-      "gottman.com",
+      "ggia.berkeley.edu", // UC Berkeley Greater Good in Action
       "www.scienceofpeople.com", // Van Edwards' official research lab
-      "www.chasehughesofficial.com", // Hughes' official site
+      "www.cnvc.org", // Center for Nonviolent Communication
+      "www.ted.com",
+      "ted.com",
+      "www.gottman.com",
+      "gottman.com",
+      "www.helpguide.org", // nonprofit, Harvard Medical School advisors
+      "pudding.cool",
     ];
     for (const r of READING_LIST) {
       const host = new URL(r.url).hostname;
@@ -21,7 +21,7 @@ describe("reading list curation", () => {
   });
 
   test("entries are complete: title, source authority, blurb, valid URL, kind", () => {
-    const kinds = new Set(["book", "article", "research", "podcast", "tool"]);
+    const kinds = new Set(["article", "research", "tool"]);
     for (const r of READING_LIST) {
       expect(r.title.length).toBeGreaterThan(5);
       expect(r.source.length).toBeGreaterThan(5);
@@ -45,5 +45,14 @@ describe("reading list curation", () => {
         expect(r.color).not.toBe(READING_LIST[i - 1].color);
       }
     });
+  });
+
+  test("no paywalled or paid resources: the shelf is all free web", () => {
+    const paywalled = ["hbr.org", "charlesduhigg.com", "www.chasehughesofficial.com"];
+    for (const r of READING_LIST) {
+      const host = new URL(r.url).hostname;
+      expect(paywalled).not.toContain(host);
+      expect(r.source.toLowerCase()).not.toContain("book");
+    }
   });
 });

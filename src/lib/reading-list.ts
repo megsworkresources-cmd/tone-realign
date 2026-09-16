@@ -1,7 +1,7 @@
 /**
- * "Go deeper" — reputable, non-YouTube resources on communication,
- * tone, and regulated responses. Every link points at the author or
- * institution that produced the work (no aggregators).
+ * "Go deeper" — the free web shelf. Reputable, 100% free websites on
+ * communication, tone, and regulated responses. No books to buy, no
+ * paywalls, no sign-ups: every link opens straight onto free content.
  */
 
 export interface ReadingResource {
@@ -12,53 +12,44 @@ export interface ReadingResource {
   url: string;
   /** Tailwind bg utility for the accent bar. */
   color: string;
-  kind: "book" | "article" | "research" | "podcast" | "tool";
+  kind: "article" | "research" | "tool";
 }
 
 export const READING_LIST: ReadingResource[] = [
   {
-    title: "Supercommunicators",
-    source: "Charles Duhigg · book",
+    title: "Active Listening",
+    source: "Greater Good in Action · UC Berkeley",
     blurb:
-      "Every conversation is one of three — practical, emotional, social. Match the wrong one and everything misfires. The matching skill is trainable.",
-    url: "https://charlesduhigg.com/supercommunicators/",
+      "The step-by-step protocol from the science-of-happiness lab: paraphrase, ask, validate, watch your body language, park your rebuttal. Ten minutes a week to build the core rep.",
+    url: "https://ggia.berkeley.edu/practice/active_listening",
     color: "bg-sun",
-    kind: "book",
+    kind: "research",
   },
   {
-    title: "Cues: Master the Secret Language of Charismatic Communication",
-    source: "Vanessa Van Edwards · book",
+    title: "Body Language & Nonverbal Communication",
+    source: "Science of People · Vanessa Van Edwards",
     blurb:
-      "The research lab behind the app's warmth drills. Cues decodes exactly which vocal and facial signals build — or spend — trust.",
-    url: "https://www.scienceofpeople.com/cues/",
+      "The research lab behind the app's warmth drills. A free, deep guide to the signals that build — or spend — trust: faces, hands, and vocal cues you can train.",
+    url: "https://www.scienceofpeople.com/body-language/",
     color: "bg-mint",
-    kind: "book",
+    kind: "article",
   },
   {
-    title: "The Ellipsis Manual",
-    source: "Chase Hughes · book",
+    title: "What is NVC?",
+    source: "Center for Nonviolent Communication",
     blurb:
-      "The behavior-profiling manual from the Navy trainer who taught interrogation teams to read tone, tempo, and tension in real time.",
-    url: "https://www.chasehughesofficial.com/",
+      "Marshall Rosenberg's free explainer on separating observation from evaluation, and hearing the feelings and needs behind “attacks.” The antidote to the reactive text-back.",
+    url: "https://www.cnvc.org/learn/what-is-nvc",
     color: "bg-coral",
-    kind: "book",
+    kind: "article",
   },
   {
     title: "How to Speak So That People Want to Listen",
     source: "Julian Treasure · TED · 9:44",
     blurb:
-      "The seven deadly sins of speaking, and the four foundations — HAIL. Fifty-one million people have watched it for a reason.",
+      "The seven deadly sins of speaking, and the four foundations — HAIL. Seventy million people have watched it for a reason, and it costs nothing to press play.",
     url: "https://www.ted.com/talks/julian_treasure_how_to_speak_so_that_people_want_to_listen",
     color: "bg-paper",
-    kind: "article",
-  },
-  {
-    title: "What Great Listeners Actually Do",
-    source: "Harvard Business Review",
-    blurb:
-      "Good listening isn't silence — it's questions that promote discovery and suggestions that build self-esteem. Backed by Zenger Folkman's data.",
-    url: "https://hbr.org/2016/07/what-great-listeners-actually-do",
-    color: "bg-sun",
     kind: "article",
   },
   {
@@ -67,16 +58,25 @@ export const READING_LIST: ReadingResource[] = [
     blurb:
       "Gottman's lab found repair attempts — any move that stops negativity escalating — predict relationship survival. The Skill exists; it can be practiced.",
     url: "https://www.gottman.com/blog/r-is-for-repair/",
-    color: "bg-mint",
+    color: "bg-sun",
     kind: "research",
   },
   {
-    title: "How Miscommunication Happens (and How to Avoid It)",
-    source: "Katherine Hampsten · TED-Ed · 4:44",
+    title: "Communication Skills Guides",
+    source: "HelpGuide · nonprofit, Harvard-reviewed",
     blurb:
-      "The animated origin story of every “that's not what I meant” — and why the tone channel carries the blame.",
-    url: "https://www.youtube.com/watch?v=gCfzeONu3Mo",
-    color: "bg-coral",
+      "A nonprofit mental-health resource with Harvard Medical School advisors. Free practical guides on listening, conflict, and saying what you mean without the blame.",
+    url: "https://www.helpguide.org/",
+    color: "bg-mint",
     kind: "article",
+  },
+  {
+    title: "Visual essays on how we connect",
+    source: "The Pudding",
+    blurb:
+      "A cultural observatory that explains human behavior with interactive data essays — voice, language, and connection, told in charts you can play with. Free, endlessly browsable.",
+    url: "https://pudding.cool/",
+    color: "bg-coral",
+    kind: "tool",
   },
 ];

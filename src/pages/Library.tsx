@@ -5,7 +5,7 @@ import { READING_LIST } from "@/lib/reading-list";
 import {
   ArrowRight,
   ArrowUpRight,
-  BookOpen,
+  Globe,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router";
@@ -21,9 +21,10 @@ export default function Library() {
             Reps from you.
           </h1>
           <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            The research shelf — books, talks, and studies from the people
-            whose work this app stands on. For the videos, the tour's next
-            stop back is Watch.
+            The free web shelf — websites, talks, and studies from the people
+            whose work this app stands on. Every link opens free content:
+            no books to buy, no paywalls, no sign-up. For the videos, the
+            tour's next stop back is Watch.
           </p>
         </div>
       </section>
@@ -35,13 +36,13 @@ export default function Library() {
             <div>
               <NBBadge className="bg-mint text-ink">Go deeper</NBBadge>
               <h2 className="mt-4 flex items-center gap-2 font-display text-3xl sm:text-4xl">
-                <BookOpen className="size-6 text-coral" /> The research shelf
+                <Globe className="size-6 text-coral" /> The free web shelf
               </h2>
             </div>
             <p className="max-w-md text-sm text-muted-foreground">
-              Books, talks, and studies from the people whose work this app
-              stands on. Every link goes to the author — no aggregators, no
-              sign-up.
+              Guides, talks, and studies from the people whose work this app
+              stands on. Every link is a free website — no books to buy, no
+              paywalls, no sign-up.
             </p>
           </div>
           <div className="mt-8 grid gap-4 md:grid-cols-2">
