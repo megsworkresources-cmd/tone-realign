@@ -51,14 +51,17 @@ export function tourStops(
 /**
  * The signed-in app's walking order. Same idea as the public tour: every
  * page ends with back / next so the tools chain into one circuit —
- * dashboard → practice → translate → quiz → reframe → back home.
- * `/practice/:drillId` matches its position by prefix.
+ * dashboard → gym → calm → translate → quiz → reframe → progress →
+ * back home. `/practice/:drillId` matches its position by prefix.
  */
 export const APP_ORDER: { to: string; label: string; blurb: string }[] = [
   { to: "/dashboard", label: "Dashboard", blurb: "Your day at a glance" },
+  { to: "/gym", label: "Gym", blurb: "Pick a drill, do the take" },
+  { to: "/calm", label: "Calm", blurb: "Ground, then speak" },
   { to: "/translate", label: "Translate", blurb: "Say it again, mean it" },
   { to: "/quiz", label: "Read the Room", blurb: "Train the judgment" },
   { to: "/reframe", label: "Reframe Lab", blurb: "Rewrite the reaction" },
+  { to: "/progress", label: "Progress", blurb: "Trends, trophies, history" },
 ];
 
 /**

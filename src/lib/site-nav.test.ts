@@ -74,10 +74,18 @@ describe("page tour (back/forward pager)", () => {
 });
 
 describe("app tour (signed-in pager)", () => {
-  test("app tour covers the four nav destinations exactly once", () => {
+  test("app tour covers the seven nav destinations exactly once", () => {
     const paths = APP_ORDER.map((p) => p.to);
     expect(new Set(paths).size).toBe(paths.length);
-    expect(paths).toEqual(["/dashboard", "/translate", "/quiz", "/reframe"]);
+    expect(paths).toEqual([
+      "/dashboard",
+      "/gym",
+      "/calm",
+      "/translate",
+      "/quiz",
+      "/reframe",
+      "/progress",
+    ]);
   });
 
   test("every stop has a label and a blurb", () => {
@@ -88,21 +96,24 @@ describe("app tour (signed-in pager)", () => {
   });
 
   test("appTourStops: middle pages get their neighbors", () => {
-    expect(appTourStops("/translate").prev?.to).toBe("/dashboard");
+    expect(appTourStops("/gym").prev?.to).toBe("/dashboard");
+    expect(appTourStops("/gym").next?.to).toBe("/calm");
+    expect(appTourStops("/translate").prev?.to).toBe("/calm");
     expect(appTourStops("/translate").next?.to).toBe("/quiz");
     expect(appTourStops("/quiz").prev?.to).toBe("/translate");
     expect(appTourStops("/quiz").next?.to).toBe("/reframe");
+    expect(appTourStops("/reframe").next?.to).toBe("/progress");
   });
 
-  test("the circuit wraps: dashboard's back is reframe, reframe's next is dashboard", () => {
-    expect(appTourStops("/dashboard").prev?.to).toBe("/reframe");
-    expect(appTourStops("/reframe").next?.to).toBe("/dashboard");
+  test("the circuit wraps: dashboard's back is progress, progress's next is dashboard", () => {
+    expect(appTourStops("/dashboard").prev?.to).toBe("/progress");
+    expect(appTourStops("/progress").next?.to).toBe("/dashboard");
   });
 
-  test("practice routes resolve via prefix: back to dashboard, next to translate", () => {
+  test("practice routes resolve via prefix: back to dashboard, next to gym", () => {
     const { prev, next } = appTourStops("/practice/steady-ground");
     expect(prev?.to).toBe("/dashboard");
-    expect(next?.to).toBe("/translate");
+    expect(next?.to).toBe("/gym");
   });
 
   test("unknown routes get no pager (renders nothing)", () => {
@@ -112,7 +123,7 @@ describe("app tour (signed-in pager)", () => {
   });
 
   test("AppShell renders the pager on every signed-in page", () => {
-    for (const page of ["Dashboard", "Practice", "Translate", "Quiz", "Reframe"]) {
+    for (const page of ["Dashboard", "Gym", "Calm", "Practice", "Translate", "Quiz", "Reframe", "Progress"]) {
       const src = readFileSync(new URL(`../pages/${page}.tsx`, import.meta.url), "utf8");
       expect(src).toContain("AppShell");
     }
@@ -130,7 +141,7 @@ describe("nav ↔ router parity", () => {
 
   test("the authed routes still exist (no accidental removal)", () => {
     const main = readFileSync(new URL("../main.tsx", import.meta.url), "utf8");
-    for (const path of ["/auth", "/dashboard", "/reframe", "/quiz", "/practice/:drillId"]) {
+    for (const path of ["/auth", "/dashboard", "/gym", "/calm", "/progress", "/reframe", "/quiz", "/practice/:drillId"]) {
       expect(main).toContain(`path="${path}"`);
     }
   });

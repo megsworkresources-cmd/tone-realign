@@ -20,6 +20,9 @@ const Watch = lazy(() => import("./pages/Watch.tsx"));
 const Library = lazy(() => import("./pages/Library.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
+const Gym = lazy(() => import("./pages/Gym.tsx"));
+const Calm = lazy(() => import("./pages/Calm.tsx"));
+const Progress = lazy(() => import("./pages/Progress.tsx"));
 const Practice = lazy(() => import("./pages/Practice.tsx"));
 const Reframe = lazy(() => import("./pages/Reframe.tsx"));
 const Quiz = lazy(() => import("./pages/Quiz.tsx"));
@@ -87,6 +90,30 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Dashboard />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/gym"
+                element={
+                  <RequireAuth>
+                    <Gym />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/calm"
+                element={
+                  <RequireAuth>
+                    <Calm />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/progress"
+                element={
+                  <RequireAuth>
+                    <Progress />
                   </RequireAuth>
                 }
               />

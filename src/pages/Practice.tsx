@@ -61,8 +61,8 @@ export default function Practice() {
         <div className="mx-auto max-w-3xl px-4 py-10">
           <NBPanel className="p-8 text-center">
             <p className="font-display text-xl">We couldn't find that drill</p>
-            <Link to="/dashboard" className="mt-4 inline-block">
-              <NBButton variant="paper">Back to dashboard</NBButton>
+            <Link to="/gym" className="mt-4 inline-block">
+              <NBButton variant="paper">Back to the gym</NBButton>
             </Link>
           </NBPanel>
         </div>
@@ -94,8 +94,8 @@ export default function Practice() {
               every honest take counts.
             </p>
             <div className="mt-5 flex justify-center gap-3">
-              <Link to="/dashboard">
-                <NBButton variant="paper">Back to dashboard</NBButton>
+              <Link to="/gym">
+                <NBButton variant="paper">Back to the gym</NBButton>
               </Link>
               <Link to="/practice/steady-ground">
                 <NBButton variant="coral">Do an open drill</NBButton>
@@ -200,9 +200,9 @@ function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) 
       <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 pb-10 pt-6">
         {/* Top bar */}
         <div className="flex items-center justify-between">
-          <Link to="/dashboard">
+          <Link to="/gym">
             <NBButton variant="paper" className="px-3 py-2">
-              <ArrowLeft className="size-4" /> Dashboard
+              <ArrowLeft className="size-4" /> Gym
             </NBButton>
           </Link>
           <div className="flex items-center gap-2">

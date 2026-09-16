@@ -6,12 +6,15 @@ import logo from "@/assets/logo.svg";
 import {
   ArrowLeft,
   ArrowRight,
+  Dumbbell,
   LayoutDashboard,
   Languages,
   LogOut,
   MessagesSquare,
   Mic,
   Shuffle,
+  TrendingUp,
+  Wind,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -19,19 +22,24 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
-  id: "dashboard" | "translate" | "quiz" | "reframe";
+  id: "dashboard" | "gym" | "calm" | "translate" | "quiz" | "reframe" | "progress";
   to: string;
   label: string;
   short: string;
   icon: typeof Mic;
+  /** Shown as one of the five mobile tab-bar slots (plus the mic FAB). */
+  tab?: boolean;
 }
 
-/** The signed-in app's four destinations, in nav order. */
+/** The signed-in app's seven destinations, in nav order. */
 const NAV: NavItem[] = [
-  { id: "dashboard", to: "/dashboard", label: "Dashboard", short: "Home", icon: LayoutDashboard },
-  { id: "translate", to: "/translate", label: "Translate", short: "Translate", icon: Languages },
+  { id: "dashboard", to: "/dashboard", label: "Dashboard", short: "Home", icon: LayoutDashboard, tab: true },
+  { id: "gym", to: "/gym", label: "Gym", short: "Gym", icon: Dumbbell, tab: true },
+  { id: "calm", to: "/calm", label: "Calm", short: "Calm", icon: Wind },
+  { id: "translate", to: "/translate", label: "Translate", short: "Translate", icon: Languages, tab: true },
   { id: "quiz", to: "/quiz", label: "Read the Room", short: "Room", icon: MessagesSquare },
   { id: "reframe", to: "/reframe", label: "Reframe Lab", short: "Reframe", icon: Shuffle },
+  { id: "progress", to: "/progress", label: "Progress", short: "Progress", icon: TrendingUp, tab: true },
 ];
 
 /** The signed-in app's shared chrome: one header, consistent nav, live level. */
@@ -72,7 +80,7 @@ export function AppShell({
             </span>
           </Link>
 
-          <nav className="flex items-center gap-1" aria-label="Primary">
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
             {NAV.map((item) => {
               const Icon = item.icon;
               const isActive = active === item.id;
@@ -82,12 +90,12 @@ export function AppShell({
                   to={item.to}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "nb nb-press flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-widest transition-colors sm:px-3",
+                    "nb nb-press flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-widest transition-colors",
                     isActive ? "bg-sun text-ink" : "bg-transparent text-paper/75 hover:text-paper",
                   )}
                 >
                   <Icon className="size-3.5" />
-                  <span className="hidden md:inline">{item.label}</span>
+                  <span className="hidden lg:inline">{item.label}</span>
                 </Link>
               );
             })}
@@ -118,8 +126,7 @@ export function AppShell({
         </div>
       </header>
 
-      <main id="app-main" className="flex-1 pb-16 md:pb-0">
-        {children}
+      <main id="app-main" className="flex-1 pb-16 md:pb-0">        {children}
       </main>
 
       <AppPager tour={tour} />
@@ -134,15 +141,15 @@ export function AppShell({
         className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-ink bg-paper md:hidden"
       >
         <div className="relative mx-auto grid max-w-md grid-cols-5 items-end px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
-          {NAV.slice(0, 2).map((item) => (
+          {NAV.filter((n) => n.tab).slice(0, 2).map((item) => (
             <TabItem key={item.id} item={item} active={active} />
           ))}
 
-          {/* Central mic FAB — the app's core action, always one tap away */}
+          {/* Central mic FAB — jump to the gym floor */}
           <Link
-            to="/dashboard"
-            aria-label="Record a take"
-            title="Record a take"
+            to="/gym"
+            aria-label="Open the gym"
+            title="Open the gym"
             className="flex flex-col items-center"
           >
             <span className="nb nb-press -mt-5 flex size-14 items-center justify-center bg-coral nb-shadow">
@@ -153,7 +160,7 @@ export function AppShell({
             </span>
           </Link>
 
-          {NAV.slice(2).map((item) => (
+          {NAV.filter((n) => n.tab).slice(2).map((item) => (
             <TabItem key={item.id} item={item} active={active} />
           ))}
         </div>
