@@ -21,6 +21,21 @@ import {
 
 export type CaptureState = "idle" | "recording" | "analyzing" | "done";
 
+/**
+ * True when the app is embedded in an iframe (e.g. a preview pane).
+ * Browsers refuse getUserMedia inside a cross-origin iframe unless the
+ * embedding page opts in with allow="microphone" — and they do it as a
+ * NotAllowedError with *no permission prompt*, which is indistinguishable
+ * from the user having blocked mic access. The UI uses this flag to say
+ * so honestly and offer an escape hatch instead of blaming the user's
+ * browser settings.
+ */
+export const isEmbeddedFrame =
+  typeof window !== "undefined" && window.self !== window.top;
+
+/** Suffix marking an error that "Open in a new tab" would likely fix. */
+export const OPEN_IN_TAB_HINT = "\n[open-in-tab]";
+
 interface UseToneCapture {
   state: CaptureState;
   error: string | null;
@@ -366,7 +381,10 @@ export function useToneCapture(): UseToneCapture {
       const name = e instanceof Error ? e.name : "";
       setError(
         name === "NotAllowedError" || name === "SecurityError"
-          ? "Microphone access was blocked. Enable it for this site in your browser settings and try again."
+          ? isEmbeddedFrame
+            ? "The preview frame is blocking microphone access — no permission prompt can even appear here. Click 'Open in a new tab' below and grant access there. It usually fixes this instantly." +
+              OPEN_IN_TAB_HINT
+            : "Microphone access was blocked. Click the lock/camera icon in your browser's address bar, allow the microphone for this site, and try again."
           : name === "NotFoundError" || name === "DevicesNotFoundError"
             ? "No microphone found. Connect one (or pick the right input in your browser's site settings) and try again."
             : name === "NotReadableError" || name === "TrackStartError"

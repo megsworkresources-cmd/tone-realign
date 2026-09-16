@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { NBBadge, NBButton, NBPanel, NBStat } from "@/components/nb";
+import { MicError } from "@/components/MicError";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { api } from "@/convex/_generated/api";
 import {
@@ -189,9 +190,7 @@ export default function Translate() {
             {capture.state === "analyzing" && (
               <div className="mt-5 text-center font-display">Analyzing…</div>
             )}
-            {capture.error && (
-              <p className="nb mt-5 bg-coral px-3 py-2 text-sm font-medium">{capture.error}</p>
-            )}
+            {capture.error && <MicError message={capture.error} />}
           </NBPanel>
         )}
 

@@ -1,4 +1,5 @@
 import { NBBadge, NBButton, NBPanel, NBMeter } from "@/components/nb";
+import { MicError } from "@/components/MicError";
 import { CoachNote } from "@/components/CoachNote";
 import { getDrill, type Drill } from "@/lib/drills";
 import { getDailyChallenge } from "@/lib/daily";
@@ -146,9 +147,7 @@ function PracticeRunner({ drill }: { drill: Drill }) {
               </p>
             )}
 
-            {error && (
-              <p className="nb bg-coral px-3 py-2 text-sm font-medium">{error}</p>
-            )}
+            {error && <MicError message={error} />}
 
             {/* Controls */}
             <div className="flex items-center gap-3">
