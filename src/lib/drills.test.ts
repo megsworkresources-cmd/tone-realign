@@ -3,13 +3,16 @@ import { DRILLS, getDrill, REFRAME_SCENARIOS } from "./drills";
 import { DAILY_ANGLES, getDailyChallenge } from "./daily";
 
 describe("drill catalog curation", () => {
-  test("catalog has the five curated drills in stable order", () => {
+  test("catalog has the eight curated drills in stable order", () => {
     expect(DRILLS.map((d) => d.id)).toEqual([
       "steady-ground",
       "warm-open",
       "nice-no",
       "unruffled",
       "firm-clear",
+      "de-escalate",
+      "praise-clear",
+      "recovery",
     ]);
   });
 

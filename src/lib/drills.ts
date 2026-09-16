@@ -87,6 +87,54 @@ export const DRILLS: Drill[] = [
     ],
     seconds: 35,
   },
+  {
+    id: "de-escalate",
+    name: "Bring It Down",
+    tag: "DE-ESCALATION",
+    color: "bg-mint",
+    prompt:
+      "Someone is talking over you, louder and faster. Without matching their volume, say: \"I want to hear this — and I can only hear it one voice at a time.\" Then slow your next sentence to half speed.",
+    focus:
+      "Lower and slower is the whole move. Your calm is an offer, not a weapon — let the pace gap do the work.",
+    tips: [
+      "Drop your volume one notch below theirs and stay there",
+      "Speak on the exhale — it physically can't sound sharp",
+      "If they speed up, you slow down: the gap resets the room",
+    ],
+    seconds: 40,
+  },
+  {
+    id: "praise-clear",
+    name: "Name the Good",
+    tag: "PRAISE THAT LANDS",
+    color: "bg-sun",
+    prompt:
+      "Tell someone about one specific thing they did well this week — what they did, and what it made possible. Let the last sentence land before you stop.",
+    focus:
+      "Praise dies when it's mumbled or rushed. Fuller volume, slight pitch lift on the good part, unhurried ending.",
+    tips: [
+      "Specific beats general: name the exact thing they did",
+      "Lift your pitch slightly on the strength you're naming",
+      "Don't swallow the ending — let the last word finish",
+    ],
+    seconds: 35,
+  },
+  {
+    id: "recovery",
+    name: "The Clean Recovery",
+    tag: "AFTER THE MISS",
+    color: "bg-coral",
+    prompt:
+      "You just snapped at someone and you know it. Say: \"That came out sharper than I meant. Let me try that again.\" Then repeat your point, slower, at the tone you wanted the first time.",
+    focus:
+      "Recovery without groveling: name it in one short clause, then model the tone you meant. No self-flagellation.",
+    tips: [
+      "One clean clause, then move — don't relitigate",
+      "The retake is the point: slower, lower, level ending",
+      "Skip the apology spiral; it makes them manage you",
+    ],
+    seconds: 40,
+  },
 ];
 
 export function getDrill(id: string): Drill | undefined {

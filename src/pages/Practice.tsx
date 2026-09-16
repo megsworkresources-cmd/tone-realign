@@ -26,6 +26,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
+import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -41,8 +42,8 @@ export default function Practice() {
 
   if (!drill) {
     return (
-      <main className="nb-dots min-h-screen bg-paper px-4 py-10">
-        <div className="mx-auto max-w-3xl">
+      <AppShell>
+        <div className="mx-auto max-w-3xl px-4 py-10">
           <NBPanel className="p-8 text-center">
             <p className="font-display text-xl">We couldn't find that drill</p>
             <Link to="/dashboard" className="mt-4 inline-block">
@@ -50,7 +51,7 @@ export default function Practice() {
             </Link>
           </NBPanel>
         </div>
-      </main>
+      </AppShell>
     );
   }
 
@@ -139,8 +140,8 @@ function PracticeRunner({ drill }: { drill: Drill }) {
     capture;
 
   return (
-    <main className="nb-dots min-h-screen bg-paper px-4 pb-16 pt-6">
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <AppShell>
+      <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 pb-10 pt-6">
         {/* Top bar */}
         <div className="flex items-center justify-between">
           <Link to="/dashboard">
@@ -500,7 +501,7 @@ function PracticeRunner({ drill }: { drill: Drill }) {
           </ul>
         </NBPanel>
       </div>
-    </main>
+    </AppShell>
   );
 }
 

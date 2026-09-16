@@ -1,8 +1,11 @@
 import { levelInfo } from "@/lib/gamify";
+import { appTourStops } from "@/lib/site-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import logo from "@/assets/logo.svg";
 import {
+  ArrowLeft,
+  ArrowRight,
   LayoutDashboard,
   Languages,
   LogOut,
@@ -11,7 +14,7 @@ import {
   Shuffle,
 } from "lucide-react";
 import { useQuery } from "convex/react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +44,8 @@ export function AppShell({
 }) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const tour = appTourStops(pathname);
   const progression = useQuery(api.dailyLog.progression);
 
   const level = levelInfo(progression?.totalXp ?? 0);
@@ -117,6 +122,8 @@ export function AppShell({
         {children}
       </main>
 
+      <AppPager tour={tour} />
+
       <footer className="hidden border-t-2 border-ink bg-ink py-4 text-center text-[10px] font-bold uppercase tracking-widest text-paper/50 md:block">
         ShiftedTone — train the tone that says it
       </footer>
@@ -152,6 +159,56 @@ export function AppShell({
         </div>
       </nav>
     </div>
+  );
+}
+
+/**
+ * Back/next pager at the bottom of every signed-in page — the app
+ * circuit equivalent of the public site's PagePager. Known pages get
+ * both buttons (the loop wraps); unknown routes render nothing.
+ */
+function AppPager({
+  tour,
+}: {
+  tour: ReturnType<typeof appTourStops>;
+}) {
+  if (!tour.prev && !tour.next) return null;
+  return (
+    <nav
+      aria-label="Next and previous"
+      className="mx-auto flex w-full max-w-6xl items-stretch justify-between gap-4 px-4 pb-24 md:pb-6"
+    >
+      {tour.prev && (
+        <Link to={tour.prev.to} className="group min-w-0 flex-1">
+          <div className="nb nb-press flex h-full items-center gap-3 bg-card p-4">
+            <ArrowLeft className="size-5 shrink-0 transition-transform group-hover:-translate-x-1" />
+            <span className="min-w-0">
+              <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Back — {tour.prev.blurb}
+              </span>
+              <span className="block truncate font-display text-lg leading-tight">
+                {tour.prev.label}
+              </span>
+            </span>
+          </div>
+        </Link>
+      )}
+      {tour.next && (
+        <Link to={tour.next.to} className="group min-w-0 flex-1">
+          <div className="nb nb-press flex h-full items-center justify-end gap-3 bg-sun p-4 text-right">
+            <span className="min-w-0">
+              <span className="block text-[10px] font-bold uppercase tracking-widest text-ink/70">
+                Next — {tour.next.blurb}
+              </span>
+              <span className="block truncate font-display text-lg leading-tight">
+                {tour.next.label}
+              </span>
+            </span>
+            <ArrowRight className="size-5 shrink-0 transition-transform group-hover:translate-x-1" />
+          </div>
+        </Link>
+      )}
+    </nav>
   );
 }
 

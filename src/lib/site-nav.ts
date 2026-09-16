@@ -45,3 +45,46 @@ export function tourStops(
     next: i >= 0 && i < PAGE_ORDER.length - 1 ? PAGE_ORDER[i + 1] : null,
   };
 }
+
+/**
+ * The signed-in app's walking order. Same idea as the public tour: every
+ * page ends with back / next so the tools chain into one circuit —
+ * dashboard → practice → translate → quiz → reframe → back home.
+ * `/practice/:drillId` matches its position by prefix.
+ */
+export const APP_ORDER: { to: string; label: string; blurb: string }[] = [
+  { to: "/dashboard", label: "Dashboard", blurb: "Your day at a glance" },
+  { to: "/translate", label: "Translate", blurb: "Say it again, mean it" },
+  { to: "/quiz", label: "Read the Room", blurb: "Train the judgment" },
+  { to: "/reframe", label: "Reframe Lab", blurb: "Rewrite the reaction" },
+];
+
+/**
+ * Route prefixes with a virtual position: `/practice/:drillId` sits
+ * between Dashboard (0) and Translate (1), so its back/next resolve
+ * without being a stable route in APP_ORDER.
+ */
+const APP_VIRTUAL: { prefix: string; prev: number; next: number }[] = [
+  { prefix: "/practice/", prev: 0, next: 1 },
+];
+
+/**
+ * Prev/next stops of the app circuit for a given path. The circuit
+ * wraps — the last page's "next" is the dashboard — so every signed-in
+ * page shows both buttons and the loop never dead-ends.
+ */
+export function appTourStops(
+  pathname: string,
+): { prev: (typeof APP_ORDER)[number] | null; next: (typeof APP_ORDER)[number] | null } {
+  const len = APP_ORDER.length;
+  let i = APP_ORDER.findIndex((p) => p.to === pathname);
+  if (i < 0) {
+    const match = APP_VIRTUAL.find((m) => pathname.startsWith(m.prefix));
+    if (match) return { prev: APP_ORDER[match.prev], next: APP_ORDER[match.next] };
+    return { prev: null, next: null };
+  }
+  return {
+    prev: APP_ORDER[(i - 1 + len) % len],
+    next: APP_ORDER[(i + 1) % len],
+  };
+}

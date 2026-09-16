@@ -84,6 +84,38 @@ export const TRANSLATION_LINES: TranslationLine[] = [
     targetHint: "Smile on the first word — it carries warmth without softening the line.",
     payoff: "The listener moves on instead of negotiating.",
   },
+  {
+    id: "interrupted",
+    text: "Hold on — I wasn't finished.",
+    usually: "Comes out either a snap (“EXCUSE me—”) or a surrender (“oh, sorry, go ahead…”) — the thought is gone either way.",
+    intended: "Level and unhurried. A door held open for yourself, not a slam.",
+    targetHint: "Even volume on “hold on,” then finish the thought slowly.",
+    payoff: "The listener waits — and your point survives the interruption.",
+  },
+  {
+    id: "thanks",
+    text: "Thank you — that genuinely helped.",
+    usually: "Comes out tossed over a shoulder on the way out the door — gratitude at throwaway speed.",
+    intended: "Unhurried and specific-warm. Thanks that lands as received.",
+    targetHint: "Slow the last three words; let the period be a period.",
+    payoff: "The helper actually feels thanked — and helps again.",
+  },
+  {
+    id: "raise",
+    text: "I'd like to talk about my compensation.",
+    usually: "Comes out either buried under five hedges or launched like an ultimatum — both hands over the ears.",
+    intended: "Plain, steady, expectant. A request with no apology for existing.",
+    targetHint: "Level pitch start to end — don't let “compensation” rise like a question.",
+    payoff: "The listener hears an equal negotiating, not a guest hoping.",
+  },
+  {
+    id: "overloaded",
+    text: "I'm at capacity — here's what I can take on.",
+    usually: "Comes out as “yeah, I'll figure it out somehow” while the resentment compounds at 8% interest.",
+    intended: "Calm and constructive. A full plate stated as fact, plus a real offer.",
+    targetHint: "Steady on “at capacity” — that's information, not confession.",
+    payoff: "The listener plans around reality instead of your silent overflow.",
+  },
 ];
 
 /** Pick today's translation line (stable per local day). */
