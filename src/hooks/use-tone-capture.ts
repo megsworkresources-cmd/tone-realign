@@ -252,6 +252,16 @@ export function useToneCapture(): UseToneCapture {
       lastFrameAtRef.current = 0;
       setState("recording");
 
+      // Defensive: release any recognizer a previous take left behind —
+      // two live recognizers split the mic input and can keep the browser's
+      // mic indicator lit between takes.
+      try {
+        recognitionRef.current?.abort();
+      } catch {
+        // transcript is best-effort
+      }
+      recognitionRef.current = null;
+
       // Best-effort transcript for the coach — silence on any failure.
       const Recognition = getSpeechRecognition();
       if (Recognition) {
@@ -380,6 +390,15 @@ export function useToneCapture(): UseToneCapture {
     // on what was actually measured — muted, too quiet, faint, or short.
     if (isDeadTake(speechFramesRef.current)) {
       const reason = deadTakeReason(speechFramesRef.current, maxRawRef.current);
+      // Release the recognizer here too — it holds the mic independently
+      // of the stream, and skipping it on this early exit would leave the
+      // browser's mic indicator lit after a dead take.
+      try {
+        recognitionRef.current?.abort();
+      } catch {
+        // transcript is best-effort
+      }
+      recognitionRef.current = null;
       cleanup();
       setState("idle");
       setError(DEAD_TAKE_MESSAGES[reason]);
@@ -391,6 +410,7 @@ export function useToneCapture(): UseToneCapture {
     } catch {
       // transcript is best-effort
     }
+    recognitionRef.current = null;
     const durationMs = performance.now() - startedAtRef.current;
     setState("analyzing");
     setLevel(0);
