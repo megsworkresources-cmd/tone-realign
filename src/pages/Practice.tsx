@@ -4,7 +4,7 @@ import { MicPicker, getSavedMicDeviceId } from "@/components/MicPicker";
 import { CoachNote } from "@/components/CoachNote";
 import { getDrill, type Drill } from "@/lib/drills";
 import { UNLOCKABLE_DRILLS, isUnlocked, unlockGoalLine } from "@/lib/unlocks";
-import { getDailyChallenge } from "@/lib/daily";
+import { getAccessibleDailyChallenge } from "@/lib/daily";
 import {
   COUNTDOWN_SECONDS,
   PACE_BAR_CLASS,
@@ -50,7 +50,10 @@ export default function Practice() {
     streak: progression?.streakDays ?? 0,
   };
   const gate = UNLOCKABLE_DRILLS.find((u) => u.id === drillId);
-  const locked = !!drill && !!gate && !isUnlocked(gate, stats);
+  // Enforce the lock only once the stats have loaded: with progression
+  // still undefined, zeros would falsely lock veterans mid-navigation.
+  const lockKnown = progression !== undefined;
+  const locked = lockKnown && !!gate && !isUnlocked(gate, stats);
 
   if (!drill) {
     return (
@@ -61,6 +64,18 @@ export default function Practice() {
             <Link to="/dashboard" className="mt-4 inline-block">
               <NBButton variant="paper">Back to dashboard</NBButton>
             </Link>
+          </NBPanel>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (lockKnown === false && drill) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-3xl px-4 py-10">
+          <NBPanel className="p-8 text-center">
+            <p className="text-sm text-muted-foreground">Loading your gym…</p>
           </NBPanel>
         </div>
       </AppShell>
@@ -94,10 +109,14 @@ export default function Practice() {
 
   // Keyed by drillId: switching drills remounts the runner, which resets
   // capture and saved state cleanly instead of via setState-in-effect.
-  return <PracticeRunner key={drillId} drill={drill} />;
+  const isDaily = getAccessibleDailyChallenge((id) => {
+    const g = UNLOCKABLE_DRILLS.find((u) => u.id === id);
+    return !g || isUnlocked(g, stats);
+  }).drill.id === drillId;
+  return <PracticeRunner key={drillId} drill={drill} isDaily={isDaily} />;
 }
 
-function PracticeRunner({ drill }: { drill: Drill }) {
+function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) {
   const capture = useToneCapture();
   const [saved, setSaved] = useState(false);
   const [expandedFactor, setExpandedFactor] = useState<
@@ -187,9 +206,7 @@ function PracticeRunner({ drill }: { drill: Drill }) {
             </NBButton>
           </Link>
           <div className="flex items-center gap-2">
-            {getDailyChallenge().drill.id === drill.id && (
-              <NBBadge className="bg-coral">★ Today's challenge</NBBadge>
-            )}
+            {isDaily && <NBBadge className="bg-coral">★ Today's challenge</NBBadge>}
             <NBBadge className="bg-sun">{drill.tag}</NBBadge>
           </div>
         </div>

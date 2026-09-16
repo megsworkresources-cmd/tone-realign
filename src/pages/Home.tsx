@@ -351,7 +351,7 @@ export default function Home() {
             {
               to: "/drills",
               title: "See the drills",
-              body: "Five real-world reps — calm, warmth, boundaries, recovery.",
+              body: "Eight real-world reps — calm, warmth, boundaries, recovery, praise.",
               color: "bg-mint",
             },
             {

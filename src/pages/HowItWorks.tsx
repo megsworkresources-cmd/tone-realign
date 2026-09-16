@@ -1,7 +1,7 @@
 import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
 import { PagePager } from "@/components/PagePager";
-import { getDailyChallenge } from "@/lib/daily";
+import { getAccessibleDailyChallenge } from "@/lib/daily";
 import {
   Activity,
   ArrowRight,
@@ -34,7 +34,8 @@ const STEPS = [
 ];
 
 export default function HowItWorks() {
-  const daily = getDailyChallenge();
+  // Public page: model a brand-new user, matching the Drills page.
+  const daily = getAccessibleDailyChallenge(() => false);
 
   return (
     <PublicLayout>

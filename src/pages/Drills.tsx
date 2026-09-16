@@ -2,13 +2,15 @@ import { NBBadge, NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
 import { PagePager } from "@/components/PagePager";
 import { DRILLS } from "@/lib/drills";
-import { getDailyChallenge } from "@/lib/daily";
+import { getAccessibleDailyChallenge } from "@/lib/daily";
 import { ArrowRight, Check, Mic, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router";
 
 export default function Drills() {
-  const daily = getDailyChallenge();
+  // Public page: model a brand-new user, so "today's challenge" always
+  // matches what they'll actually be asked to run after signing up.
+  const daily = getAccessibleDailyChallenge(() => false);
 
   return (
     <PublicLayout>
@@ -16,7 +18,7 @@ export default function Drills() {
         <div className="mx-auto max-w-6xl px-4 py-14 lg:py-16">
           <NBBadge className="bg-mint text-ink">The drill floor</NBBadge>
           <h1 className="mt-4 font-display text-4xl leading-tight sm:text-5xl">
-            Five drills for the moments that{" "}
+            Drills for the moments that{" "}
             <span className="italic text-coral">get to you</span>
           </h1>
           <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">

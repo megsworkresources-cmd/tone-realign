@@ -3,7 +3,7 @@ import { AppShell, LevelRing } from "@/components/AppShell";
 import { DailyChecklist } from "@/components/DailyChecklist";
 import { BreathReset } from "@/components/BreathReset";
 import { DRILLS } from "@/lib/drills";
-import { dailyLabel, getDailyChallenge } from "@/lib/daily";
+import { dailyLabel, getAccessibleDailyChallenge } from "@/lib/daily";
 import { arcDaysLeft, arcStageFor } from "@/lib/arc";
 import {
   ACHIEVEMENTS,
@@ -54,7 +54,6 @@ export default function Dashboard() {
   const reframeLogs = useQuery(api.reframes.list, { limit: 2 });
   const drillStats = useQuery(api.sessions.drillStats);
 
-  const daily = getDailyChallenge();
   const level = levelInfo(progression?.totalXp ?? 0);
   const bestByDrill = new Map((drillStats ?? []).map((s) => [s.drill, s]));
 
@@ -67,7 +66,7 @@ export default function Dashboard() {
     totalResets: progression?.totalResets ?? 0,
     streakDays: progression?.streakDays ?? 0,
     drillsTried: progression?.drillsTried ?? 0,
-    drills: progression?.drills ?? 5,
+    drills: progression?.drills ?? DRILLS.length,
   };
   const earned = new Set(
     ACHIEVEMENTS.filter((a) => a.test(stats)).map((a) => a.id),
@@ -83,6 +82,14 @@ export default function Dashboard() {
   };
   const next = nextUnlock(unlockStats);
   const trendsUnlocked = isUnlocked(TRENDS_UNLOCK, unlockStats);
+
+  // The daily CTA must always be runnable: when the calendar pick sits
+  // behind a lock, swap it for a starter so the headline button and the
+  // checklist's "One honest take" never dead-end on the lock screen.
+  const daily = getAccessibleDailyChallenge((drillId) => {
+    const gate = UNLOCKABLE_DRILLS.find((u) => u.id === drillId);
+    return !gate || isUnlocked(gate, unlockStats);
+  });
 
   const maxWeekXp = Math.max(1, ...(progression?.week ?? []).map((w) => w.xp));
   const weekBars = (progression?.week ?? []).map((w) => ({

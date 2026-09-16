@@ -4,8 +4,10 @@ import {
   DAILY_TAGS,
   dailyLabel,
   getDailyChallenge,
+  getAccessibleDailyChallenge,
 } from "./daily";
 import { DRILLS } from "./drills";
+import { STARTER_DRILLS } from "./unlocks";
 
 describe("getDailyChallenge", () => {
   test("same day always yields the same challenge", () => {
@@ -45,6 +47,32 @@ describe("getDailyChallenge", () => {
       const c = getDailyChallenge(d);
       expect(DAILY_ANGLES).toContain(c.angle);
       expect(DAILY_TAGS).toContain(c.tag);
+    }
+  });
+});
+
+describe("getAccessibleDailyChallenge", () => {
+  test("passes the calendar pick through when unlocked", () => {
+    const result = getAccessibleDailyChallenge(() => true, 19_000);
+    expect(result).toEqual(getDailyChallenge(19_000));
+  });
+
+  test("falls back to a starter drill when the pick is locked", () => {
+    const result = getAccessibleDailyChallenge(() => false, 19_000);
+    expect(STARTER_DRILLS).toContain(result.drill.id);
+  });
+
+  test("fallback varies across days (deterministic starter rotation)", () => {
+    const ids = new Set(
+      Array.from({ length: 3 }, (_, i) => getAccessibleDailyChallenge(() => false, i).drill.id),
+    );
+    expect(ids.size).toBeGreaterThan(1);
+  });
+
+  test("locked picks always land on drills that exist and starters stay in sync", () => {
+    for (let d = 0; d < 30; d++) {
+      const r = getAccessibleDailyChallenge((id) => id === "recovery" ? false : true, d);
+      expect(DRILLS.some((dr) => dr.id === r.drill.id)).toBe(true);
     }
   });
 });

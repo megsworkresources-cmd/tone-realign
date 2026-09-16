@@ -1,4 +1,5 @@
 import { DRILLS, type Drill } from "./drills";
+import { STARTER_DRILLS } from "./unlocks";
 
 /**
  * The daily challenge: one drill + one focus, deterministic per calendar day.
@@ -17,7 +18,8 @@ export interface DailyChallenge {
 
 /**
  * The angle on today's drill changes daily even when the drill repeats:
- * with 5 drills and 7 angles, the full combo cycles every 35 days.
+ * with the full drill catalog and 7 angles, the combo cycles every
+ * DRILLS.length × 7 days.
  */
 const ANGLES = [
   "Half volume, all meaning",
@@ -38,7 +40,7 @@ const TAGS = [
 ];
 
 /** Days since epoch — stable across reloads, changes at local midnight. */
-function dayNumber(): number {
+export function dayNumber(): number {
   const now = new Date();
   const local = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.floor(local.getTime() / 86_400_000);
@@ -50,6 +52,28 @@ export function getDailyChallenge(day = dayNumber()): DailyChallenge {
   const angle = ANGLES[Math.floor(day / DRILLS.length) % ANGLES.length];
   const tag = TAGS[Math.floor(day / (DRILLS.length * 2)) % TAGS.length];
   return { drill, angle, tag };
+}
+
+/**
+ * Today's challenge that every user can actually run: the calendar pick,
+ * swapped for a starter drill when the pick sits behind a progressive
+ * unlock. Keeps the daily CTA honest for new users without changing
+ * the rotation for anyone with a full gym.
+ */
+export function getAccessibleDailyChallenge(
+  isDrillUnlocked: (drillId: string) => boolean,
+  day = dayNumber(),
+): DailyChallenge {
+  const challenge = getDailyChallenge(day);
+  if (isDrillUnlocked(challenge.drill.id)) return challenge;
+
+  // Deterministic starter fallback: rotate the starters by day so the
+  // fallback varies across days too.
+  const starter = DRILLS.find(
+    (d) => d.id === STARTER_DRILLS[day % STARTER_DRILLS.length],
+  );
+  if (!starter) return challenge; // defensive: starters must exist
+  return { drill: starter, angle: challenge.angle, tag: challenge.tag };
 }
 
 /** "Friday, September 13" style label for the challenge card. */
@@ -64,3 +88,6 @@ export function dailyLabel(day = dayNumber()): string {
 /** For tests and rotation sanity. */
 export const DAILY_ANGLES = ANGLES;
 export const DAILY_TAGS = TAGS;
+
+/** Test hook for the day number (deterministic fallback coverage). */
+export const __dayNumberForTest = dayNumber;
