@@ -51,9 +51,16 @@ interface UseToneCapture {
   /** Pass the previous take's max raw mic level (capture.lastPeakRawRms)
    * to begin with its calibrated gain — the second take on a quiet mic
    * is heard immediately instead of being another dead take. */
-  start: (lastPeakRawRms?: number | null) => Promise<void>;
+  start: (
+    lastPeakRawRms?: number | null,
+    deviceId?: string | null,
+  ) => Promise<void>;
   stop: () => void;
   reset: () => void;
+  /** Label of the input device the last stream came from ("" if unknown). */
+  activeDeviceLabel: string;
+  /** True while recording and the audio track reports itself muted. */
+  micMuted: boolean;
 }
 
 const FRAME_INTERVAL_MS = 50;
@@ -108,6 +115,13 @@ export function useToneCapture(): UseToneCapture {
   /** Peak raw mic level of the previous take — the calibration seed for the
    * next start(). State, not a ref, so consumers re-render with the new seed. */
   const [lastPeakRawRms, setLastPeakRawRms] = useState<number | null>(null);
+  /** Label of the input device from the last acquired stream. */
+  const [activeDeviceLabel, setActiveDeviceLabel] = useState("");
+  /** Live muted status of the current audio track (drives the hint). */
+  const [micMuted, setMicMuted] = useState(false);
+  const micMutedRef = useRef(false);
+  /** The audio track of the live stream — muted flag checked per UI tick. */
+  const trackRef = useRef<MediaStreamTrack | null>(null);
 
   const framesRef = useRef<ToneFrame[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -150,6 +164,9 @@ export function useToneCapture(): UseToneCapture {
       analyzeTimerRef.current = null;
     }
     startingRef.current = false;
+    trackRef.current = null;
+    micMutedRef.current = false;
+    setMicMuted(false);
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     ctxRef.current?.close().catch(() => {});
@@ -177,7 +194,8 @@ export function useToneCapture(): UseToneCapture {
     [cleanup],
   );
 
-  const start = useCallback(async (lastPeakRawRms?: number | null) => {
+  const start = useCallback(
+    async (lastPeakRawRms?: number | null, deviceId?: string | null) => {
     // Double-start guard: rAF covers the recording phase; startingRef covers
     // the async window before it (permission prompt, getUserMedia) where
     // state is still "idle" and the Start button is still clickable — a
@@ -223,13 +241,38 @@ export function useToneCapture(): UseToneCapture {
           .webkitAudioContext;
       const ctx = new AudioCtx();
       ctxRef.current = ctx;
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      });
+      // Honor the user's device pick from the MicPicker (exact — so the
+      // browser can't silently substitute another input). A saved device
+      // that has since been unplugged falls back to the default instead of
+      // failing the whole take.
+      const audioConstraints: MediaTrackConstraints = {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+      };
+      if (deviceId) audioConstraints.deviceId = { exact: deviceId };
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: audioConstraints,
+        });
+      } catch (e) {
+        if (
+          deviceId &&
+          e instanceof DOMException &&
+          e.name === "OverconstrainedError"
+        ) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+            },
+          });
+        } else {
+          throw e;
+        }
+      }
       // The user may have unmounted or hit reset while the permission
       // prompt was up — bail before touching refs so this stream can't leak
       // a live mic that nothing will ever stop.
@@ -238,6 +281,15 @@ export function useToneCapture(): UseToneCapture {
         return;
       }
       streamRef.current = stream;
+
+      // Remember which input actually delivered this stream — the dead-take
+      // verdict names it, and a virtual-cable device showing up here is the
+      // #1 "we heard nothing" culprit after permissions.
+      const track = stream.getAudioTracks()[0] ?? null;
+      trackRef.current = track;
+      setActiveDeviceLabel(track?.label ?? "");
+      micMutedRef.current = track?.muted ?? false;
+      setMicMuted(micMutedRef.current);
 
       // Some browsers still park the context in "suspended" (Safari, or a
       // permission prompt that ate the gesture) — nudge it to running.
@@ -367,6 +419,14 @@ export function useToneCapture(): UseToneCapture {
         // and jank the take).
         if (now - lastUiAtRef.current >= 33) {
           lastUiAtRef.current = now;
+          // Surface a track that reports itself muted — the OS privacy layer
+          // or another app holding the mic produces exactly this silent but
+          // "live" stream, and the meter alone can't say which.
+          const muted = trackRef.current?.muted ?? false;
+          if (muted !== micMutedRef.current) {
+            micMutedRef.current = muted;
+            setMicMuted(muted);
+          }
           setLevel(Math.min(gainedRms * 4, 1));
           setLivePitchHz(lastPitchRef.current);
           setElapsedMs(now - startedAtRef.current);
@@ -408,6 +468,20 @@ export function useToneCapture(): UseToneCapture {
     // on what was actually measured — muted, too quiet, faint, or short.
     if (isDeadTake(speechFramesRef.current)) {
       const reason = deadTakeReason(speechFramesRef.current, maxRawRef.current);
+      let message: string = DEAD_TAKE_MESSAGES[reason];
+      // Enrich "muted" with what the stream itself reported: a track that
+      // says it's muted points at the OS privacy layer or another app; a
+      // named device points at the wrong input being selected.
+      if (reason === "muted") {
+        const track = streamRef.current?.getAudioTracks()[0];
+        if (track?.muted) {
+          message =
+            "Your microphone opened but reported itself muted the whole take. Check the OS microphone privacy setting for your browser, close apps that may hold the mic (Zoom, Teams, Discord), then try again.";
+        } else if (track?.label) {
+          message +=
+            ` Active input: “${track.label}” — if that isn't your real microphone (e.g. a virtual cable or “Stereo Mix”), switch it below and try again.`;
+        }
+      }
       // Release the recognizer here too — it holds the mic independently
       // of the stream, and skipping it on this early exit would leave the
       // browser's mic indicator lit after a dead take.
@@ -419,7 +493,7 @@ export function useToneCapture(): UseToneCapture {
       recognitionRef.current = null;
       cleanup();
       setState("idle");
-      setError(DEAD_TAKE_MESSAGES[reason]);
+      setError(message);
       return;
     }
 
@@ -464,6 +538,7 @@ export function useToneCapture(): UseToneCapture {
     setElapsedMs(0);
     setTranscript("");
     transcriptRef.current = "";
+    setActiveDeviceLabel("");
     framesRef.current = [];
     speechFramesRef.current = 0;
     lastPitchRef.current = null;
@@ -479,6 +554,8 @@ export function useToneCapture(): UseToneCapture {
     analysis,
     transcript,
     lastPeakRawRms,
+    activeDeviceLabel,
+    micMuted,
     start,
     stop,
     reset,

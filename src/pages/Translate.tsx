@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { NBBadge, NBButton, NBPanel, NBStat } from "@/components/nb";
 import { MicError } from "@/components/MicError";
+import { MicPicker, getSavedMicDeviceId } from "@/components/MicPicker";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { api } from "@/convex/_generated/api";
 import {
@@ -47,7 +48,7 @@ export default function Translate() {
     const seed = capture.lastPeakRawRms;
     capture.reset();
     setAwaiting(null);
-    capture.start(seed);
+    capture.start(seed, getSavedMicDeviceId());
   };
 
   const finishPass = () => {
@@ -191,6 +192,14 @@ export default function Translate() {
               <div className="mt-5 text-center font-display">Analyzing…</div>
             )}
             {capture.error && <MicError message={capture.error} />}
+            {capture.state === "recording" && capture.micMuted && (
+              <p className="nb mt-5 bg-sun px-3 py-2 text-sm font-medium">
+                The mic reports itself muted — check your system's mic privacy
+                setting or close the app holding it; this take will come back
+                empty otherwise.
+              </p>
+            )}
+            <MicPicker activeLabel={capture.activeDeviceLabel} className="mt-5" />
           </NBPanel>
         )}
 

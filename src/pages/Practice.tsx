@@ -1,5 +1,6 @@
 import { NBBadge, NBButton, NBPanel, NBMeter } from "@/components/nb";
 import { MicError } from "@/components/MicError";
+import { MicPicker, getSavedMicDeviceId } from "@/components/MicPicker";
 import { CoachNote } from "@/components/CoachNote";
 import { getDrill, type Drill } from "@/lib/drills";
 import { getDailyChallenge } from "@/lib/daily";
@@ -57,6 +58,8 @@ function PracticeRunner({ drill }: { drill: Drill }) {
     analysis,
     transcript,
     lastPeakRawRms,
+    activeDeviceLabel,
+    micMuted,
     start,
     stop,
     reset,
@@ -149,10 +152,23 @@ function PracticeRunner({ drill }: { drill: Drill }) {
 
             {error && <MicError message={error} />}
 
+            {state === "recording" && micMuted && (
+              <p className="nb bg-sun px-3 py-2 text-sm font-medium">
+                The mic reports itself muted — check your system's mic privacy
+                setting or close the app holding it; this take will come back
+                empty otherwise.
+              </p>
+            )}
+
+            <MicPicker activeLabel={activeDeviceLabel} />
+
             {/* Controls */}
             <div className="flex items-center gap-3">
               {state === "idle" && (
-                <NBButton onClick={() => start(lastPeakRawRms)} variant="coral">
+                <NBButton
+                  onClick={() => start(lastPeakRawRms, getSavedMicDeviceId())}
+                  variant="coral"
+                >
                   <Mic className="size-4" /> Start my take
                 </NBButton>
               )}
