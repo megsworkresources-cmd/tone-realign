@@ -45,7 +45,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
 
       {/* Nav */}
       <header className="sticky top-0 z-40 border-b-2 border-ink bg-paper/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4">
           <Link to="/" className="group flex items-center gap-3">
             <img
               src={logo}
@@ -59,7 +59,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm font-bold uppercase tracking-wide md:flex">
+          <nav className="hidden items-center gap-4 text-[13px] font-bold uppercase tracking-wide lg:gap-6 lg:text-sm xl:gap-7 md:flex">
             {NAV.map((item) => (
               <NavLink key={item.to} to={item.to} className={({ isActive }) => navClass(isActive)}>
                 {item.label}
