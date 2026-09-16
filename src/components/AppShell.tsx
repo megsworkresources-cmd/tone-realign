@@ -2,17 +2,41 @@ import { levelInfo } from "@/lib/gamify";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import logo from "@/assets/logo.svg";
-import { LayoutDashboard, LogOut, MessagesSquare, Shuffle } from "lucide-react";
+import {
+  LayoutDashboard,
+  Languages,
+  LogOut,
+  MessagesSquare,
+  Mic,
+  Shuffle,
+} from "lucide-react";
 import { useQuery } from "convex/react";
 import { Link, useNavigate } from "react-router";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+interface NavItem {
+  id: "dashboard" | "translate" | "quiz" | "reframe";
+  to: string;
+  label: string;
+  short: string;
+  icon: typeof Mic;
+}
+
+/** The signed-in app's four destinations, in nav order. */
+const NAV: NavItem[] = [
+  { id: "dashboard", to: "/dashboard", label: "Dashboard", short: "Home", icon: LayoutDashboard },
+  { id: "translate", to: "/translate", label: "Translate", short: "Translate", icon: Languages },
+  { id: "quiz", to: "/quiz", label: "Read the Room", short: "Room", icon: MessagesSquare },
+  { id: "reframe", to: "/reframe", label: "Reframe Lab", short: "Reframe", icon: Shuffle },
+];
 
 /** The signed-in app's shared chrome: one header, consistent nav, live level. */
 export function AppShell({
   active,
   children,
 }: {
-  active?: "dashboard" | "quiz" | "reframe" | "practice";
+  active?: NavItem["id"];
   children: ReactNode;
 }) {
   const { signOut } = useAuth();
@@ -20,12 +44,6 @@ export function AppShell({
   const progression = useQuery(api.dailyLog.progression);
 
   const level = levelInfo(progression?.totalXp ?? 0);
-
-  const NAV = [
-    { id: "dashboard", to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "quiz", to: "/quiz", label: "Read the Room", icon: MessagesSquare },
-    { id: "reframe", to: "/reframe", label: "Reframe Lab", icon: Shuffle },
-  ] as const;
 
   const handleSignOut = async () => {
     await signOut();
@@ -58,9 +76,10 @@ export function AppShell({
                   key={item.id}
                   to={item.to}
                   aria-current={isActive ? "page" : undefined}
-                  className={`nb nb-press flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-widest transition-colors sm:px-3 ${
-                    isActive ? "bg-sun text-ink" : "bg-transparent text-paper/75 hover:text-paper"
-                  }`}
+                  className={cn(
+                    "nb nb-press flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-widest transition-colors sm:px-3",
+                    isActive ? "bg-sun text-ink" : "bg-transparent text-paper/75 hover:text-paper",
+                  )}
                 >
                   <Icon className="size-3.5" />
                   <span className="hidden md:inline">{item.label}</span>
@@ -94,12 +113,69 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="flex-1">{children}</main>
+      <main id="app-main" className="flex-1 pb-16 md:pb-0">
+        {children}
+      </main>
 
-      <footer className="border-t-2 border-ink bg-ink py-4 text-center text-[10px] font-bold uppercase tracking-widest text-paper/50">
+      <footer className="hidden border-t-2 border-ink bg-ink py-4 text-center text-[10px] font-bold uppercase tracking-widest text-paper/50 md:block">
         ShiftedTone — train the tone that says it
       </footer>
+
+      {/* Mobile bottom tab bar — thumb-reachable, with the mic as the hub */}
+      <nav
+        aria-label="Primary (mobile)"
+        className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-ink bg-paper md:hidden"
+      >
+        <div className="relative mx-auto grid max-w-md grid-cols-5 items-end px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
+          {NAV.slice(0, 2).map((item) => (
+            <TabItem key={item.id} item={item} active={active} />
+          ))}
+
+          {/* Central mic FAB — the app's core action, always one tap away */}
+          <Link
+            to="/dashboard"
+            aria-label="Record a take"
+            title="Record a take"
+            className="flex flex-col items-center"
+          >
+            <span className="nb nb-press -mt-5 flex size-14 items-center justify-center bg-coral nb-shadow">
+              <Mic className="size-6" />
+            </span>
+            <span className="mt-0.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+              Take
+            </span>
+          </Link>
+
+          {NAV.slice(2).map((item) => (
+            <TabItem key={item.id} item={item} active={active} />
+          ))}
+        </div>
+      </nav>
     </div>
+  );
+}
+
+function TabItem({
+  item,
+  active,
+}: {
+  item: NavItem;
+  active?: NavItem["id"];
+}) {
+  const Icon = item.icon;
+  const isActive = active === item.id;
+  return (
+    <Link
+      to={item.to}
+      aria-current={isActive ? "page" : undefined}
+      className={cn(
+        "flex flex-col items-center gap-0.5 py-1 text-[9px] font-bold uppercase tracking-widest",
+        isActive ? "text-ink" : "text-muted-foreground",
+      )}
+    >
+      <Icon className={cn("size-5", isActive && "text-coral")} />
+      {item.short}
+    </Link>
   );
 }
 

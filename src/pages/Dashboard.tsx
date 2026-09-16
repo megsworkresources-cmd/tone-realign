@@ -15,16 +15,22 @@ import { api } from "@/convex/_generated/api";
 import {
   ArrowRight,
   History,
+  Languages,
   Lock,
   MessagesSquare,
   Mic,
   Shuffle,
   Sparkles,
   Timer,
+  TrendingUp,
   Trophy,
+  Wind,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { Link } from "react-router";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { NBMeter } from "@/components/nb";
 
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -84,6 +90,38 @@ export default function Dashboard() {
               suffix={progression?.bestOverall ? "/100" : undefined}
             />
             </div>
+        </section>
+
+        {/* Quick reps — every tool one tap away */}
+        <section aria-label="Quick reps">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            {[
+              { to: `/practice/${daily.drill.id}`, icon: Mic, label: "Quick take", sub: "45s", color: "bg-coral" },
+              { to: "/translate", icon: Languages, label: "Translate", sub: "2 passes", color: "bg-sun" },
+              { to: "/quiz", icon: MessagesSquare, label: "Read the Room", sub: "1 scenario", color: "bg-mint" },
+              { to: "/reframe", icon: Shuffle, label: "Reframe", sub: "2 min", color: "bg-paper" },
+              { to: "/dashboard#breath", icon: Wind, label: "Breath reset", sub: "90s", color: "bg-paper" },
+            ].map((rep) => {
+              const Icon = rep.icon;
+              return (
+                <Link
+                  key={rep.label}
+                  to={rep.to}
+                  className="group nb nb-press flex items-center gap-3 bg-card p-3"
+                >
+                  <span className={`nb flex size-9 shrink-0 items-center justify-center ${rep.color}`}>
+                    <Icon className="size-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-bold leading-tight">{rep.label}</span>
+                    <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {rep.sub}
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </section>
 
         {/* 21-day arc — where you are in the reprogramming program */}
@@ -328,26 +366,7 @@ export default function Dashboard() {
               </p>
             )}
             {recentSessions?.map((s) => (
-              <div
-                key={s._id}
-                className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-6 py-4 last:border-b-0"
-              >
-                <div className="flex items-center gap-3">
-                  <NBBadge className={TONE_LABELS[s.dominantTone]?.color ?? "bg-secondary"}>
-                    {TONE_LABELS[s.dominantTone]?.label ?? s.dominantTone}
-                  </NBBadge>
-                  <div>
-                    <div className="text-sm font-bold">
-                      {DRILLS.find((d) => d.id === s.drill)?.name ?? s.drill}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {s.wordsPerMinute} wpm · {s.avgPitchHz} Hz ·{" "}
-                      {Math.round(s.voicedRatio * 100)}% voiced
-                    </div>
-                  </div>
-                </div>
-                <div className="font-display text-2xl">{s.overallScore}</div>
-              </div>
+              <RecentTakeRow key={s._id} session={s} best={bestByDrill.get(s.drill)} />
             ))}
           </div>
         </section>
@@ -355,6 +374,110 @@ export default function Dashboard() {
     </AppShell>
   );
 }
+
+/**
+ * One recent take: tone badge, drill, live metrics, and your delta vs.
+ * that drill's best — expandable to the four factor scores so the log
+ * reads as progress, not a pile of numbers.
+ */
+function RecentTakeRow({
+  session: s,
+  best,
+}: {
+  session: {
+    _id: string;
+    drill: string;
+    overallScore: number;
+    calmScore: number;
+    energyScore: number;
+    clarityScore: number;
+    stabilityScore: number;
+    wordsPerMinute: number;
+    avgPitchHz: number;
+    voicedRatio: number;
+    dominantTone: string;
+  };
+  best?: { bestScore: number; attemptCount: number };
+}) {
+  const [open, setOpen] = useState(false);
+  const delta = best ? s.overallScore - best.bestScore : null;
+  const isNewBest = delta !== null && delta > 0;
+
+  const factors = [
+    { label: "Calm", score: s.calmScore },
+    { label: "Energy", score: s.energyScore },
+    { label: "Clarity", score: s.clarityScore },
+    { label: "Stability", score: s.stabilityScore },
+  ];
+
+  return (
+    <div className="border-b border-ink/10 last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full flex-wrap items-center justify-between gap-3 px-6 py-4 text-left transition-colors hover:bg-secondary/60"
+      >
+        <div className="flex items-center gap-3">
+          <NBBadge className={TONE_LABELS[s.dominantTone]?.color ?? "bg-secondary"}>
+            {TONE_LABELS[s.dominantTone]?.label ?? s.dominantTone}
+          </NBBadge>
+          <div>
+            <div className="flex items-center gap-2 text-sm font-bold">
+              {DRILLS.find((d) => d.id === s.drill)?.name ?? s.drill}
+              {isNewBest && (
+                <NBBadge className="bg-sun">
+                  <TrendingUp className="size-3" /> new best
+                </NBBadge>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {s.wordsPerMinute} wpm · {s.avgPitchHz} Hz ·{" "}
+              {Math.round(s.voicedRatio * 100)}% voiced
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {delta !== null && (
+            <span
+              className={cn(
+                "text-xs font-bold uppercase tracking-widest",
+                delta > 0 ? "text-mint" : delta < 0 ? "text-muted-foreground" : "text-ink",
+              )}
+            >
+              {delta > 0 ? `+${delta} vs best` : delta < 0 ? `${delta} vs best` : "= best"}
+            </span>
+          )}
+          <div className="font-display text-2xl">{s.overallScore}</div>
+          <span
+            aria-hidden
+            className={cn(
+              "text-[10px] font-bold text-muted-foreground transition-transform",
+              open && "rotate-180",
+            )}
+          >
+            ▼
+          </span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="grid grid-cols-2 gap-3 border-t border-dashed border-ink/20 bg-secondary/50 px-6 py-4 sm:grid-cols-4">
+          {factors.map((f) => (
+            <div key={f.label}>
+              <div className="flex items-baseline justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {f.label}
+                </span>
+                <span className="font-display text-lg">{f.score}</span>
+              </div>
+              <NBMeter value={f.score} className="mt-1 h-2" barClassName="bg-ink" />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );}
 
 /**
  * The 21-day reprogramming arc: your streak maps onto a three-week

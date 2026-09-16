@@ -5,6 +5,13 @@ import { CoachNote } from "@/components/CoachNote";
 import { getDrill, type Drill } from "@/lib/drills";
 import { getDailyChallenge } from "@/lib/daily";
 import {
+  COUNTDOWN_SECONDS,
+  PACE_BAR_CLASS,
+  PACE_HINTS,
+  pacePct,
+  paceStatus,
+} from "@/lib/take-timing";
+import {
   biggestLever,
   buildFactorFeedback,
   TONE_FACTORS,
@@ -14,10 +21,11 @@ import {
 } from "@/lib/tone-analyzer";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { api } from "@/convex/_generated/api";
-import { ArrowLeft, Check, Mic, Square } from "lucide-react";
+import { ArrowLeft, Check, Mic, Square, Target } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -59,6 +67,59 @@ function PracticeRunner({ drill }: { drill: Drill }) {
   >(null);
   const drillStats = useQuery(api.sessions.drillStats);
   const bestByDrill = new Map((drillStats ?? []).map((s) => [s.drill, s]));
+
+  // Pre-roll countdown: hit Start, breathe for three beats, then the
+  // recorder actually opens. State lives here (UI choreography), the
+  // capture hook stays a pure clock. The hook object is unstable across
+  // renders, so the effect reads it through a ref — a mid-countdown
+  // re-render must never reset the ticking timer.
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const captureRef = useRef(capture);
+  captureRef.current = capture;
+  const beginCountdown = () => {
+    setCountdown(COUNTDOWN_SECONDS);
+  };
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown <= 0) {
+      setCountdown(null);
+      const c = captureRef.current;
+      c.start(c.lastPeakRawRms, getSavedMicDeviceId());
+      return;
+    }
+    const t = window.setTimeout(() => setCountdown((c) => (c ?? 1) - 1), 1000);
+    return () => window.clearTimeout(t);
+  }, [countdown]);
+
+  // Space toggles record/stop — the desktop flow never leaves the keyboard.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      const el = e.target as HTMLElement | null;
+      if (el && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(el.tagName)) return;
+      e.preventDefault();
+      const c = captureRef.current;
+      if (c.state === "idle" && countdown === null) beginCountdown();
+      else if (c.state === "recording") c.stop();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [countdown]);
+
+  // Landing on the results: the reveal draws the eye to the verdict.
+  const resultsRef = useRef<HTMLDivElement | null>(null);
+  const prevAnalysis = useRef(capture.analysis);
+  useEffect(() => {
+    if (capture.analysis && capture.analysis !== prevAnalysis.current) {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    prevAnalysis.current = capture.analysis;
+  }, [capture.analysis]);
+
+  // Pacing guidance against the drill's suggested length.
+  const targetMs = drill.seconds * 1000;
+  const pace = paceStatus(capture.elapsedMs, targetMs);
+  const pct = pacePct(capture.elapsedMs, targetMs);
 
   const {
     state,
@@ -123,36 +184,79 @@ function PracticeRunner({ drill }: { drill: Drill }) {
         {/* Recorder */}
         <NBPanel className="p-6">
           <div className="flex flex-col items-center gap-5">
+            {/* Pre-roll countdown overlay */}
+            {countdown !== null && state === "idle" && (
+              <div
+                className="flex h-24 w-full flex-col items-center justify-center"
+                aria-live="assertive"
+              >
+                <motion.span
+                  key={countdown}
+                  initial={{ scale: 0.4, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 18 }}
+                  className="nb flex size-16 items-center justify-center bg-sun font-display text-4xl nb-shadow"
+                >
+                  {countdown}
+                </motion.span>
+                <p className="mt-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  Breathe in… speak on the exhale
+                </p>
+              </div>
+            )}
+
             {/* Live visualizer */}
-            <div
-              className="flex h-24 w-full items-end justify-center gap-1"
-              aria-hidden
-            >
-              {Array.from({ length: 28 }).map((_, i) => {
-                const wave =
-                  state === "recording"
-                    ? Math.max(
-                        level *
-                          (0.4 +
-                            0.6 *
-                              Math.abs(
-                                Math.sin(i * 0.9 + elapsedMs / 180),
-                              )),
-                        0.06,
-                      )
-                    : 0.06;
-                const heightPct = Math.min(wave * 100, 100);
-                return (
+            {countdown === null && (
+              <div
+                className="flex h-24 w-full items-end justify-center gap-1"
+                aria-hidden
+              >
+                {Array.from({ length: 28 }).map((_, i) => {
+                  const wave =
+                    state === "recording"
+                      ? Math.max(
+                          level *
+                            (0.4 +
+                              0.6 *
+                                Math.abs(
+                                  Math.sin(i * 0.9 + elapsedMs / 180),
+                                )),
+                          0.06,
+                        )
+                      : 0.06;
+                  const heightPct = Math.min(wave * 100, 100);
+                  return (
+                    <div
+                      key={i}
+                      className={
+                        i >= 8 && i <= 19 ? "w-2.5 bg-coral" : "w-2.5 bg-ink/70"
+                      }
+                      style={{ height: `${Math.max(heightPct, 6)}%` }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Target pacing meter — where you are against the drill's length */}
+            {state === "recording" && (
+              <div className="w-full">
+                <div className="h-3 w-full nb bg-card overflow-hidden">
                   <div
-                    key={i}
-                    className={
-                      i >= 8 && i <= 19 ? "w-2.5 bg-coral" : "w-2.5 bg-ink/70"
-                    }
-                    style={{ height: `${Math.max(heightPct, 6)}%` }}
+                    className={cn("h-full transition-[width] duration-300", PACE_BAR_CLASS[pace])}
+                    style={{ width: `${pct}%` }}
                   />
-                );
-              })}
-            </div>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <Target className="size-3.5" /> {PACE_HINTS[pace]}
+                  </span>
+                  <span>
+                    {fmtTime(elapsedMs)} / {fmtTime(targetMs)}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {state === "recording" && (
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -177,7 +281,8 @@ function PracticeRunner({ drill }: { drill: Drill }) {
             <div className="flex items-center gap-3">
               {state === "idle" && (
                 <NBButton
-                  onClick={() => start(lastPeakRawRms, getSavedMicDeviceId())}
+                  onClick={beginCountdown}
+                  disabled={countdown !== null}
                   variant="coral"
                 >
                   <Mic className="size-4" /> Start my take
@@ -194,16 +299,20 @@ function PracticeRunner({ drill }: { drill: Drill }) {
                 </NBButton>
               )}
               {state === "done" && (
-          <NBButton onClick={reset} variant="paper">
-            Go again
-          </NBButton>
+                <NBButton onClick={reset} variant="paper">
+                  Go again
+                </NBButton>
               )}
             </div>
+            <p className="hidden text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:block">
+              Tip: press Space to start / stop
+            </p>
           </div>
         </NBPanel>
 
         {/* Results */}
         {state === "done" && analysis && (
+          <div ref={resultsRef}>
           <NBPanel className="p-6">
             {/* The one highest-leverage fix for next time. */}
             <div className="nb mb-5 bg-sun p-4">
@@ -232,9 +341,14 @@ function PracticeRunner({ drill }: { drill: Drill }) {
                 <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   Overall
                 </div>
-                <div className="font-display text-5xl">
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.15 }}
+                  className="font-display text-5xl"
+                >
                   {analysis.overallScore}
-                </div>
+                </motion.div>
               </div>
             </div>
 
@@ -366,6 +480,7 @@ function PracticeRunner({ drill }: { drill: Drill }) {
               drillStats={bestByDrill.get(drill.id)}
             />
           </NBPanel>
+          </div>
         )}
 
         {/* Tips */}

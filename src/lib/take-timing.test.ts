@@ -1,0 +1,68 @@
+import { describe, expect, test } from "bun:test";
+import {
+  COUNTDOWN_SECONDS,
+  PACE_BAR_CLASS,
+  PACE_HINTS,
+  countdownBeats,
+  pacePct,
+  paceStatus,
+} from "./take-timing";
+
+describe("countdown beats", () => {
+  test("counts down from COUNTDOWN_SECONDS to 1", () => {
+    expect(countdownBeats()).toEqual([3, 2, 1]);
+    expect(countdownBeats().length).toBe(COUNTDOWN_SECONDS);
+  });
+});
+
+describe("paceStatus", () => {
+  const target = 45_000;
+
+  test("warming-up before a third of the target", () => {
+    expect(paceStatus(0, target)).toBe("warming-up");
+    expect(paceStatus(target / 3 - 1, target)).toBe("warming-up");
+  });
+
+  test("on-pace inside the target window", () => {
+    expect(paceStatus(target / 3, target)).toBe("on-pace");
+    expect(paceStatus(target - 1, target)).toBe("on-pace");
+  });
+
+  test("good-length right after the target", () => {
+    expect(paceStatus(target, target)).toBe("good-length");
+    expect(paceStatus(target * 1.49, target)).toBe("good-length");
+  });
+
+  test("overtime well past the target", () => {
+    expect(paceStatus(target * 1.5, target)).toBe("overtime");
+    expect(paceStatus(target * 4, target)).toBe("overtime");
+  });
+
+  test("zero/negative target is safe (stays on-pace)", () => {
+    expect(paceStatus(10_000, 0)).toBe("on-pace");
+    expect(paceStatus(10_000, -1)).toBe("on-pace");
+  });
+});
+
+describe("pacePct", () => {
+  test("fills linearly and caps at 100", () => {
+    expect(pacePct(0, 45_000)).toBe(0);
+    expect(pacePct(22_500, 45_000)).toBe(50);
+    expect(pacePct(45_000, 45_000)).toBe(100);
+    expect(pacePct(90_000, 45_000)).toBe(100);
+  });
+
+  test("zero target stays at 0", () => {
+    expect(pacePct(10_000, 0)).toBe(0);
+  });
+});
+
+describe("pace copy covers every status", () => {
+  const statuses = ["warming-up", "on-pace", "good-length", "overtime"] as const;
+  test("hint + bar class exist for each", () => {
+    for (const s of statuses) {
+      expect(PACE_HINTS[s].length).toBeGreaterThan(5);
+      expect(PACE_BAR_CLASS[s]).toMatch(/^bg-/);
+    }
+  });
+});

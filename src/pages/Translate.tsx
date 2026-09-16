@@ -14,6 +14,7 @@ import { TONE_LABELS } from "@/lib/tone-analyzer";
 import { ArrowRight, Languages, RefreshCw } from "lucide-react";
 import { useMutation } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 
 type Pass = "reflex" | "intended";
 
@@ -113,7 +114,7 @@ export default function Translate() {
   const passNum = pass === order[0] ? 1 : 2;
 
   return (
-    <AppShell>
+    <AppShell active="translate">
       <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
         {/* Header */}
         <div>
@@ -163,7 +164,34 @@ export default function Translate() {
         {/* Take flow */}
         {!done && (
           <NBPanel className="p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Step tracker — two passes in the actual run order, always
+                visible so you know where you are and what's left */}
+            <div className="flex items-stretch gap-2" aria-hidden>
+              {order.map((passKey, i) => {
+                const label = passKey === "reflex" ? "Reflex take" : "Intended take";
+                const isCurrent = pass === passKey;
+                const isDone =
+                  (passKey === "reflex" ? reflexAnalysis : intendedAnalysis) !== null;
+                return (
+                  <div
+                    key={passKey}
+                    className={cn(
+                      "flex-1 border-2 border-ink px-3 py-2 text-center text-[10px] font-bold uppercase tracking-widest",
+                      isDone
+                        ? "bg-mint"
+                        : isCurrent
+                          ? "bg-sun"
+                          : "bg-card text-muted-foreground",
+                    )}
+                  >
+                    {isDone ? "✓ " : ""}
+                    {i + 1} · {label}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <NBBadge className={pass === "reflex" ? "bg-coral text-ink" : "bg-mint text-ink"}>
                 Pass {passNum} of 2 —{" "}
                 {pass === "reflex" ? "as it usually comes out" : "as you mean it"}
