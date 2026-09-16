@@ -8,7 +8,7 @@ import {
 import {
   calibrateInputGain,
   CALIBRATION_WINDOW,
-  DEAD_TAKE_MESSAGES,
+  deadTakeMessageFor,
   deadTakeReason,
   gainedVolume,
   initialInputGain,
@@ -468,20 +468,14 @@ export function useToneCapture(): UseToneCapture {
     // on what was actually measured — muted, too quiet, faint, or short.
     if (isDeadTake(speechFramesRef.current)) {
       const reason = deadTakeReason(speechFramesRef.current, maxRawRef.current);
-      let message: string = DEAD_TAKE_MESSAGES[reason];
-      // Enrich "muted" with what the stream itself reported: a track that
-      // says it's muted points at the OS privacy layer or another app; a
-      // named device points at the wrong input being selected.
-      if (reason === "muted") {
-        const track = streamRef.current?.getAudioTracks()[0];
-        if (track?.muted) {
-          message =
-            "Your microphone opened but reported itself muted the whole take. Check the OS microphone privacy setting for your browser, close apps that may hold the mic (Zoom, Teams, Discord), then try again.";
-        } else if (track?.label) {
-          message +=
-            ` Active input: “${track.label}” — if that isn't your real microphone (e.g. a virtual cable or “Stereo Mix”), switch it below and try again.`;
-        }
-      }
+      // Enrich the verdict with what the stream reported — pure logic in
+      // capture-gain.ts, so the rules stay unit-testable.
+      const track = streamRef.current?.getAudioTracks()[0];
+      const message = deadTakeMessageFor(
+        reason,
+        track?.muted ?? false,
+        track?.label ?? "",
+      );
       // Release the recognizer here too — it holds the mic independently
       // of the stream, and skipping it on this early exit would leave the
       // browser's mic indicator lit after a dead take.

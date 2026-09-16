@@ -3,6 +3,7 @@ import { analyzeFrames, type ToneFrame } from "./tone-analyzer";
 import {
   calibrateInputGain,
   DEAD_TAKE_MESSAGES,
+  deadTakeMessageFor,
   deadTakeReason,
   gainedVolume,
   HOPELESS_RAW_FLOOR,
@@ -186,6 +187,28 @@ describe("dead-take verdicts", () => {
       const msg = DEAD_TAKE_MESSAGES[reason];
       expect(msg.length).toBeGreaterThan(20);
       expect(msg).toMatch(/mic|hear|speak|take/);
+    }
+  });
+
+  test("deadTakeMessageFor enriches muted by what the stream reported", () => {
+    // Track says it's muted → OS privacy / other-app message, not the
+    // generic "check your settings" one.
+    const mutedMsg = deadTakeMessageFor("muted", true, "MacBook Pro Mic");
+    expect(mutedMsg).not.toBe(DEAD_TAKE_MESSAGES.muted);
+    expect(mutedMsg).toMatch(/privacy|holding the mic/i);
+    // Known device → names the input so a wrong pick is obvious.
+    const namedMsg = deadTakeMessageFor("muted", false, "Stereo Mix");
+    expect(namedMsg).toContain("Stereo Mix");
+    expect(namedMsg.startsWith(DEAD_TAKE_MESSAGES.muted)).toBe(true);
+    // Unknown device, not muted → base message unchanged.
+    expect(deadTakeMessageFor("muted", false, "")).toBe(
+      DEAD_TAKE_MESSAGES.muted,
+    );
+    // Non-muted reasons never get enrichment.
+    for (const reason of ["too-quiet", "soft", "no-speech"] as const) {
+      expect(deadTakeMessageFor(reason, true, "Whatever Mic")).toBe(
+        DEAD_TAKE_MESSAGES[reason],
+      );
     }
   });
 });

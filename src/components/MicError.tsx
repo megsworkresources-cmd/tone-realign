@@ -1,5 +1,5 @@
 import { NBButton } from "@/components/nb";
-import { OPEN_IN_TAB_HINT, isEmbeddedFrame } from "@/hooks/use-tone-capture";
+import { OPEN_IN_TAB_HINT } from "@/hooks/use-tone-capture";
 import { ExternalLink, MicOff } from "lucide-react";
 
 /**
@@ -26,7 +26,7 @@ export function MicError({ message }: { message: string }) {
         <MicOff className="mt-0.5 size-4 shrink-0" />
         {text}
       </p>
-      {(canOpenInTab || isEmbeddedFrame) && (
+      {canOpenInTab && (
         <div className="mt-3 flex items-center gap-2">
           <NBButton
             variant="ink"

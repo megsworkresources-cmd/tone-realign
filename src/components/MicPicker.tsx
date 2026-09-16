@@ -40,6 +40,20 @@ export function MicPicker({
     () => getSavedMicDeviceId() ?? "",
   );
 
+  // If the saved device has been unplugged since, clear it — otherwise the
+  // select would display "Default input" while start() still requests the
+  // stale device.
+  useEffect(() => {
+    if (selected && devices.length > 0 && !devices.some((d) => d.deviceId === selected)) {
+      setSelected("");
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // persistence is best-effort
+      }
+    }
+  }, [selected, devices]);
+
   const enumerate = useCallback(() => {
     navigator.mediaDevices
       ?.enumerateDevices()

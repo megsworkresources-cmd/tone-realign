@@ -105,6 +105,34 @@ export const DEAD_TAKE_MESSAGES: Record<DeadTakeReason, string> = {
 };
 
 /**
+ * The final dead-take message, enriched with what the stream itself
+ * reported. Pure so the enrichment rules are unit-testable:
+ * * a track that says it's muted points at the OS privacy layer or
+ *   another app holding the mic — the generic "check settings" text
+ *   would mislead;
+ * * a known device label names the input that heard nothing — a virtual
+ *   cable or "Stereo Mix" is the top wrong-device culprit;
+ * * anything else keeps the base verdict unchanged.
+ */
+export function deadTakeMessageFor(
+  reason: DeadTakeReason,
+  trackMuted: boolean,
+  trackLabel: string,
+): string {
+  if (reason !== "muted") return DEAD_TAKE_MESSAGES[reason];
+  if (trackMuted) {
+    return "Your microphone opened but reported itself muted the whole take. Check the OS microphone privacy setting for your browser, close apps that may hold the mic (Zoom, Teams, Discord), then try again.";
+  }
+  if (trackLabel) {
+    return (
+      DEAD_TAKE_MESSAGES.muted +
+      ` Active input: “${trackLabel}” — if that isn't your real microphone (e.g. a virtual cable or “Stereo Mix”), switch it below and try again.`
+    );
+  }
+  return DEAD_TAKE_MESSAGES.muted;
+}
+
+/**
  * The adaptive input gain a take should start with, given the peak raw
  * level the last take reached. Deterministic so tests are stable.
  */
