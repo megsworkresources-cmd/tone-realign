@@ -1,6 +1,8 @@
 import { NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
 import { PagePager } from "@/components/PagePager";
+import { WatchLearnSection } from "@/components/VideoCard";
+import { WATCH_LIST } from "@/lib/watch-list";
 import { useAuth } from "@/hooks/use-auth";
 import {
   ArrowRight,
@@ -326,6 +328,15 @@ export default function Home() {
           ))}
         </div>
       </div>
+
+      {/* Watch & learn — curated videos, each paired with a drill */}
+      <WatchLearnSection
+        videos={WATCH_LIST.slice(0, 6)}
+        seeAll={{
+          to: "/library",
+          label: "See all videos in the library",
+        }}
+      />
 
       {/* Quick routes: three doors into the site */}
       <section className="border-b-2 border-ink bg-paper">
