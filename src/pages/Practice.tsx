@@ -22,12 +22,13 @@ import {
 } from "@/lib/tone-analyzer";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { api } from "@/convex/_generated/api";
-import { ArrowLeft, Check, Lock, Mic, Square, Target } from "lucide-react";
+import { ArrowLeft, Check, Lock, Mic, MessageSquareText, Square, Target } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
+import { CONTEXT_PROMPTS } from "@/lib/context-prompts";
 import { levelInfo } from "@/lib/gamify";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -119,6 +120,8 @@ export default function Practice() {
 function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) {
   const capture = useToneCapture();
   const [saved, setSaved] = useState(false);
+  // The user's own context: what this take is responding to or opening.
+  const [context, setContext] = useState("");
   const [expandedFactor, setExpandedFactor] = useState<
     "calm" | "energy" | "clarity" | "stability" | null
   >(null);
@@ -365,6 +368,49 @@ function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) 
           </div>
         </NBPanel>
 
+        {/* The user's context — what this take is responding to or opening. */}
+        <NBPanel className="bg-secondary p-6">
+          <div className="flex items-center gap-2">
+            <MessageSquareText className="size-5" />
+            <p className="font-display text-xl">Your context</p>
+          </div>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+            Tell the mic what the take is for — who it's aimed at, what you're
+            responding to or opening. It gets saved with the take and your
+            coach reads it, so the advice lands on your moment, not a made-up
+            one.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {CONTEXT_PROMPTS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setContext(context === p ? "" : p)}
+                aria-pressed={context === p}
+                className={cn(
+                  "nb nb-press px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest transition-colors",
+                  context === p
+                    ? "bg-sun text-ink"
+                    : "bg-card text-muted-foreground hover:text-ink",
+                )}
+              >
+                {p}
+                {context === p && <span aria-hidden className="ml-1.5">×</span>}
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={context}
+            onChange={(e) => setContext(e.target.value)}
+            placeholder="e.g. my manager messaged “we need to talk” and I'm rehearsing my reply"
+            rows={3}
+            className="nb mt-4 w-full bg-card p-3 text-sm outline-none placeholder:text-muted-foreground"
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Optional — but a coach that knows the room coaches better.
+          </p>
+        </NBPanel>
+
         {/* Results */}
         {state === "done" && analysis && (
           <div ref={resultsRef}>
@@ -529,6 +575,7 @@ function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) 
               drillId={drill.id}
               elapsedMs={elapsedMs}
               transcript={transcript}
+              context={context.trim() || undefined}
               saved={saved}
               onSaved={() => setSaved(true)}
               onRetry={reset}
@@ -564,6 +611,7 @@ function SaveRow({
   drillId,
   elapsedMs,
   transcript,
+  context,
   saved,
   onSaved,
   onRetry,
@@ -573,6 +621,7 @@ function SaveRow({
   drillId: string;
   elapsedMs: number;
   transcript: string;
+  context?: string;
   saved: boolean;
   onSaved: () => void;
   onRetry: () => void;
@@ -610,6 +659,7 @@ function SaveRow({
         voicedRatio: analysis.voicedRatio,
         dominantTone: analysis.dominantTone,
         transcript: transcript || undefined,
+        scenario: context,
       });
       setSavedId(sessionId);
       toast.success("Saved. It's in your log.");

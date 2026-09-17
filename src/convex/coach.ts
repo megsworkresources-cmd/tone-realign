@@ -54,6 +54,7 @@ interface CoachSessionPayload {
   voicedRatio: number;
   volumeVariability: number;
   transcript?: string;
+  scenario?: string;
 }
 
 export const generate = action({
@@ -103,6 +104,7 @@ export const generate = action({
       voicedRatio: session.voicedRatio,
       volumeVariability: session.volumeVariability,
       transcript: session.transcript,
+      context: session.scenario,
       goal,
       previousBest,
     };

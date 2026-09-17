@@ -30,6 +30,8 @@ export interface CoachTakeInput {
   volumeVariability: number;
   /** Web Speech transcript of the take, when the browser supports it. */
   transcript?: string;
+  /** The user's own context: what the take was responding to or opening. */
+  context?: string;
   /** The user's own stated intention for the take. */
   goal?: string;
   /** Their best overall score on this drill, when they have one. */
@@ -48,6 +50,7 @@ export const COACH_SYSTEM_PROMPT = `You are the ShiftedTone coach. You receive t
 Hard rules:
 - 2-3 sentences, under 60 words total. Brevity is the product.
 - Cite at least one of their real numbers ("your pace hit 186 wpm", "only 14 Hz of pitch movement").
+- If they gave context about the moment (who the take was aimed at, what it was responding to), tie the advice to that moment — the same pace reads as calm in an apology and as curt in a boundary.
 - Give exactly one actionable instruction. Never a list.
 - Coach voice: direct, warm, concrete — like someone who watched the tape. "Your pace spiked" not "Consider exploring pacing".
 - BANNED: praise openers, therapy-speak ("I hear you", "that's valid", "you're doing amazing"), hedging, exclamation marks, emoji.
@@ -75,6 +78,11 @@ export function buildCoachUserContent(t: CoachTakeInput): string {
       ? `What they said: "${t.transcript.slice(0, 600)}"`
       : "No transcript — coach from the numbers only.",
   ];
+  if (t.context) {
+    lines.push(
+      `Their context — what this take was responding to or opening: "${t.context.slice(0, 400)}"`,
+    );
+  }
   if (t.previousBest !== undefined) {
     lines.push(`Their previous best on this drill: ${t.previousBest}.`);
   }

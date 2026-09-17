@@ -82,6 +82,24 @@ describe("buildCoachUserContent", () => {
     expect(withTranscript).toContain("What they said:");
     expect(withTranscript).toContain("Here's what I can do instead");
   });
+
+  test("includes the user's context when given and omits the line when not", () => {
+    const without = buildCoachUserContent(takeInput());
+    expect(without).not.toContain("Their context");
+    const withContext = buildCoachUserContent(
+      takeInput({ context: "My manager messaged “we need to talk” and I'm rehearsing my reply." }),
+    );
+    expect(withContext).toContain("Their context");
+    expect(withContext).toContain("what this take was responding to or opening");
+    expect(withContext).toContain("rehearsing my reply");
+  });
+
+  test("context is truncated to 400 chars", () => {
+    const long = "x".repeat(500);
+    const content = buildCoachUserContent(takeInput({ context: long }));
+    expect(content).toContain("x".repeat(400));
+    expect(content).not.toContain("x".repeat(401));
+  });
 });
 
 describe("pickWeakestSignal", () => {

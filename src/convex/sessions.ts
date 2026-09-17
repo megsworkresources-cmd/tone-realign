@@ -198,6 +198,7 @@ export const getSessionForCoach = internalQuery({
       voicedRatio: session.voicedRatio,
       volumeVariability: session.volumeVariability,
       transcript: session.transcript,
+      scenario: session.scenario,
     };
   },
 });
