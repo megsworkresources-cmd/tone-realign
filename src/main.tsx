@@ -40,7 +40,14 @@ function RouteLoading() {
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
-
+/** Land at the top of every new page — no mid-scroll surprises. */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [pathname]);
+  return null;
+}
 
 function RouteSyncer() {
   const location = useLocation();
@@ -73,6 +80,7 @@ createRoot(document.getElementById("root")!).render(
       <ConvexAuthProvider client={convex}>
         <BrowserRouter>
           <RouteSyncer />
+          <ScrollToTop />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
               <Route path="/" element={<Landing />} />

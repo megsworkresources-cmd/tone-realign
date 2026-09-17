@@ -1,11 +1,20 @@
 import { levelInfo } from "@/lib/gamify";
-import { appTourStops } from "@/lib/site-nav";
+import { APP_ORDER, PAGE_ORDER, appTourStops } from "@/lib/site-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import logo from "@/assets/logo.svg";
 import {
   ArrowLeft,
   ArrowRight,
+  ChevronDown,
+  Clapperboard,
   Dumbbell,
   LayoutDashboard,
   Languages,
@@ -67,7 +76,11 @@ export function AppShell({
     <div className="nb-dots flex min-h-screen flex-col bg-paper">
       <header className="sticky top-0 z-40 border-b-2 border-ink bg-ink text-paper">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Link to="/dashboard" className="group flex items-center gap-3">
+          <Link
+            to="/"
+            title="Back to the ShiftedTone home page"
+            className="group flex items-center gap-3"
+          >
             <img
               src={logo}
               alt="ShiftedTone"
@@ -102,6 +115,7 @@ export function AppShell({
           </nav>
 
           <div className="flex items-center gap-3">
+            <EverythingMenu />
             <Link
               to="/dashboard#progress"
               className="flex items-center gap-2"
@@ -166,6 +180,89 @@ export function AppShell({
         </div>
       </nav>
     </div>
+  );
+}
+
+/**
+ * The everything menu: every signed-in destination plus the whole public
+ * site (Home, How it works, Tone check, Drills, Watch, Library). One tap
+ * reaches any page — no dead ends between the app and the public site.
+ */
+function EverythingMenu() {
+  const { pathname } = useLocation();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="nb nb-press flex items-center gap-1.5 bg-paper px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-widest text-ink"
+          aria-label="All pages menu"
+        >
+          Pages
+          <ChevronDown className="size-3.5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        sideOffset={10}
+        className="w-64 rounded-none border-2 border-ink bg-card p-0 nb-shadow-sm"
+      >
+        <div className="grid grid-cols-2">
+          <div>
+            <DropdownMenuLabel className="border-b-2 border-ink px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-ink/60">
+              Training
+            </DropdownMenuLabel>
+            <div className="flex flex-col p-1">
+              {APP_ORDER.map((item) => {
+                const Icon = NAV.find((n) => n.to === item.to)?.icon;
+                const isCurrent = pathname === item.to;
+                return (
+                  <DropdownMenuItem key={item.to} asChild>
+                    <Link
+                      to={item.to}
+                      aria-current={isCurrent ? "page" : undefined}
+                      className={cn(
+                        "cursor-pointer justify-start gap-2 rounded-none px-3 py-1.5 text-xs font-bold uppercase tracking-wide focus:bg-sun focus:text-ink",
+                        isCurrent ? "bg-sun text-ink" : "text-ink",
+                      )}
+                    >
+                      {Icon && <Icon className="size-3.5 shrink-0" aria-hidden />}
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <DropdownMenuLabel className="border-b-2 border-l-2 border-ink px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-ink/60">
+              Learn
+            </DropdownMenuLabel>
+            <div className="flex flex-col p-1">
+              {PAGE_ORDER.map((item) => (
+                <DropdownMenuItem asChild key={item.to}>
+                  <Link
+                    to={item.to}
+                    className={cn(
+                      "cursor-pointer justify-start rounded-none px-3 py-1.5 text-xs font-bold uppercase tracking-wide",
+                      item.to === "/watch" && "gap-2",
+                    )}
+                  >
+                    {item.to === "/watch" && (
+                      <Clapperboard className="size-3.5" aria-hidden />
+                    )}
+                    {item.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="border-t-2 border-ink bg-sun px-3 py-2 text-[10px] font-bold uppercase tracking-widest">
+          The whole site, one tap away
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

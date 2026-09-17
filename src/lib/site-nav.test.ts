@@ -26,6 +26,9 @@ describe("site nav config", () => {
     for (const n of NAV_ITEMS) {
       expect(n.dot).toMatch(palette);
     }
+    for (const stop of PAGE_ORDER) {
+      expect(stop.dot).toMatch(palette);
+    }
   });
 });
 
@@ -191,6 +194,31 @@ describe("page split contracts", () => {
     const s = src("Calm");
     expect(s).toContain('to="/quiz"');
     expect(s).toContain('to="/reframe"');
+  });
+
+  test("the app header's Pages menu reaches every training page and the whole public site", () => {
+    const shell = readFileSync(
+      new URL("../components/AppShell.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(shell).toContain("EverythingMenu");
+    expect(shell).toContain("APP_ORDER");
+    expect(shell).toContain("PAGE_ORDER");
+    // The two destinations the training tabs never link: home + videos.
+    expect(shell).toContain('to="/"');
+  });
+
+  test("the in-app logo returns to the public home page, not the dashboard", () => {
+    const shell = readFileSync(
+      new URL("../components/AppShell.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(shell).toMatch(/<Link\s+to="\/"/);
+  });
+
+  test("every navigation lands at the top of the page (global scroll reset)", () => {
+    const main = readFileSync(new URL("../main.tsx", import.meta.url), "utf8");
+    expect(main).toContain("ScrollToTop");
   });
 
   test("AppShell keeps exactly 5 mobile tab slots (4 tabs + mic FAB)", () => {

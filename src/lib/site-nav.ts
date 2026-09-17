@@ -28,13 +28,13 @@ export const PUBLIC_ROUTES = ["/", ...NAV_ITEMS.map((n) => n.to)];
  * whole story — Home → How → Tone check → Drills → Watch → Library —
  * without hunting for the nav. `/` opens the tour; Library closes it.
  */
-export const PAGE_ORDER: { to: string; label: string; blurb: string }[] = [
-  { to: "/", label: "Home", blurb: "What ShiftedTone is" },
-  { to: "/how", label: "How it works", blurb: "The three-step method" },
-  { to: "/tone-check", label: "Tone check", blurb: "Find your default under pressure" },
-  { to: "/drills", label: "Drills", blurb: "Pick a drill, train the tone" },
-  { to: "/watch", label: "Watch", blurb: "Videos from the pros" },
-  { to: "/library", label: "Library", blurb: "Research shelf + all videos" },
+export const PAGE_ORDER: { to: string; label: string; blurb: string; dot: string }[] = [
+  { to: "/", label: "Home", blurb: "What ShiftedTone is", dot: "bg-coral" },
+  { to: "/how", label: "How it works", blurb: "The three-step method", dot: "bg-sun" },
+  { to: "/tone-check", label: "Tone check", blurb: "Find your default under pressure", dot: "bg-coral" },
+  { to: "/drills", label: "Drills", blurb: "Pick a drill, train the tone", dot: "bg-mint" },
+  { to: "/watch", label: "Watch", blurb: "Videos from the pros", dot: "bg-coral" },
+  { to: "/library", label: "Library", blurb: "Research shelf + all videos", dot: "bg-paper" },
 ];
 
 /** Prev/next stops of the tour for a given path (nulls at the ends). */
