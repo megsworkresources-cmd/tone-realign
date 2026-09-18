@@ -22,7 +22,7 @@ const MOMENTS = [
   "the apology you keep rehearsing",
 ];
 
-/** Cycling beats for the hero's live-read card. */
+/** Cycling example beats for the hero's preview card — demo data, not the user's mic. */
 const READS: {
   tone: string;
   toneColor: string;
@@ -79,19 +79,11 @@ const MARQUEE_ITEMS = [
 export default function Home() {
   const { isAuthenticated } = useAuth();
 
-  // Drives the hero's rotating moments and the live-read card beats
+  // Drives the hero's rotating moments and the example-read card beats
   const [beat, setBeat] = useState(0);
-  const [sec, setSec] = useState(7);
   useEffect(() => {
     const beatTimer = setInterval(() => setBeat((b) => b + 1), 2600);
-    const secTimer = setInterval(
-      () => setSec((s) => (s >= 45 ? 0 : s + 1)),
-      1000,
-    );
-    return () => {
-      clearInterval(beatTimer);
-      clearInterval(secTimer);
-    };
+    return () => clearInterval(beatTimer);
   }, []);
   const momentIdx = beat % MOMENTS.length;
   const read = READS[beat % READS.length];
@@ -143,9 +135,9 @@ export default function Home() {
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
               Most arguments aren't about the words. They're about the tone
-              underneath. ShiftedTone hears yours, shows you what it's giving
-              away, and trains the gap out — before the next conversation
-              needs it.
+              underneath. ShiftedTone helps you hear how your voice comes
+              across, understand the patterns underneath it, and practice a
+              different response before the next conversation needs it.
             </p>
 
             {/* Rotating real moments */}
@@ -192,7 +184,7 @@ export default function Home() {
             </div>
           </motion.div>
 
-          {/* Hero visual: live analyzer card */}
+          {/* Hero visual: example analyzer card — demo values, clearly labeled as a preview */}
           <motion.div
             initial={{ opacity: 0, y: 36, rotate: 2.5 }}
             animate={{ opacity: 1, y: 0, rotate: 0 }}
@@ -206,7 +198,7 @@ export default function Home() {
             <NBPanel className="nb-shadow-lg relative self-center transition-transform duration-300 hover:-translate-y-1">
               <div className="flex items-center justify-between border-b-2 border-ink bg-sun px-4 py-2.5">
                 <span className="flex items-center gap-2 font-display text-sm">
-                  <AudioWaveform className="size-4" /> Live read
+                  <AudioWaveform className="size-4" /> Example read
                 </span>
                 <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest">
                   <motion.span
@@ -214,8 +206,11 @@ export default function Home() {
                     transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
                     className="size-2 bg-coral nb"
                   />
-                  Rec · 0:{String(sec).padStart(2, "0")}
+                  Preview
                 </span>
+              </div>
+              <div className="border-b-2 border-ink bg-mint px-4 py-1.5 text-[10px] font-bold tracking-wide text-ink/80">
+                Sample analysis — your real read starts after you click Try your first read.
               </div>
               <div className="p-5">
                 <div className="flex h-28 items-end gap-1.5" aria-hidden>
