@@ -2,6 +2,7 @@ import { NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
 import { PagePager } from "@/components/PagePager";
 import { useAuth } from "@/hooks/use-auth";
+import { DRILLS } from "@/lib/drills";
 import {
   ArrowRight,
   AudioWaveform,
@@ -335,13 +336,14 @@ export default function Home() {
             {
               to: "/drills",
               title: "See the drills",
-              body: "Five real-world reps — calm, warmth, boundaries, recovery.",
+              // Count stays honest as the catalog grows — rendered from the source of truth.
+              body: `${DRILLS.length} real-world reps — calm, warmth, boundaries, recovery.`,
               color: "bg-mint",
             },
             {
               to: "/library",
               title: "Learn from the pros",
-              body: "Videos and research from the people who study this for a living.",
+              body: "Research, talks, and guides from the people who study this for a living.",
               color: "bg-sun",
             },
           ].map((card, i) => (
