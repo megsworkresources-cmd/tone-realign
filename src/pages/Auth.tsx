@@ -6,11 +6,13 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { useAuth } from "@/hooks/use-auth";
+import { friendlyEmailError, friendlyOtpError, GUEST_UNAVAILABLE_ERROR } from "@/lib/auth-errors";
 import { resolveRedirectAfterAuth } from "@/lib/redirect";
 import logo from "@/assets/logo.svg";
 import { ArrowRight, AudioWaveform, Loader2, UserX } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
 
 interface AuthProps {
   redirectAfterAuth?: string;
@@ -22,44 +24,6 @@ interface AuthProps {
  * validation can be skipped by programmatic submits).
  */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/**
- * Friendly, user-facing error messages. Raw backend/provider errors are logged
- * to the console for support but are never shown verbatim in the UI.
- */
-const EMAIL_FALLBACK_ERROR =
-  "Something went wrong sending your verification code. Please check your email address and try again.";
-const OTP_FALLBACK_ERROR =
-  "That code didn't work. Please check the code in your email and try again.";
-const GUEST_UNAVAILABLE_ERROR =
-  "Guest access isn't available right now. Please continue with your email.";
-
-/** Map known email-step backend errors to clear copy; everything else falls back. */
-function friendlyEmailError(error: unknown): string {
-  const raw = error instanceof Error ? error.message.toLowerCase() : "";
-  if (
-    (raw.includes("invalid") || raw.includes("missing")) &&
-    (raw.includes("email") || raw.includes("identifier"))
-  ) {
-    return "That email address doesn't look right. Please check it and try again.";
-  }
-  if (raw.includes("rate") || raw.includes("too many")) {
-    return "Too many attempts just now. Please wait a minute and try again.";
-  }
-  return EMAIL_FALLBACK_ERROR;
-}
-
-/** Map known OTP-step backend errors to clear copy; everything else falls back. */
-function friendlyOtpError(error: unknown): string {
-  const raw = error instanceof Error ? error.message.toLowerCase() : "";
-  if (raw.includes("expired")) {
-    return "That code has expired. Go back below and we'll send you a fresh one.";
-  }
-  if (raw.includes("rate") || raw.includes("too many")) {
-    return "Too many attempts just now. Please wait a minute and try again.";
-  }
-  return OTP_FALLBACK_ERROR;
-}
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
@@ -314,6 +278,14 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       value={otp}
                       onChange={setOtp}
                       maxLength={6}
+                      // Digit-only at the component level: letters can never fill the
+                      // slots, so an enabled Verify button always means six digits —
+                      // and the handler's /^\d{6}$/ guard can never silently swallow
+                      // a submit. inputMode + one-time-code give iOS the numeric pad
+                      // and Mail/Messages autofill.
+                      pattern={REGEXP_ONLY_DIGITS}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
                       disabled={isLoading}
                       onKeyDown={(e) => {
                         if (
