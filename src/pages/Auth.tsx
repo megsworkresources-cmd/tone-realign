@@ -6,20 +6,59 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { useAuth } from "@/hooks/use-auth";
+import { resolveRedirectAfterAuth } from "@/lib/redirect";
 import logo from "@/assets/logo.svg";
 import { ArrowRight, AudioWaveform, Loader2, UserX } from "lucide-react";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
 interface AuthProps {
   redirectAfterAuth?: string;
 }
 
-function resolveRedirectAfterAuth(returnTo: string | null, fallback = "/dashboard") {
-  if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
-    return returnTo;
+/**
+ * Pragmatic email shape check. The input's native `type="email"` validation is
+ * the first line of defense; this is the defensive second layer (native
+ * validation can be skipped by programmatic submits).
+ */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Friendly, user-facing error messages. Raw backend/provider errors are logged
+ * to the console for support but are never shown verbatim in the UI.
+ */
+const EMAIL_FALLBACK_ERROR =
+  "Something went wrong sending your verification code. Please check your email address and try again.";
+const OTP_FALLBACK_ERROR =
+  "That code didn't work. Please check the code in your email and try again.";
+const GUEST_UNAVAILABLE_ERROR =
+  "Guest access isn't available right now. Please continue with your email.";
+
+/** Map known email-step backend errors to clear copy; everything else falls back. */
+function friendlyEmailError(error: unknown): string {
+  const raw = error instanceof Error ? error.message.toLowerCase() : "";
+  if (
+    (raw.includes("invalid") || raw.includes("missing")) &&
+    (raw.includes("email") || raw.includes("identifier"))
+  ) {
+    return "That email address doesn't look right. Please check it and try again.";
   }
-  return fallback;
+  if (raw.includes("rate") || raw.includes("too many")) {
+    return "Too many attempts just now. Please wait a minute and try again.";
+  }
+  return EMAIL_FALLBACK_ERROR;
+}
+
+/** Map known OTP-step backend errors to clear copy; everything else falls back. */
+function friendlyOtpError(error: unknown): string {
+  const raw = error instanceof Error ? error.message.toLowerCase() : "";
+  if (raw.includes("expired")) {
+    return "That code has expired. Go back below and we'll send you a fresh one.";
+  }
+  if (raw.includes("rate") || raw.includes("too many")) {
+    return "Too many attempts just now. Please wait a minute and try again.";
+  }
+  return OTP_FALLBACK_ERROR;
 }
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
@@ -34,62 +73,98 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** In-flight guard: one auth request at a time, no matter how many clicks. */
+  const submittingRef = useRef(false);
 
+  // Signed-in users never stay on /auth. `replace` keeps /auth out of the
+  // history stack so back-buttoning out of the app can't loop them here.
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      navigate(redirect);
+      navigate(redirect, { replace: true });
     }
   }, [authLoading, isAuthenticated, navigate, redirect]);
 
   const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submittingRef.current) return;
+    const email = String(
+      new FormData(event.currentTarget).get("email") ?? "",
+    ).trim();
+    if (!EMAIL_PATTERN.test(email)) {
+      setError(
+        "That email address doesn't look right. Please check it and try again.",
+      );
+      return;
+    }
+    submittingRef.current = true;
     setIsLoading(true);
     setError(null);
     try {
-      const formData = new FormData(event.currentTarget);
+      // Normalized copy of the form data (trimmed email) into the existing
+      // signIn("email-otp", formData) flow — first call sends the code.
+      const formData = new FormData();
+      formData.set("email", email);
       await signIn("email-otp", formData);
-      setStep({ email: formData.get("email") as string });
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Email sign-in error:", error);
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to send verification code. Please try again.",
-      );
+      setStep({ email });
+    } catch (err) {
+      console.error("Email sign-in error:", err);
+      setError(friendlyEmailError(err));
+    } finally {
+      submittingRef.current = false;
       setIsLoading(false);
     }
   };
 
   const handleOtpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submittingRef.current || step === "signIn") return;
+    // Require exactly 6 digits — the button is disabled until then, but the
+    // handler must not trust that (Enter key, autofill, rapid double-tap).
+    if (!/^\d{6}$/.test(otp)) return;
+    submittingRef.current = true;
     setIsLoading(true);
     setError(null);
     try {
-      const formData = new FormData(event.currentTarget);
+      const formData = new FormData();
+      formData.set("email", step.email);
+      formData.set("code", otp);
       await signIn("email-otp", formData);
-      navigate(redirect);
-    } catch (error) {
-      console.error("OTP verification error:", error);
-      setError("The verification code you entered is incorrect.");
-      setIsLoading(false);
+      navigate(redirect, { replace: true });
+    } catch (err) {
+      console.error("OTP verification error:", err);
+      setError(friendlyOtpError(err));
+      // A wrong code must never survive into the retry — clear the boxes.
       setOtp("");
+    } finally {
+      submittingRef.current = false;
+      setIsLoading(false);
     }
   };
 
   const handleGuestLogin = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setIsLoading(true);
     setError(null);
     try {
       await signIn("anonymous");
-      navigate(redirect);
-    } catch (error) {
-      console.error("Guest login error:", error);
-      setError(
-        `Failed to sign in as guest: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+      navigate(redirect, { replace: true });
+    } catch (err) {
+      console.error("Guest login error:", err);
+      // Anonymous may be unavailable/disabled — never surface the raw error.
+      setError(GUEST_UNAVAILABLE_ERROR);
+    } finally {
+      submittingRef.current = false;
       setIsLoading(false);
     }
+  };
+
+  // Returning to the email screen must clear the stale code and any error
+  // from the previous attempt, so the form starts clean.
+  const handleBackToEmail = () => {
+    setStep("signIn");
+    setOtp("");
+    setError(null);
   };
 
   return (
@@ -112,8 +187,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           </h2>
           <p className="mt-5 max-w-sm text-sm leading-relaxed text-paper/70">
             Sign in so your takes, streak, and reframes are here when you come
-            back. Your audio never leaves your device — we keep the scores, not
-            the recordings.
+            back. ShiftedTone never saves your audio — tone scores are
+            computed on your device. On some browsers, an optional live
+            transcript of your take is generated by your browser's built-in
+            speech service and stored with your take so the coach can use it.
           </p>
           <div className="mt-8 flex items-center gap-3">
             <div className="flex h-10 items-end gap-1" aria-hidden>
@@ -171,13 +248,14 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       name="email"
                       placeholder="name@example.com"
                       type="email"
+                      autoComplete="email"
                       className="nb h-11 rounded-none bg-card px-3 shadow-none focus-visible:ring-2 focus-visible:ring-sun"
                       disabled={isLoading}
                       required
                     />
                   </div>
                   {error && (
-                    <p className="nb bg-coral px-3 py-2 text-sm font-medium">
+                    <p className="nb bg-coral px-3 py-2 text-sm font-medium" role="alert">
                       {error}
                     </p>
                   )}
@@ -256,7 +334,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     </InputOTP>
                   </div>
                   {error && (
-                    <p className="nb bg-coral px-3 py-2 text-center text-sm font-medium">
+                    <p className="nb bg-coral px-3 py-2 text-center text-sm font-medium" role="alert">
                       {error}
                     </p>
                   )}
@@ -278,7 +356,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   </NBButton>
                   <button
                     type="button"
-                    onClick={() => setStep("signIn")}
+                    onClick={handleBackToEmail}
                     className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-ink"
                   >
                     ← Wrong email? Go back
@@ -293,9 +371,18 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   );
 }
 
+/** Minimal branded loading state — a slow chunk never renders a blank screen. */
+function AuthFallback() {
+  return (
+    <div className="nb-dots flex min-h-screen items-center justify-center bg-paper">
+      <Loader2 className="size-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
 export default function AuthPage(props: AuthProps) {
   return (
-    <Suspense>
+    <Suspense fallback={<AuthFallback />}>
       <Auth {...props} />
     </Suspense>
   );

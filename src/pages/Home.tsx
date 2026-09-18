@@ -176,7 +176,7 @@ export default function Home() {
             </motion.div>
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
               <span className="flex items-center gap-2">
-                <ShieldCheck className="size-4" /> Your audio stays with you
+                <ShieldCheck className="size-4" /> We keep the scores, not your audio
               </span>
               <span className="flex items-center gap-2">
                 <Timer className="size-4" /> 45 seconds, that's it
