@@ -1,14 +1,10 @@
 import { NBButton, NBPanel } from "@/components/nb";
 import { PublicLayout } from "@/components/PublicLayout";
 import { PagePager } from "@/components/PagePager";
-import { VideoCard } from "@/components/VideoCard";
-import { WATCH_LIST, videoThumb, type WatchVideo } from "@/lib/watch-list";
 import { useAuth } from "@/hooks/use-auth";
 import {
   ArrowRight,
   AudioWaveform,
-  Play,
-  PlaySquare,
   ShieldCheck,
   Timer,
 } from "lucide-react";
@@ -331,12 +327,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Watch teaser — one featured video; the full shelf lives on /watch */}
-      <FeaturedWatchTeaser />
-
-      {/* Quick routes: four doors into the site */}
+      {/* Quick routes: three doors into the site */}
       <section className="border-b-2 border-ink bg-paper">
-        <div className="mx-auto grid max-w-6xl gap-5 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl gap-5 px-4 py-12 sm:grid-cols-3">
           {[
             {
               to: "/tone-check",
@@ -347,20 +340,14 @@ export default function Home() {
             {
               to: "/drills",
               title: "See the drills",
-              body: "Eight real-world reps — calm, warmth, boundaries, recovery, praise.",
+              body: "Five real-world reps — calm, warmth, boundaries, recovery.",
               color: "bg-mint",
             },
             {
-              to: "/watch",
-              title: "Learn from the pros",
-              body: "Seven curated videos on tone, delivery, and staying regulated.",
-              color: "bg-sun",
-            },
-            {
               to: "/library",
-              title: "Go deeper",
-              body: "The research shelf — books and studies behind the method.",
-              color: "bg-paper",
+              title: "Learn from the pros",
+              body: "Videos and research from the people who study this for a living.",
+              color: "bg-sun",
             },
           ].map((card, i) => (
             <motion.div
@@ -417,111 +404,5 @@ export default function Home() {
       </section>
       <PagePager />
     </PublicLayout>
-  );
-}
-
-/**
- * One featured video — a taste of the /watch shelf without the weight
- * of a six-card grid on the home page. Header strip + one real inline
- * preview (click the poster to play) + compact swap-in thumbs so
- * browsing the shelf never leaves the page.
- */
-function FeaturedWatchTeaser() {
-  const [featuredId, setFeaturedId] = useState(WATCH_LIST[0].id);
-  const featured =
-    WATCH_LIST.find((v) => v.id === featuredId) ?? WATCH_LIST[0];
-  const others = WATCH_LIST.filter((v) => v.id !== featured.id).slice(0, 3);
-  return (
-    <section className="nb-stripes border-b-2 border-ink bg-ink text-paper">
-      <div className="mx-auto max-w-6xl px-4 py-14">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <span className="nb inline-flex items-center gap-2 bg-coral px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink">
-              <PlaySquare className="size-3.5" /> Watch & learn
-            </span>
-            <h2 className="mt-4 font-display text-3xl leading-tight sm:text-4xl">
-              Learn from the <span className="italic text-sun">pros</span>.
-            </h2>
-          </div>
-          <p className="max-w-md text-sm leading-relaxed text-paper/60">
-            Coaches and researchers on what your voice broadcasts — every
-            video paired with the drill that turns it into a rep.
-          </p>
-        </div>
-
-        <div className="mt-8 grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
-          <VideoCard video={featured} playInline />
-          <div className="flex flex-col justify-center gap-5">
-            <p className="text-base leading-relaxed text-paper/80">
-              Press play right here — no leaving the page. When it clicks,
-              the "Train it" card underneath hands the idea to a 45-second
-              drill so it becomes a rep, not just a takeaway.
-            </p>
-            <div className="grid grid-cols-3 gap-3">
-              {others.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setFeaturedId(v.id)}
-                  aria-label={`Preview ${v.title}`}
-                  className="group/thumb nb relative aspect-video overflow-hidden bg-ink nb-press"
-                >
-                  <TeaserThumb video={v} />
-                  <span
-                    aria-hidden
-                    className="absolute inset-0 flex items-center justify-center bg-ink/30 transition-colors group-hover/thumb:bg-ink/10"
-                  >
-                    <span className="nb flex size-7 items-center justify-center bg-sun text-ink">
-                      <Play className="size-3.5 fill-ink" />
-                    </span>
-                    <span
-                      aria-hidden
-                      className="absolute bottom-1 right-1 nb bg-ink px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest text-paper"
-                    >
-                      Preview
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div>
-              <Link to="/watch">
-                <NBButton variant="paper" className="px-6 py-3 text-base">
-                  See all seven videos <ArrowRight className="size-4" />
-                </NBButton>
-              </Link>
-            </div>
-            <p className="text-xs text-paper/50">
-              Seven curated videos on tone, delivery, and staying regulated.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/**
- * Mini thumbnail for the teaser's swap strip. Same broken-image
- * fallback idea as VideoThumb, sized down: on failure the video title
- * stands in for the picture so the strip never shows a broken box.
- */
-function TeaserThumb({ video }: { video: WatchVideo }) {
-  const [broken, setBroken] = useState(false);
-  if (broken) {
-    return (
-      <span className="flex size-full items-center justify-center px-2 text-center font-display text-[10px] leading-tight text-paper/90">
-        {video.title}
-      </span>
-    );
-  }
-  return (
-    <img
-      src={videoThumb(video.id)}
-      alt=""
-      loading="lazy"
-      onError={() => setBroken(true)}
-      className="size-full object-cover"
-    />
   );
 }

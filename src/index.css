@@ -92,6 +92,8 @@
   --grid: rgba(46, 32, 25, 0.07);
   --stripe: rgba(249, 238, 221, 0.09);
   --ray: rgba(46, 32, 25, 0.07);
+  /* Focus ring: darker coral passes ≥3:1 against paper, card, and ink */
+  --focus: #c4553a;
 }
 
 .dark {
@@ -131,6 +133,8 @@
   --grid: rgba(246, 234, 215, 0.06);
   --stripe: rgba(246, 234, 215, 0.07);
   --ray: rgba(246, 234, 215, 0.06);
+  /* Same ring value clears 3:1 against the dark palette too */
+  --focus: #c4553a;
 }
 
 @layer base {
@@ -148,6 +152,25 @@
   }
   html {
     scroll-behavior: smooth;
+    /* Sticky headers: don't land anchors underneath them */
+    scroll-padding-top: 5rem;
+  }
+  /* WCAG 2.4.7: every interactive element shows a visible keyboard focus ring.
+     #c4553a stays ≥3:1 against paper, card, and ink in both themes. */
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  /* Honoring vestibular-safety preferences beats decorative motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
   /* Editorial typography: balanced headings, prettier paragraph rag */
   h1,

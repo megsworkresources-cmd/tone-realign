@@ -1,14 +1,15 @@
 {
-  "name": "vite-template",
+  "name": "shiftedtone",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "icons": "bun scripts/generate-icons.ts"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",

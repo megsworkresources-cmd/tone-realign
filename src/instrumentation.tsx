@@ -1,3 +1,4 @@
+import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -50,8 +51,8 @@ async function reportErrorToVly(errorData: {
         projectSemanticIdentifier: import.meta.env.VITE_VLY_APP_ID,
       }),
     });
-  } catch (error) {
-    console.error("Failed to report error to Vly:", error);
+  } catch {
+    // Reporting is best-effort — never surface monitor failures to users.
   }
 }
 
@@ -69,35 +70,32 @@ function ErrorDialog({
         setError(null);
       }}
     >
-      <DialogContent className="bg-red-700 text-white max-w-4xl">
+      <DialogContent className="bg-coral text-ink max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Runtime Error</DialogTitle>
+          <DialogTitle className="font-display">Something went sideways</DialogTitle>
         </DialogHeader>
-        A runtime error occurred. Open the vly editor to automatically debug the
-        error.
+        <p className="text-sm leading-relaxed">
+          An unexpected error interrupted the page. It has been logged — reload
+          to pick up where you left off. Your saved takes and progress are safe.
+        </p>
         <div className="mt-4">
           <Collapsible>
-            <CollapsibleTrigger>
-              <div className="flex items-center font-bold cursor-pointer">
-                See error details <ChevronDown />
+            <CollapsibleTrigger className="cursor-pointer">
+              <div className="flex items-center font-bold underline decoration-ink/40 underline-offset-4">
+                See error details <ChevronDown className="ml-1" />
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent className="max-w-[460px]">
-              <div className="mt-2 p-3 bg-neutral-800 rounded text-white text-sm overflow-x-auto max-h-60 max-w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                <pre className="whitespace-pre">{error.stack}</pre>
+              <div className="mt-2 p-3 bg-ink/90 rounded text-paper text-sm overflow-x-auto max-h-60 max-w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <pre className="whitespace-pre">{error.stack || error.error}</pre>
               </div>
             </CollapsibleContent>
           </Collapsible>
         </div>
         <DialogFooter>
-          <a
-            href={`https://freebuff.com/project/${import.meta.env.VITE_VLY_APP_ID}`}
-            target="_blank"
-          >
-            <Button>
-              <ExternalLink /> Open editor
-            </Button>
-          </a>
+          <Button onClick={() => window.location.reload()} className="bg-ink text-paper border-ink hover:bg-ink/90">
+            Reload ShiftedTone
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -126,20 +124,13 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // logErrorToMyService(
-    //   error,
-    //   // Example "componentStack":
-    //   //   in ComponentThatThrows (created by App)
-    //   //   in ErrorBoundary (created by App)
-    //   //   in div (created by App)
-    //   //   in App
-    //   info.componentStack,
-    //   // Warning: `captureOwnerStack` is not available in production.
-    //   React.captureOwnerStack(),
-    // );
     reportErrorToVly({
       error: error.message,
       stackTrace: error.stack,
+    });
+    trackEvent("runtime_error", {
+      source: "boundary",
+      message: error.message.slice(0, 120),
     });
     this.setState({
       hasError: true,
@@ -184,7 +175,6 @@ export function InstrumentationProvider({
       // runtime errors and shouldn't pop the dialog.
       if (!isRuntimeError(event)) return;
       try {
-        console.log(event);
         event.preventDefault();
         setError({
           error: event.message,
@@ -192,6 +182,11 @@ export function InstrumentationProvider({
           filename: event.filename || "",
           lineno: event.lineno,
           colno: event.colno,
+        });
+
+        trackEvent("runtime_error", {
+          source: "window",
+          message: event.message.slice(0, 120),
         });
 
         if (import.meta.env.VITE_VLY_APP_ID) {
@@ -203,16 +198,22 @@ export function InstrumentationProvider({
             colno: event.colno,
           });
         }
-      } catch (error) {
-        console.error("Error in handleError:", error);
+      } catch (innerError) {
+        // The handler itself must never become the crash.
+        console.error("Error handler failure:", innerError);
       }
     };
 
     const handleRejection = async (event: PromiseRejectionEvent) => {
       try {
-        console.error(event);
+        event.preventDefault();
 
         const { error: message, stack } = normalizeRejection(event.reason);
+
+        trackEvent("runtime_error", {
+          source: "promise",
+          message: message.slice(0, 120),
+        });
 
         if (import.meta.env.VITE_VLY_APP_ID) {
           await reportErrorToVly({
@@ -225,8 +226,9 @@ export function InstrumentationProvider({
           error: message,
           stack,
         });
-      } catch (error) {
-        console.error("Error in handleRejection:", error);
+      } catch (innerError) {
+        // The handler itself must never become the crash.
+        console.error("Rejection handler failure:", innerError);
       }
     };
 

@@ -10,6 +10,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 import "./types/global.d.ts";
+import { trackPageview } from "@/lib/analytics";
 
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
@@ -56,6 +57,11 @@ function RouteSyncer() {
       { type: "iframe-route-change", path: location.pathname },
       "*",
     );
+  }, [location.pathname]);
+
+  // SPA pageviews — the initial load is auto-tracked by the script itself.
+  useEffect(() => {
+    trackPageview(location.pathname);
   }, [location.pathname]);
 
   useEffect(() => {

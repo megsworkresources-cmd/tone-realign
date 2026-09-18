@@ -6,6 +6,7 @@ import { Menu, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router";
 import { NAV_ITEMS } from "@/lib/site-nav";
+import { trackEvent } from "@/lib/analytics";
 
 const NAV = NAV_ITEMS;
 
@@ -69,7 +70,11 @@ export function PublicLayout({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-3">
             <Link to={isAuthenticated ? "/dashboard" : "/auth"} className="hidden sm:block">
-              <NBButton variant="ink" className="px-4 py-2 text-xs">
+              <NBButton
+                variant="ink"
+                className="px-4 py-2 text-xs"
+                onClick={() => trackEvent("cta_clicked", { source: "nav_desktop" })}
+              >
                 {isAuthenticated ? "Open app" : "Start free"}
               </NBButton>
             </Link>
@@ -101,7 +106,10 @@ export function PublicLayout({ children }: { children: ReactNode }) {
               ))}
               <Link
                 to={isAuthenticated ? "/dashboard" : "/auth"}
-                onClick={() => setMenuOpen(false)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  trackEvent("cta_clicked", { source: "nav_mobile" });
+                }}
                 className="px-4 py-3"
               >
                 <NBButton variant="ink" className="w-full text-xs">
