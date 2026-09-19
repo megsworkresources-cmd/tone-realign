@@ -28,6 +28,7 @@ import {
 import { useQuery } from "convex/react";
 import { Link, useLocation, useNavigate } from "react-router";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -67,8 +68,16 @@ export function AppShell({
 
   const level = levelInfo(progression?.totalXp ?? 0);
 
+  // A failed sign-out (offline, session already gone) must not leave the
+  // user stuck on a header that pretends it worked — say so and stay put
+  // so they can retry; navigate home only on success.
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      await signOut();
+    } catch {
+      toast.error("Sign-out didn't finish. Check your connection and try again.");
+      return;
+    }
     navigate("/");
   };
 
