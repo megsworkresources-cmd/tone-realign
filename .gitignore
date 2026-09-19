@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Playwright component tests (browser binaries + CT vite cache + results)
+playwright/.cache
+test-results
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

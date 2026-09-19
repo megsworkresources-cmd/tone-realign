@@ -32,17 +32,17 @@ export default defineConfig({
     ctPort: 3109,
     trace: "retain-on-failure",
     ...devices["Desktop Chrome"],
-  },
-  ctViteConfig: {
-    plugins: [react(), tailwindcss()],
-    resolve: {
-      alias: [
-        { find: /^@\/hooks\/use-auth$/, replacement: stubPath },
-        { find: "@", replacement: srcPath },
-      ],
-    },
-    optimizeDeps: {
-      include: ["react", "react-dom", "react-router", "input-otp", "lucide-react"],
+    ctViteConfig: {
+      plugins: [react(), tailwindcss()],
+      resolve: {
+        alias: [
+          { find: /^@\/hooks\/use-auth$/, replacement: stubPath },
+          { find: "@", replacement: srcPath },
+        ],
+      },
+      optimizeDeps: {
+        include: ["react", "react-dom", "react-router", "input-otp", "lucide-react"],
+      },
     },
   },
 });

@@ -26,6 +26,9 @@ Everything code-side is done. The remaining steps below need account access
 - **Cleanup**: removed stale `isolate/` build output, template junk, dead
   console logs, and `.DS_Store` files
 - **Verification**: `bun tsc -b --noEmit` ✓ · 246 tests pass ✓ · `bun run build` ✓ · OG card validated ✓
+- **Component tests**: Playwright CT (`@playwright/experimental-ct-react`) covers the auth page's
+  email → OTP → guest flows against a stubbed `useAuth` (no backend needed):
+  `bunx playwright test -c playwright-ct.config.ts` — 10 tests in `playwright/Auth.ct.tsx`.
 
 ## 1. Custom domain (shiftedtone.com)
 
