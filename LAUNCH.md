@@ -25,7 +25,7 @@ Everything code-side is done. The remaining steps below need account access
   `dailyLog`, `coachNotes`, `users`); no unauthenticated table access
 - **Cleanup**: removed stale `isolate/` build output, template junk, dead
   console logs, and `.DS_Store` files
-- **Verification**: `bun tsc -b --noEmit` ✓ · 230 tests pass ✓
+- **Verification**: `bun tsc -b --noEmit` ✓ · 246 tests pass ✓ · `bun run build` ✓ · OG card validated ✓
 
 ## 1. Custom domain (shiftedtone.com)
 
