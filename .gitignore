@@ -16,6 +16,14 @@ dist-ssr
 playwright/.cache
 test-results
 
+# Secrets & local env (managed in the Keys/API keys UI — never commit)
+.env.keys
+.env.local
+
+# Archives (exported source snapshots)
+*.zip
+*.tar.gz
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
