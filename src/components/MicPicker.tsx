@@ -2,18 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Mic } from "lucide-react";
 import { NBBadge } from "@/components/nb";
 import { looksLikeMiclessSpeaker } from "@/lib/capture-gain";
+import { getSavedMicDeviceId, saveMicDeviceId } from "@/lib/mic-prefs";
 import { cn } from "@/lib/utils";
-
-const STORAGE_KEY = "shiftedtone:micDeviceId";
-
-/** The user's saved mic choice, or null for the browser default. */
-export function getSavedMicDeviceId(): string | null {
-  try {
-    return localStorage.getItem(STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
 
 interface MicDeviceInfo {
   deviceId: string;
@@ -53,11 +43,7 @@ export function MicPicker({
   // stale id from storage — otherwise start() would still request it.
   useEffect(() => {
     if (clampedSelected === selected) return;
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // persistence is best-effort
-    }
+    saveMicDeviceId(null);
   }, [clampedSelected, selected]);
 
   const enumerate = useCallback(() => {
@@ -87,12 +73,7 @@ export function MicPicker({
 
   const choose = (deviceId: string) => {
     setSelected(deviceId);
-    try {
-      if (deviceId) localStorage.setItem(STORAGE_KEY, deviceId);
-      else localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // persistence is best-effort
-    }
+    saveMicDeviceId(deviceId || null);
   };
 
   if (devices.length === 0 && !activeLabel) return null;

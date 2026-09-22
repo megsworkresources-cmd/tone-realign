@@ -1,7 +1,8 @@
 import { AppShell } from "@/components/AppShell";
 import { NBBadge, NBButton, NBPanel, NBStat } from "@/components/nb";
 import { MicError } from "@/components/MicError";
-import { MicPicker, getSavedMicDeviceId } from "@/components/MicPicker";
+import { MicPicker } from "@/components/MicPicker";
+import { getSavedMicDeviceId } from "@/lib/mic-prefs";
 import { ResponsePlanner } from "@/components/ResponsePlanner";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { api } from "@/convex/_generated/api";

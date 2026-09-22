@@ -1,6 +1,7 @@
 import { NBBadge, NBButton, NBPanel, NBMeter } from "@/components/nb";
 import { MicError } from "@/components/MicError";
-import { MicPicker, getSavedMicDeviceId } from "@/components/MicPicker";
+import { MicPicker } from "@/components/MicPicker";
+import { getSavedMicDeviceId } from "@/lib/mic-prefs";
 import { CoachNote } from "@/components/CoachNote";
 import { getDrill, type Drill } from "@/lib/drills";
 import { UNLOCKABLE_DRILLS, isUnlocked, unlockGoalLine } from "@/lib/unlocks";

@@ -39,4 +39,14 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Vendored shadcn/ui components conventionally export a component plus
+    // its variants helper from one file, and the router entry (main.tsx) is
+    // never a fast-refresh target. This platform also runs with HMR
+    // disabled, so the rule is advisory only — silence it for those files.
+    files: ["src/components/ui/**", "src/main.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
 );
