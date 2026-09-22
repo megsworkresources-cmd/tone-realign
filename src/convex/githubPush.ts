@@ -11,27 +11,23 @@
  * operator from the browser (/push-source page). It is used for the API calls
  * in this action, never written to the database, never logged, and should be
  * revoked on GitHub afterwards.
+ *
+ * Snapshot validation (secret-file refusal, package.json structure check,
+ * entry filtering) lives in src/lib/source-guard.ts so it can be unit-tested
+ * (src/lib/source-guard.test.ts).
  */
 
 import { v } from "convex/values";
 import { action } from "./_generated/server";
+import { gitBlobSha, validateSnapshot } from "../lib/source-guard";
 
 const OWNER = "megsworkresources-cmd";
 const REPO = "ShiftedTone";
 const BRANCH = "main";
 
-// Mirrors scripts/make-source-zip.py — these paths must never reach GitHub.
-// (The ops files themselves — githubPush.ts, PushSource.tsx — are included in
+// The ops files themselves (githubPush.ts, PushSource.tsx) are included in
 // the pushed source on purpose: they take the token per-call and contain no
-// secrets, and excluding them would break the pushed repo's imports.)
-const EXCLUDED_PREFIXES = [
-  ".env.keys",
-  ".env.local",
-  "public/shiftedtone-source.zip",
-  "shiftedtone-source.zip",
-];
-const EXCLUDED_BASENAMES = new Set([".DS_Store"]);
-const EXCLUDED_SUFFIXES = [".pyc", ".log"];
+// secrets, and excluding them would break the pushed repo's imports.
 
 const BLOB_UPLOAD_CONCURRENCY = 8;
 
@@ -251,26 +247,6 @@ function inflateRaw(input: Uint8Array): Uint8Array {
   return Uint8Array.from(out);
 }
 
-function shouldInclude(name: string): boolean {
-  if (name.endsWith("/")) return false;
-  if (EXCLUDED_BASENAMES.has(name.split("/").pop() ?? "")) return false;
-  if (EXCLUDED_SUFFIXES.some((s) => name.endsWith(s))) return false;
-  if (EXCLUDED_PREFIXES.some((p) => name === p || name.startsWith(p + "/"))) return false;
-  return true;
-}
-
-/** Git blob SHA-1 over "blob <len>\0" + content. */
-async function gitBlobSha(data: Uint8Array): Promise<string> {
-  const header = new TextEncoder().encode(`blob ${data.length}\0`);
-  const payload = new Uint8Array(header.length + data.length);
-  payload.set(header, 0);
-  payload.set(data, header.length);
-  const digest = await crypto.subtle.digest("SHA-1", payload);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 async function gh(path: string, token: string, init?: RequestInit): Promise<Response> {
   return fetch(`https://api.github.com${path}`, {
     ...init,
@@ -304,13 +280,10 @@ export const publishSource = action({
 
     const zipBuf = new Uint8Array(Buffer.from(zipB64, "base64"));
     const allEntries = parseZip(zipBuf);
-    const entries = allEntries.filter((e) => shouldInclude(e.name));
-    if (!entries.some((e) => e.name === "package.json")) {
-      throw new Error("package.json missing from zip root — refusing to push a broken snapshot");
-    }
-    if (entries.some((e) => e.name.startsWith(".env"))) {
-      throw new Error("refusing to push: env/secret file present in zip");
-    }
+    // Shared, tested guard: secret-file refusal + package.json structure check.
+    const { included } = validateSnapshot(allEntries.map((e) => e.name));
+    const includedSet = new Set(included);
+    const entries = allEntries.filter((e) => includedSet.has(e.name));
 
     // 1. Current branch head
     const refRes = await gh(`/repos/${OWNER}/${REPO}/git/ref/heads/${BRANCH}`, token);
