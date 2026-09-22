@@ -67,17 +67,16 @@ export default function PushSource() {
 
         <ol className="space-y-1 rounded-md border-2 border-ink/15 bg-background p-4 text-sm text-muted-foreground">
           <li>
-            1. Create a fine-grained token: repo{" "}
-            <span className="font-mono text-ink">megsworkresources-cmd/ShiftedTone</span>, permission{" "}
-            <span className="font-mono text-ink">Contents: Read and write</span>.
+            1. GitHub → Settings → Developer settings → <b>Tokens (classic)</b> → Generate new token
+            (classic) → check <span className="font-mono text-ink">repo</span> → Generate → copy.
           </li>
-          <li>2. Paste it below and press Push. It is used once and never stored.</li>
-          <li>3. Revoke the token on GitHub when the push lands.</li>
+          <li>2. Paste below and press Push. Used once, never stored.</li>
+          <li>3. Delete the token on GitHub afterwards (it also expires on its own).</li>
         </ol>
 
         <div className="space-y-2">
           <label htmlFor="gh-token" className="text-sm font-bold">
-            GitHub fine-grained token
+            GitHub token
           </label>
           <input
             id="gh-token"
@@ -85,7 +84,7 @@ export default function PushSource() {
             autoComplete="off"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            placeholder="github_pat_…"
+            placeholder="ghp_… (or github_pat_…)"
             className="w-full rounded-md border-2 border-ink bg-background px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-sun"
           />
           {tokenError && <p className="text-sm font-semibold text-coral">{tokenError}</p>}
