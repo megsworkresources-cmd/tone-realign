@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
+import { SOURCE_ZIP_B64 } from "./_sourceSnapshot";
 
 const ALLOWED_ORIGINS = new Set([
   "https://shiftedtone.com",
@@ -58,5 +59,32 @@ http.route({
 });
 
 auth.addHttpRoutes(http);
+
+/**
+ * Ops route: serves the packaged source snapshot (shiftedtone-source.zip)
+ * so it can be downloaded by the Codespace push flow without any preview
+ * URL or GitHub token. Unauthenticated by design (the zip contains no
+ * secrets — see scripts/make-source-zip.py); remove together with the
+ * /push-source tooling after the source lands (LAUNCH.md §5).
+ */
+http.route({
+  path: "/source-zip",
+  method: "GET",
+  handler: httpAction(async () => {
+    // No Buffer in the default V8 runtime — decode base64 via web APIs.
+    const bin = atob(SOURCE_ZIP_B64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Response(bytes, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/zip",
+        "Content-Disposition": 'attachment; filename="shiftedtone-source.zip"',
+        "Content-Length": String(bytes.length),
+        "Cache-Control": "no-store",
+      },
+    });
+  }),
+});
 
 export default http;

@@ -160,6 +160,9 @@ it through a custom subdomain.
       secrets manager
 - [ ] **Ops tooling removed**: the `/push-source` page, its route, and
       `src/convex/githubPush.ts` deleted (or confirmed disabled on production
-      hosts) — it is an unauthenticated ops endpoint and must not ship live
+      hosts) — it is an unauthenticated ops endpoint and must not ship live.
+      Also remove the `/source-zip` HTTP route in `src/convex/http.ts` (and
+      the generated `src/convex/_sourceSnapshot.ts` embed) — same reasoning:
+      public, unthrottled, and of no use once the source is published
 - [ ] Lighthouse mobile pass ≥ 90 on `/`
 - [ ] OG preview renders (paste the URL in Discord/Slack/iMessage)

@@ -24,9 +24,12 @@ SKIP_DIRS = {
 }
 
 # Secrets are managed through the Keys/API keys UI and must never ship.
+# src/convex/_sourceSnapshot.ts is the GENERATED embed of this very zip
+# (served at /source-zip) — excluding it prevents a growth loop.
 SKIP_FILES = {
     OUT,
     os.path.join("public", OUT),  # download copy served from the preview
+    os.path.join("src", "convex", "_sourceSnapshot.ts"),
     ".DS_Store",
     ".env.keys",
     ".env.local",
@@ -42,10 +45,11 @@ def main() -> None:
         for dirpath, dirnames, filenames in os.walk(ROOT):
             dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
             for name in filenames:
-                if name in SKIP_FILES or name.endswith(SKIP_SUFFIXES):
-                    continue
                 full = os.path.join(dirpath, name)
                 rel = os.path.relpath(full, ROOT)
+                # Check basename AND repo-relative path (SKIP_FILES mixes both).
+                if name in SKIP_FILES or rel in SKIP_FILES or name.endswith(SKIP_SUFFIXES):
+                    continue
                 z.write(full, rel)
                 count += 1
 
