@@ -14,6 +14,7 @@ import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as coach from "../coach.js";
 import type * as coachNotes from "../coachNotes.js";
 import type * as dailyLog from "../dailyLog.js";
+import type * as githubPush from "../githubPush.js";
 import type * as http from "../http.js";
 import type * as reframes from "../reframes.js";
 import type * as sessions from "../sessions.js";
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   coach: typeof coach;
   coachNotes: typeof coachNotes;
   dailyLog: typeof dailyLog;
+  githubPush: typeof githubPush;
   http: typeof http;
   reframes: typeof reframes;
   sessions: typeof sessions;

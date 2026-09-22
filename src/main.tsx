@@ -29,6 +29,7 @@ const Reframe = lazy(() => import("./pages/Reframe.tsx"));
 const Quiz = lazy(() => import("./pages/Quiz.tsx"));
 const Translate = lazy(() => import("./pages/Translate.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+const PushSource = lazy(() => import("./pages/PushSource.tsx"));
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
@@ -163,6 +164,7 @@ createRoot(document.getElementById("root")!).render(
                   </RequireAuth>
                 }
               />
+              <Route path="/push-source" element={<PushSource />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
