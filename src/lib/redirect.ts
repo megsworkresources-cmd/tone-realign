@@ -14,6 +14,6 @@ export function resolveRedirectAfterAuth(
   // (/\evil.com parses as host in some agents), no control characters.
   if (!returnTo.startsWith("/")) return fallback;
   if (returnTo.startsWith("//") || returnTo.startsWith("/\\")) return fallback;
-  if (/[\u0000-\u001f\u007f]/.test(returnTo)) return fallback;
+  if (/[\u0000-\u001f\u007f]/.test(returnTo)) return fallback; // eslint-disable-line no-control-regex -- deliberate: control chars are exactly what we reject here
   return returnTo;
 }

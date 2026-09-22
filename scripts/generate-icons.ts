@@ -80,7 +80,6 @@ function encodePng(w: number, h: number, rgba: Uint8Array): Uint8Array {
  */
 function renderLogo(size: number, padFrac = 0): Uint8Array {
   const rgba = new Uint8Array(size * size * 4);
-  const scale = size / 512;
 
   const put = (x: number, y: number, c: RGB) => {
     if (x < 0 || x >= size || y < 0 || y >= size) return;

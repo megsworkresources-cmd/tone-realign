@@ -17,6 +17,10 @@ export default function PushSource() {
   const [result, setResult] = useState<string>("");
   const [tokenError, setTokenError] = useState("");
 
+  // Ops-only guardrail: this page must not ship to production (see LAUNCH.md §5).
+  const isProdHost =
+    typeof window !== "undefined" && !/localhost|127\.0\.0\.1|\.vly\.|\.preview\./i.test(window.location.hostname);
+
   async function run() {
     const trimmed = token.trim();
     if (!trimmed) {
@@ -50,6 +54,22 @@ export default function PushSource() {
       setStatus("error");
       setResult(err instanceof Error ? err.message : String(err));
     }
+  }
+
+  if (isProdHost) {
+    return (
+      <div className="min-h-screen bg-paper text-ink flex items-center justify-center p-6">
+        <div className="w-full max-w-md border-3 border-ink bg-card p-8 text-center shadow-[8px_8px_0_0_var(--color-ink)]">
+          <h1 className="text-lg font-extrabold tracking-tight">Not available in production</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This is a one-shot ops page for publishing the source snapshot to GitHub. It is
+            disabled on production hosts — remove the route and
+            <span className="font-mono"> src/convex/githubPush.ts</span> after your first push
+            (see LAUNCH.md §5).
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

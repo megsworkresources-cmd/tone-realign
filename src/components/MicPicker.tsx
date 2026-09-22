@@ -41,19 +41,24 @@ export function MicPicker({
     () => getSavedMicDeviceId() ?? "",
   );
 
-  // If the saved device has been unplugged since, clear it — otherwise the
-  // select would display "Default input" while start() still requests the
-  // stale device.
+  // The saved device id clamped to what's actually plugged in — an id for an
+  // unplugged device is treated as "Default input" (derived during render;
+  // no cascading setState effect).
+  const clampedSelected =
+    selected && devices.length > 0 && !devices.some((d) => d.deviceId === selected)
+      ? ""
+      : selected;
+
+  // Persist the clamp: if the saved device has been unplugged since, drop the
+  // stale id from storage — otherwise start() would still request it.
   useEffect(() => {
-    if (selected && devices.length > 0 && !devices.some((d) => d.deviceId === selected)) {
-      setSelected("");
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-      } catch {
-        // persistence is best-effort
-      }
+    if (clampedSelected === selected) return;
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // persistence is best-effort
     }
-  }, [selected, devices]);
+  }, [clampedSelected, selected]);
 
   const enumerate = useCallback(() => {
     navigator.mediaDevices
@@ -98,7 +103,7 @@ export function MicPicker({
         <Mic className="size-3" /> Mic
       </NBBadge>
       <select
-        value={selected}
+        value={clampedSelected}
         onChange={(e) => choose(e.target.value)}
         className="nb max-w-[220px] bg-card px-2 py-1.5 text-xs font-bold"
         aria-label="Microphone input"

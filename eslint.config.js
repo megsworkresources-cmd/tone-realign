@@ -6,7 +6,16 @@ import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  {
+    ignores: [
+      "dist",
+      // Generated Convex codegen output and the platform-owned dev toolbar:
+      // not maintained in this repo, and the React-compiler lint rules
+      // misreport patterns inside them.
+      "src/convex/_generated/**",
+      "vly-toolbar-readonly.tsx",
+    ],
+  },
   {
     extends: [
       js.configs.recommended,

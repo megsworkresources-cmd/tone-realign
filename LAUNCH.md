@@ -158,5 +158,8 @@ it through a custom subdomain.
 - [ ] `VITE_CONVEX_URL` points at the production Convex deployment (not dev)
 - [ ] No committed secrets: history clean after §0, secrets only in the
       secrets manager
+- [ ] **Ops tooling removed**: the `/push-source` page, its route, and
+      `src/convex/githubPush.ts` deleted (or confirmed disabled on production
+      hosts) — it is an unauthenticated ops endpoint and must not ship live
 - [ ] Lighthouse mobile pass ≥ 90 on `/`
 - [ ] OG preview renders (paste the URL in Discord/Slack/iMessage)

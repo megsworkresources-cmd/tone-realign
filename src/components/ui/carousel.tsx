@@ -88,17 +88,23 @@ function Carousel({
 
   React.useEffect(() => {
     if (!api || !setApi) return
-    setApi(api)
+    // Defer the parent's setState out of the effect body to avoid a
+    // cascading-render warning.
+    const t = setTimeout(() => setApi(api), 0)
+    return () => clearTimeout(t)
   }, [api, setApi])
 
   React.useEffect(() => {
     if (!api) return
-    onSelect(api)
+    // Initial sync deferred (same cascade rationale as above); event
+    // registration is not a call, so it stays synchronous.
+    const t = setTimeout(() => onSelect(api), 0)
     api.on("reInit", onSelect)
     api.on("select", onSelect)
 
     return () => {
       api?.off("select", onSelect)
+      clearTimeout(t)
     }
   }, [api, onSelect])
 
