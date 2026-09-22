@@ -26,6 +26,7 @@ SKIP_DIRS = {
 # Secrets are managed through the Keys/API keys UI and must never ship.
 SKIP_FILES = {
     OUT,
+    os.path.join("public", OUT),  # download copy served from the preview
     ".DS_Store",
     ".env.keys",
     ".env.local",

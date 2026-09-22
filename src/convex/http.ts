@@ -1,4 +1,5 @@
 import { httpRouter } from "convex/server";
+import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
 
 const ALLOWED_ORIGINS = new Set([
@@ -33,7 +34,7 @@ const http = httpRouter();
 http.route({
   path: "/__cors",
   method: "OPTIONS",
-  handler: async (_ctx, request) => {
+  handler: httpAction(async (_ctx, request) => {
     const origin = resolveAllowedOrigin(request);
 
     if (!origin) {
@@ -53,7 +54,7 @@ http.route({
         Vary: "Origin",
       },
     });
-  },
+  }),
 });
 
 auth.addHttpRoutes(http);
