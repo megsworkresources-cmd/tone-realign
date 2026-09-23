@@ -37,7 +37,16 @@ function RouteLoading() {
   );
 }
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+// VITE_CONVEX_URL is baked in at build time. If a host builds without it set
+// (e.g. a Vercel project missing the env var), the app used to crash on boot
+// with a blank page. Fall back to the known production deployment URL — this
+// URL is public by design (it appears in every build log), so embedding it is
+// safe; VITE_CONVEX_URL still takes precedence when set.
+const CONVEX_URL =
+  (import.meta.env.VITE_CONVEX_URL as string | undefined) ||
+  "https://academic-newt-417.convex.cloud";
+
+const convex = new ConvexReactClient(CONVEX_URL);
 
 function ScrollToTop() {
   const { pathname } = useLocation();
