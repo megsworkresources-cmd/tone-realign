@@ -1,7 +1,6 @@
 import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
-import { OpsLink } from "@/components/OpsLink";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { InstrumentationProvider } from "@/instrumentation.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
@@ -13,7 +12,6 @@ import "./index.css";
 import "./types/global.d.ts";
 import { trackPageview } from "@/lib/analytics";
 
-// Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const HowItWorks = lazy(() => import("./pages/HowItWorks.tsx"));
 const ToneCheck = lazy(() => import("./pages/ToneCheck.tsx"));
@@ -30,9 +28,7 @@ const Reframe = lazy(() => import("./pages/Reframe.tsx"));
 const Quiz = lazy(() => import("./pages/Quiz.tsx"));
 const Translate = lazy(() => import("./pages/Translate.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
-const PushSource = lazy(() => import("./pages/PushSource.tsx"));
 
-// Simple loading fallback for route transitions
 function RouteLoading() {
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -43,7 +39,6 @@ function RouteLoading() {
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
-/** Land at the top of every new page — no mid-scroll surprises. */
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -61,7 +56,6 @@ function RouteSyncer() {
     );
   }, [location.pathname]);
 
-  // SPA pageviews — the initial load is auto-tracked by the script itself.
   useEffect(() => {
     trackPageview(location.pathname);
   }, [location.pathname]);
@@ -80,7 +74,6 @@ function RouteSyncer() {
   return null;
 }
 
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <VlyToolbar />
@@ -89,7 +82,6 @@ createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <RouteSyncer />
           <ScrollToTop />
-          <OpsLink />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
               <Route path="/" element={<Landing />} />
@@ -166,7 +158,6 @@ createRoot(document.getElementById("root")!).render(
                   </RequireAuth>
                 }
               />
-              <Route path="/push-source" element={<PushSource />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
