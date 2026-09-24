@@ -11,9 +11,13 @@ import {
   TRANSLATION_LINES,
   type TranslationLine,
 } from "@/lib/translation";
-import type { ToneAnalysis } from "@/lib/tone-analyzer";
-import { TONE_LABELS } from "@/lib/tone-analyzer";
-import { ArrowRight, Languages, RefreshCw } from "lucide-react";
+import {
+  biggestLever,
+  TONE_FACTORS,
+  TONE_LABELS,
+  type ToneAnalysis,
+} from "@/lib/tone-analyzer";
+import { ArrowRight, AudioLines, Languages, RefreshCw } from "lucide-react";
 import { useMutation } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -41,7 +45,31 @@ export default function Translate() {
   /** The pass waiting on the hook's async analysis to land. */
   const [awaiting, setAwaiting] = useState<Pass | null>(null);
   const [lastSeen, setLastSeen] = useState<ToneAnalysis | null>(null);
+  // Listen-back snapshots: the capture hook clears its blob on reset, so
+  // each pass's audio is banked here the moment its analysis lands.
+  const [reflexAudio, setReflexAudio] = useState<Blob | null>(null);
+  const [intendedAudio, setIntendedAudio] = useState<Blob | null>(null);
   const done = reflexAnalysis !== null && intendedAnalysis !== null;
+
+  // One object URL per banked take, reclaimed on change/unmount.
+  const reflexUrl = useMemo(
+    () => (reflexAudio ? URL.createObjectURL(reflexAudio) : null),
+    [reflexAudio],
+  );
+  const intendedUrl = useMemo(
+    () => (intendedAudio ? URL.createObjectURL(intendedAudio) : null),
+    [intendedAudio],
+  );
+  useEffect(() => {
+    return () => {
+      if (reflexUrl) URL.revokeObjectURL(reflexUrl);
+    };
+  }, [reflexUrl]);
+  useEffect(() => {
+    return () => {
+      if (intendedUrl) URL.revokeObjectURL(intendedUrl);
+    };
+  }, [intendedUrl]);
 
   const startPass = () => {
     // A failed attempt (denied mic, dead take) must not strand the flow on
@@ -75,9 +103,11 @@ export default function Translate() {
     setLastSeen(banked);
     if (awaiting === "reflex") {
       setReflexAnalysis(banked);
+      setReflexAudio(capture.audioBlob);
       setPass(order[1]);
     } else {
       setIntendedAnalysis(banked);
+      setIntendedAudio(capture.audioBlob);
     }
     setAwaiting(null);
   }
@@ -93,6 +123,8 @@ export default function Translate() {
     capture.reset();
     setReflexAnalysis(null);
     setIntendedAnalysis(null);
+    setReflexAudio(null);
+    setIntendedAudio(null);
     setPass(order[0]);
     setAwaiting(null);
   };
@@ -241,6 +273,36 @@ export default function Translate() {
               </p>
             )}
             <MicPicker activeLabel={capture.activeDeviceLabel} className="mt-5" />
+
+            {/* Hear pass one before recording pass two — hearing the pattern
+                is what makes the intended take a deliberate change. */}
+            {reflexAnalysis && !done && (
+              <div className="mt-5 nb bg-card p-3">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  <AudioLines className="size-4" /> Hear your reflex take
+                </div>
+                {reflexUrl ? (
+                  <>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption -- voice takes have no captions */}
+                    <audio
+                      controls
+                      src={reflexUrl}
+                      className="nb mt-2 w-full bg-card"
+                      aria-label="Your reflex take"
+                    />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Listen once, then change it: the intended take is the
+                      same words, delivered the way you mean them.
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    This take couldn't be recorded for replay — the scores
+                    still stand.
+                  </p>
+                )}
+              </div>
+            )}
           </NBPanel>
         )}
 
@@ -259,6 +321,25 @@ export default function Translate() {
               <NBStat label="Stability Δ" value={fmtDelta(delta.stability)} />
             </div>
 
+            <p className="mt-4 text-sm leading-relaxed">
+              <span className="font-bold">What the gap means: </span>
+              <span className="text-muted-foreground">{describeDelta(delta)}</span>
+            </p>
+
+            <details className="mt-4 nb bg-secondary p-4">
+              <summary className="cursor-pointer text-xs font-bold uppercase tracking-widest">
+                How each take is rated
+              </summary>
+              <ul className="mt-3 flex flex-col gap-2 text-sm">
+                {Object.entries(TONE_FACTORS).map(([key, factor]) => (
+                  <li key={key}>
+                    <span className="font-bold">{factor.label}: </span>
+                    <span className="text-muted-foreground">{factor.how}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div className="nb bg-card p-4">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-coral">
@@ -271,6 +352,33 @@ export default function Translate() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   {TONE_LABELS[reflexAnalysis!.dominantTone]?.note}
                 </p>
+                <p className="mt-3 border-t-2 border-dashed border-ink/20 pt-3 text-sm">
+                  <span className="font-bold">
+                    Rated {reflexAnalysis!.overallScore}/100 —{" "}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {biggestLever(reflexAnalysis!).tip}
+                  </span>
+                </p>
+                <div className="mt-3">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <AudioLines className="size-3.5" /> Hear this take
+                  </div>
+                  {reflexUrl ? (
+                    /* eslint-disable-next-line jsx-a11y/media-has-caption -- voice takes have no captions */
+                    <audio
+                      controls
+                      src={reflexUrl}
+                      className="nb mt-1.5 w-full bg-card"
+                      aria-label="Your reflex take"
+                    />
+                  ) : (
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      No replay for this one — the browser couldn't capture
+                      audio. The score still stands.
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="nb bg-card p-4">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-mint">
@@ -283,6 +391,33 @@ export default function Translate() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   {TONE_LABELS[intendedAnalysis!.dominantTone]?.note}
                 </p>
+                <p className="mt-3 border-t-2 border-dashed border-ink/20 pt-3 text-sm">
+                  <span className="font-bold">
+                    Rated {intendedAnalysis!.overallScore}/100 —{" "}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {biggestLever(intendedAnalysis!).tip}
+                  </span>
+                </p>
+                <div className="mt-3">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <AudioLines className="size-3.5" /> Hear this take
+                  </div>
+                  {intendedUrl ? (
+                    /* eslint-disable-next-line jsx-a11y/media-has-caption -- voice takes have no captions */
+                    <audio
+                      controls
+                      src={intendedUrl}
+                      className="nb mt-1.5 w-full bg-card"
+                      aria-label="Your intended take"
+                    />
+                  ) : (
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      No replay for this one — the browser couldn't capture
+                      audio. The score still stands.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -303,4 +438,44 @@ export default function Translate() {
 
 function fmtDelta(n: number): string {
   return n > 0 ? `+${n}` : `${n}`;
+}
+
+type PassDelta = {
+  calm: number;
+  energy: number;
+  clarity: number;
+  stability: number;
+};
+
+/**
+ * The delta grid shows the numbers; this says what they mean in one
+ * sentence, so the reader walks away understanding their own progress
+ * instead of decoding four signed integers.
+ */
+function describeDelta(delta: PassDelta): string {
+  const ups: string[] = [];
+  const downs: string[] = [];
+  (
+    [
+      ["calm", delta.calm],
+      ["energy", delta.energy],
+      ["clarity", delta.clarity],
+      ["stability", delta.stability],
+    ] as const
+  ).forEach(([name, d]) => {
+    if (d > 0) ups.push(name);
+    if (d < 0) downs.push(name);
+  });
+  if (ups.length === 0 && downs.length === 0) {
+    return "Dead even — the two takes scored identically. Run the sentence again and lean harder into the intended delivery so the gap shows up.";
+  }
+  if (downs.length === 0) {
+    return `Every factor held or moved up (${ups.join(", ")}) — the intended delivery genuinely landed. Same words, steadier voice.`;
+  }
+  if (ups.length === 0) {
+    return `The \u201cmeant\u201d version came out ${downs.join(" and ")} lower — the reflex take outscored it. Try the intended one again: slower, on the exhale.`;
+  }
+  return `The intended take lifted ${ups.join(", ")} but slipped on ${downs.join(
+    " and ",
+  )} — mixed delivery. One more pass usually settles it.`;
 }

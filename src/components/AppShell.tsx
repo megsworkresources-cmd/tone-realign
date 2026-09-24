@@ -1,4 +1,6 @@
 import { levelInfo } from "@/lib/gamify";
+import { getAccessibleDailyChallenge } from "@/lib/daily";
+import { UNLOCKABLE_DRILLS, isUnlocked, type UnlockStats } from "@/lib/unlocks";
 import { APP_ORDER, PAGE_ORDER, appTourStops } from "@/lib/site-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
@@ -67,6 +69,22 @@ export function AppShell({
   const progression = useQuery(api.dailyLog.progression);
 
   const level = levelInfo(progression?.totalXp ?? 0);
+
+  // The mic FAB starts today's take directly — today's drill, already
+  // resolved through the same accessibility gate the Gym uses, so the
+  // button never lands on a locked drill. The Gym tab above it remains
+  // the way to browse the whole catalog; the FAB is the one-tap rep.
+  const unlockStats: UnlockStats = {
+    takes: progression?.totalSessions ?? 0,
+    level: level.level,
+    drillsTried: progression?.drillsTried ?? 0,
+    bestScore: progression?.bestOverall ?? 0,
+    streak: progression?.streakDays ?? 0,
+  };
+  const dailyDrillId = getAccessibleDailyChallenge((drillId) => {
+    const gate = UNLOCKABLE_DRILLS.find((u) => u.id === drillId);
+    return !gate || isUnlocked(gate, unlockStats);
+  }).drill.id;
 
   // A failed sign-out (offline, session already gone) must not leave the
   // user stuck on a header that pretends it worked — say so and stay put
@@ -168,11 +186,11 @@ export function AppShell({
             <TabItem key={item.id} item={item} active={active} />
           ))}
 
-          {/* Central mic FAB — jump to the gym floor */}
+          {/* Central mic FAB — straight into today's take */}
           <Link
-            to="/gym"
-            aria-label="Open the gym"
-            title="Open the gym"
+            to={`/practice/${dailyDrillId}`}
+            aria-label="Start today's take"
+            title="Start today's take"
             className="flex flex-col items-center"
           >
             <span className="nb nb-press -mt-5 flex size-14 items-center justify-center bg-coral nb-shadow">
