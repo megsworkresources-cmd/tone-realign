@@ -17,6 +17,8 @@ import { useQuery } from "convex/react";
 import { Link } from "react-router";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { TakeAudioPlayer } from "@/components/TakeAudioPlayer";
+import type { Id } from "@/convex/_generated/dataModel";
 
 /**
  * /progress — the record. Trends, trophies, and the take log: everything
@@ -240,8 +242,8 @@ function ToneTrendsPanel({
 
 /**
  * One recent take: tone badge, drill, live metrics, and your delta vs.
- * that drill's best — expandable to the four factor scores so the log
- * reads as progress, not a pile of numbers.
+ * that drill's best — expandable to the four factor scores plus the
+ * listen-back player so the log reads as progress you can hear.
  */
 function RecentTakeRow({
   session: s,
@@ -325,18 +327,23 @@ function RecentTakeRow({
       </button>
 
       {open && (
-        <div className="grid grid-cols-2 gap-3 border-t border-dashed border-ink/20 bg-secondary/50 px-6 py-4 sm:grid-cols-4">
-          {factors.map((f) => (
-            <div key={f.label}>
-              <div className="flex items-baseline justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {f.label}
-                </span>
-                <span className="font-display text-lg">{f.score}</span>
+        <div className="border-t border-dashed border-ink/20 bg-secondary/50 px-6 py-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {factors.map((f) => (
+              <div key={f.label}>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {f.label}
+                  </span>
+                  <span className="font-display text-lg">{f.score}</span>
+                </div>
+                <NBMeter value={f.score} className="mt-1 h-2" barClassName="bg-ink" />
               </div>
-              <NBMeter value={f.score} className="mt-1 h-2" barClassName="bg-ink" />
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="mt-4 border-t border-dashed border-ink/20 pt-4">
+            <TakeAudioPlayer sessionId={s._id as Id<"practiceSessions">} />
+          </div>
         </div>
       )}
     </div>

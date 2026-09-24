@@ -22,6 +22,10 @@ import {
   type ToneAnalysis,
 } from "@/lib/tone-analyzer";
 import { useToneCapture } from "@/hooks/use-tone-capture";
+import {
+  MAX_TAKE_AUDIO_BYTES,
+  isAllowedTakeAudioMime,
+} from "@/lib/take-audio";
 import { api } from "@/convex/_generated/api";
 import { ArrowLeft, Check, Lock, Mic, MessageSquareText, Square, Target } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
@@ -196,6 +200,8 @@ function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) 
     elapsedMs,
     analysis,
     transcript,
+    audioBlob,
+    audioMimeType,
     activeDeviceLabel,
     micMuted,
     stop,
@@ -581,6 +587,8 @@ function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) 
               elapsedMs={elapsedMs}
               transcript={transcript}
               context={context.trim() || undefined}
+              audioBlob={audioBlob}
+              audioMimeType={audioMimeType}
               saved={saved}
               onSaved={() => setSaved(true)}
               onRetry={reset}
@@ -617,6 +625,8 @@ function SaveRow({
   elapsedMs,
   transcript,
   context,
+  audioBlob,
+  audioMimeType,
   saved,
   onSaved,
   onRetry,
@@ -627,12 +637,17 @@ function SaveRow({
   elapsedMs: number;
   transcript: string;
   context?: string;
+  /** This take's recorded audio, when the browser could capture it. */
+  audioBlob: Blob | null;
+  audioMimeType: string;
   saved: boolean;
   onSaved: () => void;
   onRetry: () => void;
   drillStats?: { bestScore: number; attemptCount: number };
 }) {
   const saveSession = useMutation(api.sessions.saveSession);
+  const generateTakeAudioUploadUrl = useMutation(api.sessions.generateTakeAudioUploadUrl);
+  const attachTakeAudio = useMutation(api.sessions.attachTakeAudio);
   const markTake = useMutation(api.dailyLog.mark);
   const addBonus = useMutation(api.dailyLog.addBonus);
   const [saving, setSaving] = useState(false);
@@ -666,6 +681,34 @@ function SaveRow({
         transcript: transcript || undefined,
         scenario: context,
       });
+      // Listen-back audio, best-effort: the take is already saved, so a
+      // failed upload never blocks or rolls back the scores. Oversized
+      // blobs are dropped here (the server re-checks anyway).
+      if (
+        audioBlob &&
+        audioBlob.size > 0 &&
+        audioBlob.size <= MAX_TAKE_AUDIO_BYTES &&
+        isAllowedTakeAudioMime(audioMimeType || audioBlob.type)
+      ) {
+        try {
+          const uploadUrl = await generateTakeAudioUploadUrl({});
+          const res = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { "Content-Type": audioMimeType || audioBlob.type },
+            body: audioBlob,
+          });
+          if (res.ok) {
+            const { storageId } = (await res.json()) as { storageId: string };
+            await attachTakeAudio({
+              sessionId,
+              storageId: storageId as Id<"_storage">,
+              mimeType: audioMimeType || audioBlob.type,
+            }).catch(() => null);
+          }
+        } catch {
+          // Scores are safe; this take just saves without audio.
+        }
+      }
       setSavedId(sessionId);
       toast.success("Saved. It's in your log.");
       onSaved();

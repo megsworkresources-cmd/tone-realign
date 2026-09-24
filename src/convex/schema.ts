@@ -61,6 +61,11 @@ const schema = defineSchema(
       dominantTone: v.string(), // "calm" | "energetic" | "tense" | "flat" | "mixed"
       // Live speech-to-text of the take when the browser supports it
       transcript: v.optional(v.string()),
+      // Listen-back audio: the take's recording in Convex file storage.
+      // Optional — takes saved before this feature (and takes whose audio
+      // upload failed) simply have no playable audio.
+      audioStorageId: v.optional(v.id("_storage")),
+      audioMimeType: v.optional(v.string()),
     }).index("by_user", ["userId"]),
 
     // A triggered-response reframe exercise

@@ -6,6 +6,7 @@ import {
   type ToneAnalysis,
   type ToneFrame,
 } from "@/lib/tone-analyzer";
+import { pickTakeAudioMime } from "@/lib/take-audio";
 import {
   calibrateInputGain,
   CALIBRATION_WINDOW,
@@ -47,6 +48,11 @@ interface UseToneCapture {
   analysis: ToneAnalysis | null;
   /** Best-effort live speech-to-text of the take (empty when unsupported). */
   transcript: string;
+  /** The take's recorded audio when MediaRecorder is available, else null.
+   * Tap-recorded from the same mic stream — no extra permission prompt. */
+  audioBlob: Blob | null;
+  /** Mime type of audioBlob ("" when there is no blob). */
+  audioMimeType: string;
   /** Max raw mic level of the previous take, or null before the first one.
    * Pass it back into start() to pre-calibrate the input gain. */
   lastPeakRawRms: number | null;
@@ -119,6 +125,11 @@ export function useToneCapture(): UseToneCapture {
   const [lastPeakRawRms, setLastPeakRawRms] = useState<number | null>(null);
   /** Label of the input device from the last acquired stream. */
   const [activeDeviceLabel, setActiveDeviceLabel] = useState("");
+  /** The take's recorded audio (null before the first take / on reset).
+   * Best-effort: MediaRecorder support is probed, and any recorder failure
+   * is swallowed — the scores never depend on the audio capturing. */
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioMimeType, setAudioMimeType] = useState("");
   /** Live muted status of the current audio track (drives the hint). */
   const [micMuted, setMicMuted] = useState(false);
   const micMutedRef = useRef(false);
@@ -126,6 +137,10 @@ export function useToneCapture(): UseToneCapture {
   const trackRef = useRef<MediaStreamTrack | null>(null);
 
   const framesRef = useRef<ToneFrame[]>([]);
+  /** Tap recorder for the listen-back audio — same stream, same take. */
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  /** Collected recorder chunks, cleared at start/stop/reset. */
+  const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -161,6 +176,16 @@ export function useToneCapture(): UseToneCapture {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    // Best-effort teardown of the tap recorder. requestAudioBlob() is
+    // async and the stream may already be dying — swallow everything;
+    // stop() below does the awaited version on the happy path.
+    try {
+      recorderRef.current?.stop();
+    } catch {
+      // already stopped / never started
+    }
+    recorderRef.current = null;
+    audioChunksRef.current = [];
     if (analyzeTimerRef.current !== null) {
       window.clearTimeout(analyzeTimerRef.current);
       analyzeTimerRef.current = null;
@@ -177,8 +202,9 @@ export function useToneCapture(): UseToneCapture {
   }, []);
 
   // Declared between cleanup and start: its deps reference cleanup, and
-  // start's rAF loop calls stop() when a device dies mid-take.
-  const stop = useCallback(() => {
+  // start's rAF loop calls stop() when a device dies mid-take. Async so
+  // it can await the recorder flush; callers may fire-and-forget it.
+  const stop = useCallback(async () => {
     if (rafRef.current === null) return;
     cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
@@ -221,6 +247,25 @@ export function useToneCapture(): UseToneCapture {
       // transcript is best-effort
     }
     recognitionRef.current = null;
+
+    // Flush the take's audio for listen-back before the stream is torn
+    // down — awaiting the final dataavailable/stop so the blob is set.
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      await new Promise<void>((resolve) => {
+        const done = () => resolve();
+        recorder.addEventListener("stop", done, { once: true });
+        try {
+          recorder.stop();
+        } catch {
+          resolve();
+        }
+        // Never hang the UI on a wedged recorder.
+        window.setTimeout(resolve, 1500);
+      });
+    }
+    recorderRef.current = null;
+    audioChunksRef.current = [];
     const durationMs = performance.now() - startedAtRef.current;
     setState("analyzing");
     setLevel(0);
@@ -282,6 +327,9 @@ export function useToneCapture(): UseToneCapture {
     setElapsedMs(0);
     setTranscript("");
     transcriptRef.current = "";
+    setAudioBlob(null);
+    setAudioMimeType("");
+    audioChunksRef.current = [];
     inputGainRef.current = 1;
     windowMaxRawRef.current = 0;
     maxRawRef.current = 0;
@@ -403,6 +451,38 @@ export function useToneCapture(): UseToneCapture {
         // transcript is best-effort
       }
       recognitionRef.current = null;
+
+      // Best-effort listen-back recording: tap the same stream with a
+      // MediaRecorder so the take can be replayed later. Nothing here can
+      // fail the take — an unsupported browser or a recorder error simply
+      // means this take saves without audio.
+      try {
+        if (typeof MediaRecorder !== "undefined") {
+          const mime = pickTakeAudioMime();
+          if (mime) {
+            const recorder = new MediaRecorder(stream, { mimeType: mime });
+            audioChunksRef.current = [];
+            recorder.ondataavailable = (e) => {
+              if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
+            recorder.onerror = () => {};
+            recorder.onstop = () => {
+              if (audioChunksRef.current.length > 0) {
+                const type = recorder.mimeType || mime;
+                setAudioBlob(new Blob(audioChunksRef.current, { type }));
+                setAudioMimeType(type);
+              }
+              audioChunksRef.current = [];
+            }; 
+            recorder.start();
+            recorderRef.current = recorder;
+          }
+        }
+      } catch {
+        // Recording for listen-back is optional — analysis continues regardless.
+        recorderRef.current = null;
+        audioChunksRef.current = [];
+      }
 
       // Best-effort transcript for the coach — silence on any failure.
       const Recognition = getSpeechRecognition();
@@ -565,6 +645,8 @@ export function useToneCapture(): UseToneCapture {
     setTranscript("");
     transcriptRef.current = "";
     setActiveDeviceLabel("");
+    setAudioBlob(null);
+    setAudioMimeType("");
     framesRef.current = [];
     speechFramesRef.current = 0;
     lastPitchRef.current = null;
@@ -579,6 +661,8 @@ export function useToneCapture(): UseToneCapture {
     elapsedMs,
     analysis,
     transcript,
+    audioBlob,
+    audioMimeType,
     lastPeakRawRms,
     activeDeviceLabel,
     micMuted,

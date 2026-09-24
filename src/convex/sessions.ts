@@ -2,6 +2,11 @@ import { v } from "convex/values";
 import { internalQuery, mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
 import { getDrill } from "../lib/drills";
+import {
+  MAX_TAKE_AUDIO_BYTES,
+  isAllowedTakeAudioMime,
+  isTakeAudioSizeOk,
+} from "../lib/take-audio";
 
 /** Save a completed microphone practice session and update best scores. */
 export const saveSession = mutation({
@@ -13,25 +18,23 @@ export const saveSession = mutation({
     energyScore: v.number(),
     clarityScore: v.number(),
     stabilityScore: v.number(),
-    overallScore: v.number(),
-    avgPitchHz: v.number(),
-    pitchRangeHz: v.number(),
-    avgVolume: v.number(),
-    volumeVariability: v.number(),
-    wordsPerMinute: v.number(),
-    voicedRatio: v.number(),
-    dominantTone: v.string(),
-    transcript: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Not authenticated");
+    overallScore: v.number(),      avgPitchHz: v.number(),
+      pitchRangeHz: v.number(),
+      avgVolume: v.number(),
+      volumeVariability: v.number(),
+      wordsPerMinute: v.number(),
+      voicedRatio: v.number(),
+      dominantTone: v.string(),
+      transcript: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+      const user = await getCurrentUser(ctx);
+      if (!user) throw new Error("Not authenticated");
 
-    const sessionId = await ctx.db.insert("practiceSessions", {
-      userId: user._id,
-      ...args,
-    });
-
+      const sessionId = await ctx.db.insert("practiceSessions", {
+        userId: user._id,
+        ...args,
+      });
     // Upsert drill attempt stats
     const existing = await ctx.db
       .query("drillAttempts")
@@ -55,6 +58,76 @@ export const saveSession = mutation({
     }
 
     return sessionId;
+  },
+});
+
+/**
+ * A short-lived upload URL for one take's audio. The browser PUTs the
+ * recorded blob straight to storage; the sessionId is bound server-side
+ * by attachTakeAudio (ownership-checked), not by the client.
+ */
+export const generateTakeAudioUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+/**
+ * Attach an uploaded audio blob to one of *this user's* sessions. All
+ * ownership/size/type checks are server-side: the client never chooses
+ * whose session a blob lands on, only which of its own takes it enriches.
+ */
+export const attachTakeAudio = mutation({
+  args: {
+    sessionId: v.id("practiceSessions"),
+    storageId: v.id("_storage"),
+    mimeType: v.string(),
+  },
+  handler: async (ctx, { sessionId, storageId, mimeType }) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    const session = await ctx.db.get(sessionId);
+    if (!session || session.userId !== user._id) {
+      throw new Error("Session not found");
+    }
+    if (session.audioStorageId) {
+      // One audio per take: replace the old file so storage doesn't accumulate.
+      await ctx.storage.delete(session.audioStorageId);
+    }
+    const meta = await ctx.db.system.get(storageId);
+    if (!meta || meta.contentType === undefined || !isAllowedTakeAudioMime(meta.contentType)) {
+      throw new Error("That upload isn't audio this app accepts");
+    }
+    if (!isTakeAudioSizeOk(meta.size)) {
+      throw new Error("That recording is too large to store");
+    }
+
+    await ctx.db.patch(sessionId, {
+      audioStorageId: storageId,
+      audioMimeType: isAllowedTakeAudioMime(mimeType) ? mimeType : meta.contentType,
+    });
+    return null;
+  },
+});
+
+/**
+ * Owner-only playback URL for one take's audio. Anonymous/guest queries
+ * return null instead of throwing so the player can render its fallback.
+ */
+export const takeAudioUrl = query({
+  args: { sessionId: v.id("practiceSessions") },
+  handler: async (ctx, { sessionId }) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) return null;
+    const session = await ctx.db.get(sessionId);
+    if (!session || session.userId !== user._id || !session.audioStorageId) {
+      return null;
+    }
+    return await ctx.storage.getUrl(session.audioStorageId);
   },
 });
 
