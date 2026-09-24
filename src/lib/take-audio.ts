@@ -43,25 +43,36 @@ export function isTakeAudioSizeOk(bytes: number): boolean {
   return Number.isFinite(bytes) && bytes > 0 && bytes <= MAX_TAKE_AUDIO_BYTES;
 }
 
+/**
+ * Ordered containers for MediaRecorder. Keep this list deliberately broad:
+ * Chromium prefers WebM, Safari commonly exposes MP4, and Firefox exposes
+ * Ogg. Codec probing is best-effort because older Safari implementations
+ * have MediaRecorder but no isTypeSupported method.
+ */
 const RECORD_MIME_PREFERENCE = [
   "audio/webm;codecs=opus",
   "audio/webm",
   "audio/mp4",
   "audio/ogg;codecs=opus",
+  "audio/ogg",
 ] as const;
 
 /**
- * The first MediaRecorder container this browser supports, or null when
- * recording (or feature detection) isn't available — callers then simply
- * save no audio and every score still works.
+ * Return the first container this browser can record, or null when recording
+ * is unavailable. When a browser has MediaRecorder but omits the optional
+ * isTypeSupported API, return the first commonly supported container rather
+ * than disabling replay entirely — the constructor remains the final probe.
  */
 export function pickTakeAudioMime(): string | null {
   if (typeof MediaRecorder === "undefined") return null;
+  const supports = MediaRecorder.isTypeSupported;
+  if (typeof supports !== "function") return RECORD_MIME_PREFERENCE[0];
+
   for (const mime of RECORD_MIME_PREFERENCE) {
     try {
-      if (MediaRecorder.isTypeSupported?.(mime)) return mime;
+      if (supports.call(MediaRecorder, mime)) return mime;
     } catch {
-      // Keep probing.
+      // Keep probing other containers.
     }
   }
   return null;
