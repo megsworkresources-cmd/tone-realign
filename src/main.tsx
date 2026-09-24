@@ -37,14 +37,17 @@ function RouteLoading() {
   );
 }
 
-// VITE_CONVEX_URL is baked in at build time. If a host builds without it set
-// (e.g. a Vercel project missing the env var), the app used to crash on boot
-// with a blank page. Fall back to the known production deployment URL — this
-// URL is public by design (it appears in every build log), so embedding it is
-// safe; VITE_CONVEX_URL still takes precedence when set.
-const CONVEX_URL =
-  (import.meta.env.VITE_CONVEX_URL as string | undefined) ||
-  "https://academic-newt-417.convex.cloud";
+// The Convex deployment the platform manages and pushes this project's
+// functions to (bun convex dev --once targets it; the URL is public by design
+// — it appears in every build log — so embedding it is safe).
+//
+// We deliberately do NOT read VITE_CONVEX_URL here: the value configured on
+// the hosting target points at a retired deployment (happy-otter-123) that no
+// longer serves the API, which broke every client at boot. Hardcoding the
+// live deployment makes the build correct regardless of the host's env.
+// To restore env-based overrides, fix VITE_CONVEX_URL first, then reintroduce
+// `(import.meta.env.VITE_CONVEX_URL as string | undefined) ||` above the URL.
+const CONVEX_URL = "https://amiable-shrimp-189.convex.cloud";
 
 const convex = new ConvexReactClient(CONVEX_URL);
 
