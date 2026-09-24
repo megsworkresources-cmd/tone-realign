@@ -176,16 +176,16 @@ export function useToneCapture(): UseToneCapture {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    // Best-effort teardown of the tap recorder. requestAudioBlob() is
-    // async and the stream may already be dying — swallow everything;
-    // stop() below does the awaited version on the happy path.
+    // Best-effort teardown of the tap recorder. Its chunks are deliberately
+    // NOT cleared here: iOS Safari can fire "stop" after teardown (or never
+    // fire it), and the onstop handler below still assembles the blob from
+    // these buffers whenever the browser delivers it. Cleared at start().
     try {
       recorderRef.current?.stop();
     } catch {
       // already stopped / never started
     }
     recorderRef.current = null;
-    audioChunksRef.current = [];
     if (analyzeTimerRef.current !== null) {
       window.clearTimeout(analyzeTimerRef.current);
       analyzeTimerRef.current = null;
@@ -248,24 +248,29 @@ export function useToneCapture(): UseToneCapture {
     }
     recognitionRef.current = null;
 
-    // Flush the take's audio for listen-back before the stream is torn
-    // down — awaiting the final dataavailable/stop so the blob is set.
+    // Flush the take's audio for listen-back — but DON'T block the UI on
+    // it. iOS Safari sometimes never fires "stop" (or fires it late), and
+    // awaiting it here froze the "Done — score it" button. The chunk
+    // buffers stay alive in refs (cleanup no longer clears them), so the
+    // onstop handler still assembles the blob whenever the browser
+    // delivers it. The 800ms race just skips the wait for wedged
+    // recorders; the blob still lands when/if the event arrives.
     const recorder = recorderRef.current;
     if (recorder && recorder.state !== "inactive") {
-      await new Promise<void>((resolve) => {
-        const done = () => resolve();
-        recorder.addEventListener("stop", done, { once: true });
-        try {
-          recorder.stop();
-        } catch {
-          resolve();
-        }
-        // Never hang the UI on a wedged recorder.
-        window.setTimeout(resolve, 1500);
-      });
+      await Promise.race([
+        new Promise<void>((resolve) => {
+          const done = () => resolve();
+          recorder.addEventListener("stop", done, { once: true });
+          try {
+            recorder.stop();
+          } catch {
+            resolve();
+          }
+        }),
+        new Promise<void>((resolve) => window.setTimeout(resolve, 800)),
+      ]);
     }
     recorderRef.current = null;
-    audioChunksRef.current = [];
     const durationMs = performance.now() - startedAtRef.current;
     setState("analyzing");
     setLevel(0);
@@ -465,7 +470,22 @@ export function useToneCapture(): UseToneCapture {
             recorder.ondataavailable = (e) => {
               if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
             };
-            recorder.onerror = () => {};
+            // Safari can error mid-take (encoder hiccup); that must not kill
+            // scoring. If we already have chunks, stop cleanly so onstop can
+            // salvage a partial recording; otherwise drop audio silently.
+            recorder.onerror = () => {
+              try {
+                if (
+                  recorderRef.current &&
+                  recorderRef.current.state !== "inactive" &&
+                  audioChunksRef.current.length > 0
+                ) {
+                  recorderRef.current.stop();
+                }
+              } catch {
+                // Audio dropped — analysis continues regardless.
+              }
+            };
             recorder.onstop = () => {
               if (audioChunksRef.current.length > 0) {
                 const type = recorder.mimeType || mime;
@@ -473,8 +493,10 @@ export function useToneCapture(): UseToneCapture {
                 setAudioMimeType(type);
               }
               audioChunksRef.current = [];
-            }; 
-            recorder.start();
+            };
+            // 5s timeslice: on iOS Safari, chunked delivery makes the final
+            // blob far more reliable than one monolithic blob at stop().
+            recorder.start(5000);
             recorderRef.current = recorder;
           }
         }

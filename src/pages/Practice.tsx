@@ -27,9 +27,9 @@ import {
   isAllowedTakeAudioMime,
 } from "@/lib/take-audio";
 import { api } from "@/convex/_generated/api";
-import { ArrowLeft, Check, Lock, Mic, MessageSquareText, Square, Target } from "lucide-react";
+import { ArrowLeft, AudioLines, Check, Lock, Mic, MessageSquareText, Square, Target } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
@@ -132,7 +132,18 @@ function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) 
   >(null);
   const drillStats = useQuery(api.sessions.drillStats);
   const bestByDrill = new Map((drillStats ?? []).map((s) => [s.drill, s]));
-
+  // One blob URL per recording — memoized so every render (the meter
+  // re-renders ~30×/s while recording) doesn't leak a new object URL.
+  // Recreated when the take changes; reclaimed on unmount.
+  const playbackUrl = useMemo(
+    () => (capture.audioBlob ? URL.createObjectURL(capture.audioBlob) : null),
+    [capture.audioBlob],
+  );
+  useEffect(() => {
+    return () => {
+      if (playbackUrl) URL.revokeObjectURL(playbackUrl);
+    };
+  }, [playbackUrl]);
   // Pre-roll countdown: hit Start, breathe for three beats, then the
   // recorder actually opens. State lives here (UI choreography), the
   // capture hook stays a pure clock. The hook object is unstable across
@@ -581,6 +592,31 @@ function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) 
               </div>
             </div>
 
+            {/* Listen-back right away — play the take before saving it. */}
+            {audioBlob ? (
+              <div className="nb bg-secondary p-4">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  <AudioLines className="size-4" /> Hear your take
+                </div>
+                {/* eslint-disable-next-line jsx-a11y/media-has-caption -- voice takes have no captions */}
+                <audio
+                  controls
+                  src={playbackUrl ?? undefined}
+                  className="nb mt-2 w-full bg-card"
+                  aria-label="Your recorded take"
+                />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Saving also keeps this recording in your log — replay it
+                  anytime from Progress → Recent takes.
+                </p>
+              </div>
+            ) : (
+              <p className="nb bg-paper px-3 py-2 text-xs text-muted-foreground">
+                This browser couldn't capture audio for replay this time — your
+                scores still saved fine. New takes will try again automatically.
+              </p>
+            )}
+
             <SaveRow
               analysis={analysis}
               drillId={drill.id}
@@ -652,6 +688,10 @@ function SaveRow({
   const addBonus = useMutation(api.dailyLog.addBonus);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<Id<"practiceSessions"> | null>(null);
+  /** Where the listen-back upload landed — shown honestly, never silent. */
+  const [audioStatus, setAudioStatus] = useState<
+    "none" | "saving" | "saved" | "failed"
+  >("none");
 
   const handleSave = async () => {
     setSaving(true);
@@ -683,30 +723,33 @@ function SaveRow({
       });
       // Listen-back audio, best-effort: the take is already saved, so a
       // failed upload never blocks or rolls back the scores. Oversized
-      // blobs are dropped here (the server re-checks anyway).
-      if (
-        audioBlob &&
+      // blobs are dropped here (the server re-checks anyway). The outcome
+      // is surfaced, not swallowed.
+      const mime = audioMimeType || audioBlob?.type || "";
+      const canUpload =
+        !!audioBlob &&
         audioBlob.size > 0 &&
         audioBlob.size <= MAX_TAKE_AUDIO_BYTES &&
-        isAllowedTakeAudioMime(audioMimeType || audioBlob.type)
-      ) {
+        isAllowedTakeAudioMime(mime);
+      if (canUpload && audioBlob) {
+        setAudioStatus("saving");
         try {
           const uploadUrl = await generateTakeAudioUploadUrl({});
           const res = await fetch(uploadUrl, {
             method: "POST",
-            headers: { "Content-Type": audioMimeType || audioBlob.type },
+            headers: { "Content-Type": mime },
             body: audioBlob,
           });
-          if (res.ok) {
-            const { storageId } = (await res.json()) as { storageId: string };
-            await attachTakeAudio({
-              sessionId,
-              storageId: storageId as Id<"_storage">,
-              mimeType: audioMimeType || audioBlob.type,
-            }).catch(() => null);
-          }
+          if (!res.ok) throw new Error(`upload failed: ${res.status}`);
+          const { storageId } = (await res.json()) as { storageId: string };
+          await attachTakeAudio({
+            sessionId,
+            storageId: storageId as Id<"_storage">,
+            mimeType: mime,
+          });
+          setAudioStatus("saved");
         } catch {
-          // Scores are safe; this take just saves without audio.
+          setAudioStatus("failed");
         }
       }
       setSavedId(sessionId);
@@ -735,6 +778,15 @@ function SaveRow({
           Not my best — again
         </NBButton>
       </div>
+      {savedId && audioStatus !== "none" && (
+        <p className="text-xs text-muted-foreground">
+          {audioStatus === "saving" && "Keeping your recording…"}
+          {audioStatus === "saved" &&
+            "Recording kept — replay it anytime from Progress → Recent takes."}
+          {audioStatus === "failed" &&
+            "Scores saved, but the recording couldn't be kept this time."}
+        </p>
+      )}
       {savedId && <CoachNote sessionId={savedId} />}
     </>
   );
