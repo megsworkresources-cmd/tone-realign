@@ -88,7 +88,7 @@ createRoot(document.getElementById("root")!).render(
     <VlyToolbar />
     <InstrumentationProvider>
       <ConvexAuthProvider client={convex}>
-        <BrowserRouter>
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
           <RouteSyncer />
           <ScrollToTop />
           <Suspense fallback={<RouteLoading />}>

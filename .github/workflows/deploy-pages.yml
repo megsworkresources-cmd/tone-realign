@@ -1,0 +1,60 @@
+name: Deploy to GitHub Pages
+
+# The repo previously had GitHub Pages' legacy build enabled, which served
+# raw source (index.html pointing at /src/main.tsx) — unrunnable in a browser.
+# This workflow builds the production bundle and publishes it instead, so the
+# Pages URL serves the same launch-ready site as the primary hosting target.
+#
+# Base path: the Pages site lives at /<repo>/ so asset URLs must be prefixed.
+# Vercel (the primary target per LAUNCH.md §2) keeps base "/" — this flag is
+# applied here only.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun tsc -b
+
+      - name: Build (Pages base path)
+        run: bunx vite build --base=/tone-realign/
+
+      - name: SPA fallback + nojekyll
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
