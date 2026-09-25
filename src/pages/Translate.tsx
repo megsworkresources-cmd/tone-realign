@@ -6,7 +6,14 @@ import { getSavedMicDeviceId } from "@/lib/mic-prefs";
 import { ResponsePlanner } from "@/components/ResponsePlanner";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { passOrder, TRANSLATION_LINES, type TranslationLine } from "@/lib/translation";
-import { biggestLever, TONE_LABELS, type ToneAnalysis } from "@/lib/tone-analyzer";
+import {
+  biggestLever,
+  buildFactorFeedback,
+  TONE_FACTORS,
+  TONE_LABELS,
+  type FactorKey,
+  type ToneAnalysis,
+} from "@/lib/tone-analyzer";
 import { ArrowRight, AudioLines, Languages, RefreshCw } from "lucide-react";
 import { useMutation } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
@@ -14,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { api } from "@/convex/_generated/api";
 
 type Pass = "reflex" | "intended";
+const FACTORS: FactorKey[] = ["calm", "energy", "clarity", "stability"];
 
 export default function Translate() {
   const capture = useToneCapture();
@@ -25,12 +33,14 @@ export default function Translate() {
   const order = useMemo(() => passOrder(line.id.length + new Date().getDate()), [line.id]);
   const [pass, setPass] = useState<Pass>(order[0]);
   const [pendingPass, setPendingPass] = useState<Pass | null>(null);
+  const [completedPass, setCompletedPass] = useState<Pass | null>(null);
   const [lastSeen, setLastSeen] = useState<ToneAnalysis | null>(null);
   const [reflexAnalysis, setReflexAnalysis] = useState<ToneAnalysis | null>(null);
   const [intendedAnalysis, setIntendedAnalysis] = useState<ToneAnalysis | null>(null);
   const [reflexAudio, setReflexAudio] = useState<Blob | null>(null);
   const [intendedAudio, setIntendedAudio] = useState<Blob | null>(null);
   const [previewPass, setPreviewPass] = useState<Pass | null>(null);
+  const [openFactor, setOpenFactor] = useState<{ pass: Pass; factor: FactorKey } | null>(null);
   const done = !!reflexAnalysis && !!intendedAnalysis;
 
   const reflexUrl = useMemo(() => (reflexAudio ? URL.createObjectURL(reflexAudio) : null), [reflexAudio]);
@@ -38,21 +48,25 @@ export default function Translate() {
   useEffect(() => () => { if (reflexUrl) URL.revokeObjectURL(reflexUrl); }, [reflexUrl]);
   useEffect(() => () => { if (intendedUrl) URL.revokeObjectURL(intendedUrl); }, [intendedUrl]);
 
+  // Analysis and MediaRecorder stop do not necessarily resolve in the same
+  // render. Bank the score first, then bank the blob when it arrives later.
   useEffect(() => {
     if (!pendingPass || !capture.analysis || capture.analysis === lastSeen) return;
-    const analysis = capture.analysis;
-    setLastSeen(analysis);
-    if (pendingPass === "reflex") {
-      setReflexAnalysis(analysis);
-      setReflexAudio(capture.audioBlob);
-    } else {
-      setIntendedAnalysis(analysis);
-      setIntendedAudio(capture.audioBlob);
-    }
-    setPreviewPass(pendingPass);
+    const finished = pendingPass;
+    setLastSeen(capture.analysis);
+    setCompletedPass(finished);
+    setPreviewPass(finished);
+    if (finished === "reflex") setReflexAnalysis(capture.analysis);
+    else setIntendedAnalysis(capture.analysis);
     setPendingPass(null);
-    setPass(order.find((candidate) => candidate !== pendingPass) ?? pendingPass);
-  }, [capture.analysis, capture.audioBlob, lastSeen, order, pendingPass]);
+    setPass(order.find((candidate) => candidate !== finished) ?? finished);
+  }, [capture.analysis, lastSeen, order, pendingPass]);
+
+  useEffect(() => {
+    if (!capture.audioBlob || !completedPass) return;
+    if (completedPass === "reflex") setReflexAudio(capture.audioBlob);
+    else setIntendedAudio(capture.audioBlob);
+  }, [capture.audioBlob, completedPass]);
 
   useEffect(() => {
     if (reflexAnalysis && intendedAnalysis) mark({ action: "translate" }).catch(() => {});
@@ -62,6 +76,8 @@ export default function Translate() {
     const seed = capture.lastPeakRawRms;
     capture.reset();
     setPendingPass(null);
+    setCompletedPass(null);
+    setPreviewPass(null);
     capture.start(seed, getSavedMicDeviceId());
   };
 
@@ -79,7 +95,9 @@ export default function Translate() {
     setIntendedAudio(null);
     setPreviewPass(null);
     setPendingPass(null);
+    setCompletedPass(null);
     setLastSeen(null);
+    setOpenFactor(null);
     setPass(order[0]);
   };
 
@@ -89,14 +107,14 @@ export default function Translate() {
     restart();
   };
 
-  const activePreview = previewPass === "reflex" ? reflexUrl : previewPass === "intended" ? intendedUrl : null;
-  const activePreviewLabel = previewPass === "reflex" ? "Reflex take" : "Intended take";
   const delta = reflexAnalysis && intendedAnalysis ? {
     calm: intendedAnalysis.calmScore - reflexAnalysis.calmScore,
     energy: intendedAnalysis.energyScore - reflexAnalysis.energyScore,
     clarity: intendedAnalysis.clarityScore - reflexAnalysis.clarityScore,
     stability: intendedAnalysis.stabilityScore - reflexAnalysis.stabilityScore,
   } : null;
+  const activeUrl = previewPass === "reflex" ? reflexUrl : intendedUrl;
+  const activeLabel = previewPass === "reflex" ? "Reflex take" : "Intended take";
 
   return (
     <AppShell active="translate">
@@ -104,7 +122,7 @@ export default function Translate() {
         <div>
           <NBBadge className="bg-sun text-ink"><Languages className="size-3" /> The Translation Drill</NBBadge>
           <h1 className="mt-3 font-display text-3xl sm:text-4xl">Say it again. This time, mean it.</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Same words, two takes. First the way it usually comes out under pressure — then the way you actually intend it.</p>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Same words, two takes. Compare how the reflex delivery landed with the delivery you intended.</p>
         </div>
 
         <NBPanel className="p-6">
@@ -119,13 +137,13 @@ export default function Translate() {
           </div>
         </NBPanel>
 
-        {!done && <ResponsePlanner title={previewPass ? `Before the ${pass} take — think it through` : "Before you speak — think it through"} />}
+        {!done && <ResponsePlanner title={completedPass ? `Before the ${pass} take — think it through` : "Before you speak — think it through"} />}
 
         {!done && <NBPanel className="p-6">
           <div className="flex items-stretch gap-2">
             {order.map((passKey, i) => {
-              const completed = passKey === "reflex" ? !!reflexAnalysis : !!intendedAnalysis;
-              return <button key={passKey} type="button" disabled={!completed} onClick={() => completed && setPreviewPass(passKey)} className={cn("flex-1 border-2 border-ink px-3 py-2 text-center text-[10px] font-bold uppercase tracking-widest", completed ? "bg-mint nb-press" : pass === passKey ? "bg-sun" : "bg-card text-muted-foreground")} aria-pressed={previewPass === passKey}>{completed ? "✓ " : ""}{i + 1} · {passKey === "reflex" ? "Reflex take" : "Intended take"}</button>;
+              const analysis = passKey === "reflex" ? reflexAnalysis : intendedAnalysis;
+              return <button key={passKey} type="button" disabled={!analysis} onClick={() => analysis && setPreviewPass(passKey)} className={cn("flex-1 border-2 border-ink px-3 py-2 text-center text-[10px] font-bold uppercase tracking-widest", analysis ? "bg-mint nb-press" : pass === passKey ? "bg-sun" : "bg-card text-muted-foreground")} aria-pressed={previewPass === passKey}>{analysis ? "✓ " : ""}{i + 1} · {passKey === "reflex" ? "Reflex take" : "Intended take"}</button>;
             })}
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><NBBadge className={pass === "reflex" ? "bg-coral text-ink" : "bg-mint text-ink"}>Pass {order.indexOf(pass) + 1} of 2 — {pass === "reflex" ? "as it usually comes out" : "as you mean it"}</NBBadge><span className="text-xs text-muted-foreground">{line.targetHint}</span></div>
@@ -135,26 +153,34 @@ export default function Translate() {
           {capture.error && <MicError message={capture.error} />}
           {capture.state === "recording" && capture.micMuted && <p className="nb mt-5 bg-sun px-3 py-2 text-sm font-medium">The mic reports itself muted — check your system's mic privacy setting or close the app holding it.</p>}
           <MicPicker activeLabel={capture.activeDeviceLabel} className="mt-5" />
-          {previewPass && <PlaybackPanel label={activePreviewLabel} url={activePreview} />}
+          {previewPass && <PlaybackPanel label={activeLabel} url={activeUrl} />}
         </NBPanel>}
 
-        {done && delta && <NBPanel className="p-6">
-          <div className="flex flex-wrap items-center justify-between gap-2"><NBBadge className="bg-sun text-ink">The translation</NBBadge><span className="text-xs text-muted-foreground">{line.payoff}</span></div>
-          <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4"><NBStat label="Calm Δ" value={fmtDelta(delta.calm)} /><NBStat label="Energy Δ" value={fmtDelta(delta.energy)} /><NBStat label="Clarity Δ" value={fmtDelta(delta.clarity)} /><NBStat label="Stability Δ" value={fmtDelta(delta.stability)} /></div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2"><ResultCard label="Reflex take" analysis={reflexAnalysis!} url={reflexUrl} /><ResultCard label="Intended take" analysis={intendedAnalysis!} url={intendedUrl} /></div>
-          <div className="mt-5 flex flex-wrap justify-center gap-3"><NBButton onClick={restart} variant="paper">Redo this sentence</NBButton><NBButton onClick={nextLine} variant="sun">Next sentence <ArrowRight className="size-4" /></NBButton></div>
-        </NBPanel>}
+        {done && delta && <Results analysisByPass={{ reflex: reflexAnalysis!, intended: intendedAnalysis! }} audioByPass={{ reflex: reflexUrl, intended: intendedUrl }} delta={delta} onRestart={restart} onNext={nextLine} openFactor={openFactor} setOpenFactor={setOpenFactor} />}
       </div>
     </AppShell>
   );
 }
 
-function PlaybackPanel({ label, url }: { label: string; url: string | null }) {
-  return <div className="mt-5 nb bg-card p-3"><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><AudioLines className="size-4" /> Hear your {label.toLowerCase()}</div>{url ? <audio controls preload="metadata" src={url} className="nb mt-2 w-full bg-card" aria-label={`Your ${label}`} /> : <p className="mt-2 text-xs text-muted-foreground">This take could not be recorded for replay, but the score still stands.</p>}</div>;
+type Delta = { calm: number; energy: number; clarity: number; stability: number };
+function Results({ analysisByPass, audioByPass, delta, onRestart, onNext, openFactor, setOpenFactor }: { analysisByPass: Record<Pass, ToneAnalysis>; audioByPass: Record<Pass, string | null>; delta: Delta; onRestart: () => void; onNext: () => void; openFactor: { pass: Pass; factor: FactorKey } | null; setOpenFactor: (value: { pass: Pass; factor: FactorKey } | null) => void }) {
+  return <NBPanel className="p-6">
+    <div className="flex flex-wrap items-center justify-between gap-2"><NBBadge className="bg-sun text-ink">Your tone rankings</NBBadge><span className="text-xs text-muted-foreground">Higher scores mean the delivery matched the exercise goal more closely.</span></div>
+    <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4"><NBStat label="Calm Δ" value={fmtDelta(delta.calm)} /><NBStat label="Energy Δ" value={fmtDelta(delta.energy)} /><NBStat label="Clarity Δ" value={fmtDelta(delta.clarity)} /><NBStat label="Stability Δ" value={fmtDelta(delta.stability)} /></div>
+    <p className="mt-4 text-sm text-muted-foreground">The delta compares your intended delivery with your reflex delivery. Positive numbers mean the intended take improved that factor.</p>
+    <div className="mt-5 grid gap-4 sm:grid-cols-2">{(["reflex", "intended"] as Pass[]).map((pass) => <TakeResult key={pass} pass={pass} analysis={analysisByPass[pass]} url={audioByPass[pass]} openFactor={openFactor} setOpenFactor={setOpenFactor} />)}</div>
+    <div className="mt-5 flex flex-wrap justify-center gap-3"><NBButton onClick={onRestart} variant="paper">Redo this sentence</NBButton><NBButton onClick={onNext} variant="sun">Next sentence <ArrowRight className="size-4" /></NBButton></div>
+  </NBPanel>;
 }
 
-function ResultCard({ label, analysis, url }: { label: string; analysis: ToneAnalysis; url: string | null }) {
-  return <div className="nb bg-card p-4"><p className="text-[10px] font-bold uppercase tracking-widest">{label}</p><p className="mt-1 font-display text-lg">{TONE_LABELS[analysis.dominantTone]?.label ?? analysis.dominantTone}</p><p className="mt-1 text-sm text-muted-foreground">{TONE_LABELS[analysis.dominantTone]?.note}</p><p className="mt-3 border-t-2 border-dashed border-ink/20 pt-3 text-sm"><span className="font-bold">Rated {analysis.overallScore}/100 — </span><span className="text-muted-foreground">{biggestLever(analysis).tip}</span></p><PlaybackPanel label={label} url={url} /></div>;
+function TakeResult({ pass, analysis, url, openFactor, setOpenFactor }: { pass: Pass; analysis: ToneAnalysis; url: string | null; openFactor: { pass: Pass; factor: FactorKey } | null; setOpenFactor: (value: { pass: Pass; factor: FactorKey } | null) => void }) {
+  const tone = TONE_LABELS[analysis.dominantTone] ?? TONE_LABELS.mixed;
+  const feedback = buildFactorFeedback(analysis);
+  const lever = biggestLever(analysis);
+  return <div className="nb bg-card p-4"><div className="flex items-center justify-between gap-2"><p className="text-[10px] font-bold uppercase tracking-widest">{pass === "reflex" ? "Reflex take" : "Intended take"}</p><span className={cn("nb px-2 py-1 text-[10px] font-bold uppercase tracking-widest", tone.color)}>{tone.label}</span></div><p className="mt-2 text-sm text-muted-foreground">{tone.note}</p><div className="mt-3 nb bg-secondary p-3"><p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Overall ranking</p><p className="font-display text-4xl">{analysis.overallScore}<span className="text-base text-muted-foreground"> / 100</span></p></div><PlaybackPanel label={pass === "reflex" ? "Reflex take" : "Intended take"} url={url} />
+    <div className="mt-4 flex flex-col gap-2">{FACTORS.map((factor) => { const open = openFactor?.pass === pass && openFactor.factor === factor; const fb = feedback[factor]; return <div key={factor} className="nb bg-paper"><button type="button" onClick={() => setOpenFactor(open ? null : { pass, factor })} aria-expanded={open} className="flex w-full items-center justify-between px-3 py-2 text-left"><span className="text-xs font-bold uppercase tracking-widest">{TONE_FACTORS[factor].label}</span><span className="font-display text-xl">{scoreFor(factor, analysis)} / 100</span></button>{open && <div className="border-t-2 border-ink/20 px-3 py-3 text-sm"><p>{fb.read}</p><p className="mt-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">{fb.yourNumbers}</p><p className="mt-2"><span className="font-bold">Next practice: </span><span className="text-muted-foreground">{fb.tip}</span></p><p className="mt-2 text-xs text-muted-foreground"><span className="font-bold">Goal: </span>{TONE_FACTORS[factor].goal}</p></div>}</div>; })}</div><div className="mt-4 nb bg-sun p-3 text-sm"><span className="font-bold">Your next best move: </span>{TONE_FACTORS[lever.factor].label} — {lever.tip}</div></div>;
 }
 
+function PlaybackPanel({ label, url }: { label: string; url: string | null }) { return <div className="mt-4 nb bg-secondary p-3"><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><AudioLines className="size-4" /> Hear your {label.toLowerCase()}</div>{url ? <audio controls preload="auto" src={url} className="nb mt-2 w-full bg-card" aria-label={`Play ${label}`} onError={(event) => { event.currentTarget.load(); }} /> : <p className="mt-2 text-xs text-muted-foreground">Audio is still being prepared or was not available in this browser. Your tone scores are still saved.</p>}</div>; }
+function scoreFor(factor: FactorKey, analysis: ToneAnalysis): number { return factor === "calm" ? analysis.calmScore : factor === "energy" ? analysis.energyScore : factor === "clarity" ? analysis.clarityScore : analysis.stabilityScore; }
 function fmtDelta(n: number): string { return n > 0 ? `+${n}` : `${n}`; }
