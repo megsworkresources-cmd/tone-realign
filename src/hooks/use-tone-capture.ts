@@ -143,6 +143,10 @@ export function useToneCapture(): UseToneCapture {
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
+  /** Close promise of the context cleanup() is draining — start() waits it
+   * out (bounded) so two live contexts never fight over the device's single
+   * audio session (iOS reads silence when they do). */
+  const ctxCloseRef = useRef<Promise<void> | null>(null);
   const rafRef = useRef<number | null>(null);
   const startedAtRef = useRef(0);
   const lastFrameAtRef = useRef(0);
@@ -196,8 +200,17 @@ export function useToneCapture(): UseToneCapture {
     setMicMuted(false);
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
-    ctxRef.current?.close().catch(() => {});
+    const closing = ctxRef.current;
     ctxRef.current = null;
+    if (closing) {
+      // Track the close so the next start() can wait out the drain (bounded)
+      // instead of racing the device's single audio session.
+      const closed = closing.close().catch(() => {});
+      ctxCloseRef.current = closed;
+      void closed.then(() => {
+        if (ctxCloseRef.current === closed) ctxCloseRef.current = null;
+      });
+    }
     gainedBufRef.current = null;
   }, []);
 
@@ -357,13 +370,11 @@ export function useToneCapture(): UseToneCapture {
           .webkitAudioContext;
       // iOS Safari: the previous take's context can still be draining when
       // this one starts — live contexts fight over the device's single
-      // audio session and the new one reads silence. Wait out the old close
-      // (bounded) before creating the new context.
-      const staleCtx = ctxRef.current;
-      if (staleCtx) {
-        ctxRef.current = null;
+      // audio session and the new one reads silence. Wait out the close
+      // cleanup() kicked off (bounded) before creating the new context.
+      if (ctxCloseRef.current) {
         await Promise.race([
-          staleCtx.close().catch(() => {}),
+          ctxCloseRef.current,
           new Promise((resolve) => window.setTimeout(resolve, 150)),
         ]);
         if (session !== sessionRef.current) return;
@@ -462,9 +473,10 @@ export function useToneCapture(): UseToneCapture {
       }
       // Recovery for takes that STILL read silence: swap in a fresh source
       // node (the iOS bug can detach the first one) and resume again.
-      // At most twice per take, ~2.5s apart, from the loop's watchdog.
-      let silentFrames = 0;
+      // Wall-clock (not frame-counted) so 60Hz and 120Hz displays behave
+      // the same; at most twice per take, 2.5s of dead signal apart.
       let recoveries = 0;
+      let lastNonZeroAt = performance.now();
       const recoverGraph = () => {
         recoveries += 1;
         void ctx.resume().catch(() => {});
@@ -603,13 +615,12 @@ export function useToneCapture(): UseToneCapture {
         // a dead graph, not a quiet room — real rooms have nonzero noise.
         // Recover the graph instead of scoring a take we know is empty.
         if (sum === 0) {
-          silentFrames += 1;
-          if (silentFrames >= 150 && recoveries < 2) {
-            silentFrames = 0;
+          if (now - lastNonZeroAt >= 2500 && recoveries < 2) {
+            lastNonZeroAt = now;
             recoverGraph();
           }
         } else {
-          silentFrames = 0;
+          lastNonZeroAt = now;
         }
         windowMaxRawRef.current = Math.max(windowMaxRawRef.current, rms);
         const gainedRms = gainedVolume(rms, inputGainRef.current);
