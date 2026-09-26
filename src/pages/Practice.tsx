@@ -1,5 +1,6 @@
 import { NBBadge, NBButton, NBPanel, NBMeter } from "@/components/nb";
 import { MicError } from "@/components/MicError";
+import { PreviewMicHint } from "@/components/PreviewMicHint";
 import { MicPicker } from "@/components/MicPicker";
 import { getSavedMicDeviceId } from "@/lib/mic-prefs";
 import { CoachNote } from "@/components/CoachNote";
@@ -344,6 +345,10 @@ function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) 
                 {level < 0.06 && elapsedMs > 3000 && " · we can barely hear you — move closer"}
               </p>
             )}
+
+            {/* Preview frames block the mic entirely — say so before the
+                first failed take, not after. */}
+            <PreviewMicHint className="mb-1" />
 
             {error && <MicError message={error} />}
 
