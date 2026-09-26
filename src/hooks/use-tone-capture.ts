@@ -355,6 +355,19 @@ export function useToneCapture(): UseToneCapture {
         window.AudioContext ??
         (window as unknown as { webkitAudioContext: typeof AudioContext })
           .webkitAudioContext;
+      // iOS Safari: the previous take's context can still be draining when
+      // this one starts — live contexts fight over the device's single
+      // audio session and the new one reads silence. Wait out the old close
+      // (bounded) before creating the new context.
+      const staleCtx = ctxRef.current;
+      if (staleCtx) {
+        ctxRef.current = null;
+        await Promise.race([
+          staleCtx.close().catch(() => {}),
+          new Promise((resolve) => window.setTimeout(resolve, 150)),
+        ]);
+        if (session !== sessionRef.current) return;
+      }
       const ctx = new AudioCtx();
       ctxRef.current = ctx;
       // Honor the user's device pick from the MicPicker (exact — so the
@@ -417,7 +430,7 @@ export function useToneCapture(): UseToneCapture {
         }
       }
 
-      const source = ctx.createMediaStreamSource(stream);
+      let source = ctx.createMediaStreamSource(stream);
       // High-pass at 70 Hz: kills desk rumble, handling noise, and HVAC
       // hum before any measurement — plosives and pitch are unaffected,
       // and the pitch detector stops chasing sub-voicing noise.
@@ -430,6 +443,43 @@ export function useToneCapture(): UseToneCapture {
       analyser.smoothingTimeConstant = 0.6;
       source.connect(highpass);
       highpass.connect(analyser);
+      // iOS Safari can leave this graph "running" but never pulled: the
+      // analyser reads pure zeros while MediaRecorder on the SAME stream
+      // saves real audio — the exact "playback works, we heard nothing"
+      // signature. Wiring the analyser to the destination through a
+      // zero-gain node forces Safari to pull every frame: inaudible, but
+      // the graph stays alive.
+      const silentTap = ctx.createGain();
+      silentTap.gain.value = 0;
+      analyser.connect(silentTap);
+      silentTap.connect(ctx.destination);
+      // Resume AFTER the destination path exists — Safari ignores resume()
+      // on a graph with nothing wired to the output.
+      if (ctx.state !== "running") await ctx.resume().catch(() => {});
+      if (session !== sessionRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      // Recovery for takes that STILL read silence: swap in a fresh source
+      // node (the iOS bug can detach the first one) and resume again.
+      // At most twice per take, ~2.5s apart, from the loop's watchdog.
+      let silentFrames = 0;
+      let recoveries = 0;
+      const recoverGraph = () => {
+        recoveries += 1;
+        void ctx.resume().catch(() => {});
+        try {
+          source.disconnect();
+        } catch {
+          // already detached
+        }
+        try {
+          source = ctx.createMediaStreamSource(stream);
+          source.connect(highpass);
+        } catch {
+          // stream already dead — the dead-take verdict will explain it
+        }
+      };
 
       const timeBuf = new Float32Array(analyser.fftSize);
       const gainedBuf = new Float32Array(analyser.fftSize);
@@ -549,6 +599,18 @@ export function useToneCapture(): UseToneCapture {
         for (let i = 0; i < timeBuf.length; i++) sum += timeBuf[i] * timeBuf[i];
         const rms = Math.sqrt(sum / timeBuf.length);
         maxRawRef.current = Math.max(maxRawRef.current, rms);
+        // Silence watchdog: all-zero frames mean the browser is handing us
+        // a dead graph, not a quiet room — real rooms have nonzero noise.
+        // Recover the graph instead of scoring a take we know is empty.
+        if (sum === 0) {
+          silentFrames += 1;
+          if (silentFrames >= 150 && recoveries < 2) {
+            silentFrames = 0;
+            recoverGraph();
+          }
+        } else {
+          silentFrames = 0;
+        }
         windowMaxRawRef.current = Math.max(windowMaxRawRef.current, rms);
         const gainedRms = gainedVolume(rms, inputGainRef.current);
 
