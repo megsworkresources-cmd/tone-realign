@@ -3,7 +3,9 @@ import {
   COUNTDOWN_SECONDS,
   PACE_BAR_CLASS,
   PACE_HINTS,
+  TRANSLATE_TAKE_TARGET_MS,
   countdownBeats,
+  formatClock,
   pacePct,
   paceStatus,
 } from "./take-timing";
@@ -12,6 +14,30 @@ describe("countdown beats", () => {
   test("counts down from COUNTDOWN_SECONDS to 1", () => {
     expect(countdownBeats()).toEqual([3, 2, 1]);
     expect(countdownBeats().length).toBe(COUNTDOWN_SECONDS);
+  });
+});
+
+describe("formatClock", () => {
+  test("renders the recorder's M:SS clock", () => {
+    expect(formatClock(0)).toBe("0:00");
+    expect(formatClock(3_400)).toBe("0:03");
+    expect(formatClock(59_900)).toBe("0:59");
+    expect(formatClock(60_000)).toBe("1:00");
+    expect(formatClock(75_200)).toBe("1:15");
+  });
+
+  test("truncates rather than rounds sub-second time", () => {
+    expect(formatClock(999)).toBe("0:00");
+    expect(formatClock(61_999)).toBe("1:01");
+  });
+});
+
+describe("TRANSLATE_TAKE_TARGET_MS", () => {
+  test("fits one deliberate sentence inside the pace thresholds", () => {
+    // A target the pace bar can actually move through: reachable,
+    // with room for the "good-length" and "overtime" bands to matter.
+    expect(TRANSLATE_TAKE_TARGET_MS).toBeGreaterThan(5_000);
+    expect(TRANSLATE_TAKE_TARGET_MS).toBeLessThanOrEqual(30_000);
   });
 });
 

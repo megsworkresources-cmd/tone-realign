@@ -9,6 +9,7 @@ import { UNLOCKABLE_DRILLS, isUnlocked, unlockGoalLine } from "@/lib/unlocks";
 import { getAccessibleDailyChallenge } from "@/lib/daily";
 import {
   COUNTDOWN_SECONDS,
+  formatClock as fmtTime,
   PACE_BAR_CLASS,
   PACE_HINTS,
   pacePct,
@@ -39,11 +40,6 @@ import { levelInfo } from "@/lib/gamify";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
-
-function fmtTime(ms: number) {
-  const s = Math.floor(ms / 1000);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-}
 
 export default function Practice() {
   const { drillId } = useParams();

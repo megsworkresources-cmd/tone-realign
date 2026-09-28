@@ -52,3 +52,13 @@ export const PACE_BAR_CLASS: Record<PaceStatus, string> = {
   "good-length": "bg-sun",
   overtime: "bg-coral",
 };
+
+/** Target length for one deliberate Translate sentence, so the pace bar
+ * fills in a useful window (Practice targets come from each drill). */
+export const TRANSLATE_TAKE_TARGET_MS = 15_000;
+
+/** Milliseconds → M:SS, the recorder clock's format on both drill pages. */
+export function formatClock(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}

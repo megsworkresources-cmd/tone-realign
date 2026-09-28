@@ -8,7 +8,8 @@ import { ResponsePlanner } from "@/components/ResponsePlanner";
 import { useToneCapture } from "@/hooks/use-tone-capture";
 import { passOrder, TRANSLATION_LINES, type TranslationLine } from "@/lib/translation";
 import { biggestLever, buildFactorFeedback, TONE_FACTORS, TONE_LABELS, type FactorFeedback, type FactorKey, type ToneAnalysis } from "@/lib/tone-analyzer";
-import { ArrowRight, AudioLines, Languages, RefreshCw } from "lucide-react";
+import { ArrowRight, AudioLines, Languages, RefreshCw, Square, Target } from "lucide-react";
+import { PACE_BAR_CLASS, PACE_HINTS, formatClock, pacePct, paceStatus, TRANSLATE_TAKE_TARGET_MS } from "@/lib/take-timing";
 import { motion } from "framer-motion";
 import { useMutation } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
@@ -34,7 +35,6 @@ export default function Translate() {
   const [intendedAnalysis, setIntendedAnalysis] = useState<ToneAnalysis | null>(null);
   const [reflexAudio, setReflexAudio] = useState<Blob | null>(null);
   const [intendedAudio, setIntendedAudio] = useState<Blob | null>(null);
-  const [previewPass, setPreviewPass] = useState<Pass | null>(null);
   const [openFactor, setOpenFactor] = useState<{ pass: Pass; factor: FactorKey } | null>(null);
   const [experience, setExperience] = useState("");
   const done = !!reflexAnalysis && !!intendedAnalysis;
@@ -51,7 +51,6 @@ export default function Translate() {
     const finished = pendingPass;
     setLastSeen(capture.analysis);
     setFinishedPass(finished);
-    setPreviewPass(finished);
     if (finished === "reflex") setReflexAnalysis(capture.analysis);
     else setIntendedAnalysis(capture.analysis);
     setPendingPass(null);
@@ -73,7 +72,6 @@ export default function Translate() {
     capture.reset();
     setPendingPass(null);
     setFinishedPass(null);
-    setPreviewPass(null);
     capture.start(seed, getSavedMicDeviceId());
   };
   const finishPass = () => {
@@ -85,7 +83,7 @@ export default function Translate() {
     capture.reset();
     setReflexAnalysis(null); setIntendedAnalysis(null);
     setReflexAudio(null); setIntendedAudio(null);
-    setPreviewPass(null); setPendingPass(null); setFinishedPass(null); setLastSeen(null); setOpenFactor(null);
+    setPendingPass(null); setFinishedPass(null); setLastSeen(null); setOpenFactor(null);
     setPass(order[0]);
   };
   const nextLine = () => {
@@ -99,17 +97,21 @@ export default function Translate() {
     clarity: intendedAnalysis.clarityScore - reflexAnalysis.clarityScore,
     stability: intendedAnalysis.stabilityScore - reflexAnalysis.stabilityScore,
   } : null;
-  const previewUrl = previewPass === "reflex" ? reflexUrl : intendedUrl;
-  const previewLabel = previewPass === "reflex" ? "Reflex take" : "Intended take";
+  const pace = paceStatus(capture.elapsedMs, TRANSLATE_TAKE_TARGET_MS);
 
   return <AppShell active="translate"><div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
     <div><NBBadge className="bg-sun text-ink"><Languages className="size-3" /> The Translation Drill</NBBadge><h1 className="mt-3 font-display text-3xl sm:text-4xl">Say it again. This time, mean it.</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Choose the experience you want to create, then compare how your reflex delivery differs from the delivery you intend.</p></div>
     <NBPanel className="p-6"><div className="flex items-center justify-between"><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{done ? "Translated" : "The sentence"}</span><button type="button" onClick={nextLine} className="nb nb-press flex items-center gap-1.5 bg-card px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest"><RefreshCw className="size-3" /> Different sentence</button></div><p className="mt-3 font-display text-2xl leading-snug">“{line.text}”</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="nb bg-card p-3"><p className="text-[10px] font-bold uppercase tracking-widest text-coral">How it usually comes out</p><p className="mt-1 text-sm text-muted-foreground">{line.usually}</p></div><div className="nb bg-card p-3"><p className="text-[10px] font-bold uppercase tracking-widest text-mint">What you're aiming for</p><p className="mt-1 text-sm text-muted-foreground">{line.intended}</p></div></div></NBPanel>
     {!done && <ResponsePlanner title={finishedPass ? `Before the ${pass} take — think it through` : "Before you speak — think it through"} onGoalPick={setExperience} />}
     {experience && <div className="nb bg-mint px-4 py-3 text-sm"><span className="font-bold">Your chosen experience: </span>{experience}. The feedback below shows how well your delivery matched it.</div>}
-    {!done && <NBPanel className="p-6"><div className="flex items-stretch gap-2">{order.map((passKey, i) => { const analysis = passKey === "reflex" ? reflexAnalysis : intendedAnalysis; return <button key={passKey} type="button" disabled={!analysis} onClick={() => analysis && setPreviewPass(passKey)} className={cn("flex-1 border-2 border-ink px-3 py-2 text-center text-[10px] font-bold uppercase tracking-widest", analysis ? "bg-mint nb-press" : pass === passKey ? "bg-sun" : "bg-card text-muted-foreground")} aria-pressed={previewPass === passKey}>{analysis ? "✓ " : ""}{i + 1} · {passKey === "reflex" ? "Reflex take" : "Intended take"}</button>; })}</div><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><NBBadge className={pass === "reflex" ? "bg-coral text-ink" : "bg-mint text-ink"}>Pass {order.indexOf(pass) + 1} of 2 — {pass === "reflex" ? "as it usually comes out" : "as you mean it"}</NBBadge><span className="text-xs text-muted-foreground">{line.targetHint}</span></div>{capture.state === "idle" && <div className="mt-5 flex justify-center"><NBButton onClick={startPass} variant={pass === "reflex" ? "coral" : "mint"}>Say it — {pass} take</NBButton></div>}{capture.state === "recording" && <div className="mt-5 flex flex-col items-center gap-3"><div className="font-display text-4xl tabular-nums">{Math.floor(capture.elapsedMs / 1000)}s</div><NBButton onClick={finishPass} variant="ink">Done — score this take</NBButton></div>}{capture.state === "analyzing" && <div className="mt-5 text-center font-display">Analyzing…</div>}{/* Preview frames block the mic entirely — say so before the
+    {!done && <NBPanel className="p-6"><div className="flex items-stretch gap-2" role="list" aria-label="Take progress">{order.map((passKey, i) => { const analysis = passKey === "reflex" ? reflexAnalysis : intendedAnalysis; return <div key={passKey} role="listitem" aria-current={pass === passKey ? "step" : undefined} className={cn("flex-1 border-2 border-ink px-3 py-2 text-center text-[10px] font-bold uppercase tracking-widest", analysis ? "bg-mint" : pass === passKey ? "bg-sun" : "bg-card text-muted-foreground")}>{analysis ? "✓ " : ""}{i + 1} · {passKey === "reflex" ? "Reflex take" : "Intended take"}</div>; })}</div><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><NBBadge className={pass === "reflex" ? "bg-coral text-ink" : "bg-mint text-ink"}>Pass {order.indexOf(pass) + 1} of 2 — {pass === "reflex" ? "as it usually comes out" : "as you mean it"}</NBBadge><span className="text-xs text-muted-foreground">{line.targetHint}</span></div>{/* The start button must survive take 1: after scoring, the hook sits in
+    "done", not "idle" — gating on idle alone dead-ended the drill here
+    with no way to record the second take. */}
+{(capture.state === "idle" || capture.state === "done") && <div className="mt-5 flex flex-col items-center gap-3">{capture.state === "done" && finishedPass && <NBBadge className="bg-mint text-ink">✓ {finishedPass === "reflex" ? "Reflex" : "Intended"} take scored — one more to go</NBBadge>}<div className="flex justify-center"><NBButton onClick={startPass} variant={pass === "reflex" ? "coral" : "mint"}>Say it — {pass} take</NBButton></div></div>}{capture.state === "recording" && <div className="mt-5 w-full"><div className="h-3 w-full nb overflow-hidden bg-card"><div className={cn("h-full transition-[width] duration-300", PACE_BAR_CLASS[pace])} style={{ width: `${pacePct(capture.elapsedMs, TRANSLATE_TAKE_TARGET_MS)}%` }} /></div><div className="mt-1.5 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground"><span className="flex items-center gap-1.5"><Target className="size-3.5" /> {PACE_HINTS[pace]}</span><span>{formatClock(capture.elapsedMs)} / {formatClock(TRANSLATE_TAKE_TARGET_MS)}</span></div><p className="mt-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">Live pitch · {capture.livePitchHz ? `${Math.round(capture.livePitchHz)} Hz` : "listening for you…"}{capture.level < 0.06 && capture.elapsedMs > 3000 && " · we can barely hear you — move closer"}</p><div className="mt-5 flex justify-center"><NBButton onClick={finishPass} variant="ink"><Square className="size-4" /> Done — score it</NBButton></div></div>}{capture.state === "analyzing" && <div className="mt-5 text-center font-display">Analyzing…</div>}{/* Preview frames block the mic entirely — say so before the
     first failed take, not after. */}
-<PreviewMicHint className="mt-5" />{capture.error && <MicError message={capture.error} />}{capture.state === "recording" && capture.micMuted && <p className="nb mt-5 bg-sun px-3 py-2 text-sm font-medium">The mic reports itself muted — check your system's mic privacy setting.</p>}<MicPicker activeLabel={capture.activeDeviceLabel} className="mt-5" />{previewPass && <PlaybackPanel label={previewLabel} url={previewUrl} />}</NBPanel>}
+<PreviewMicHint className="mt-5" />{capture.error && <MicError message={capture.error} />}{capture.state === "recording" && capture.micMuted && <p className="nb mt-5 bg-sun px-3 py-2 text-sm font-medium">The mic reports itself muted — check your system's mic privacy setting.</p>}<MicPicker activeLabel={capture.activeDeviceLabel} className="mt-5" />        {/* Ratings appear after EVERY take, not just after both — the
+            checker panel alone after take 1 read as "it doesn't rate". */}
+        {!done && (reflexAnalysis || intendedAnalysis) && <div className="mt-5 flex flex-col gap-4"><p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Your take — rated</p>{(["reflex", "intended"] as Pass[]).filter((p) => (p === "reflex" ? reflexAnalysis : intendedAnalysis)).map((p) => <TakeResult key={p} pass={p} analysis={(p === "reflex" ? reflexAnalysis : intendedAnalysis)!} url={p === "reflex" ? reflexUrl : intendedUrl} openFactor={openFactor} setOpenFactor={setOpenFactor} />)}</div>}</NBPanel>}
     {done && delta && <Results experience={experience} analysisByPass={{ reflex: reflexAnalysis!, intended: intendedAnalysis! }} audioByPass={{ reflex: reflexUrl, intended: intendedUrl }} delta={delta} onRestart={restart} onNext={nextLine} openFactor={openFactor} setOpenFactor={setOpenFactor} />}
   </div></AppShell>;
 }
