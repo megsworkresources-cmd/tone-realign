@@ -17,8 +17,10 @@ import {
   isDeadTake,
   isPeak,
   isSpeechFrame,
+  MAX_SILENCE_RECOVERIES,
   RECALIBRATE_EVERY,
   SOFTWARE_GAIN,
+  shouldRecoverSilence,
   updateNoiseFloor,
 } from "@/lib/capture-gain";
 
@@ -473,8 +475,8 @@ export function useToneCapture(): UseToneCapture {
       }
       // Recovery for takes that STILL read silence: swap in a fresh source
       // node (the iOS bug can detach the first one) and resume again.
-      // Wall-clock (not frame-counted) so 60Hz and 120Hz displays behave
-      // the same; at most twice per take, 2.5s of dead signal apart.
+      // The decision (when, how often) lives in capture-gain.ts as a pure,
+      // unit-tested function; the hook just applies it.
       let recoveries = 0;
       let lastNonZeroAt = performance.now();
       const recoverGraph = () => {
@@ -614,12 +616,11 @@ export function useToneCapture(): UseToneCapture {
         // Silence watchdog: all-zero frames mean the browser is handing us
         // a dead graph, not a quiet room — real rooms have nonzero noise.
         // Recover the graph instead of scoring a take we know is empty.
-        if (sum === 0) {
-          if (now - lastNonZeroAt >= 2500 && recoveries < 2) {
-            lastNonZeroAt = now;
-            recoverGraph();
-          }
-        } else {
+        if (shouldRecoverSilence(sum, lastNonZeroAt, now, recoveries)) {
+          lastNonZeroAt = now;
+          recoveries += 1;
+          recoverGraph();
+        } else if (sum !== 0) {
           lastNonZeroAt = now;
         }
         windowMaxRawRef.current = Math.max(windowMaxRawRef.current, rms);

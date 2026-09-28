@@ -103,10 +103,36 @@ export function calibrateInputGain(currentGain: number, maxRawRms: number): numb
   const loudestGained = gainedVolume(maxRawRms, currentGain);
   if (loudestGained >= SPEECH_FLOOR) return currentGain;
   return Math.min(MAX_INPUT_GAIN, currentGain * 2);
-}
-
-/** Raw amplitude below this, nothing will bring it to speech level. */
+}/** Raw amplitude below this, nothing will bring it to speech level. */
 export const HOPELESS_RAW_FLOOR = SPEECH_FLOOR / (SOFTWARE_GAIN * MAX_INPUT_GAIN);
+
+/** Consecutive-dead-signal duration after which the capture loop treats the
+ * graph itself as dead (not a quiet room) and rebuilds it. Wall-clock, so
+ * 60Hz and 120Hz displays behave identically. */
+export const SILENCE_RECOVERY_AFTER_MS = 2500;
+
+/** How many graph rebuilds a single take may attempt. */
+export const MAX_SILENCE_RECOVERIES = 2;
+
+/**
+ * The silence watchdog's decision, as a pure function: should the capture
+ * loop rebuild the mic graph right now?
+ *
+ * All-zero signal means the browser is handing us a dead graph, not a quiet
+ * room — real rooms have nonzero noise. Nonzero signal resets the clock;
+ * recovery fires once per SILENCE_RECOVERY_AFTER_MS of continuous zeros and
+ * stops after MAX_SILENCE_RECOVERIES attempts.
+ */
+export function shouldRecoverSilence(
+  sum: number,
+  lastNonZeroAtMs: number,
+  nowMs: number,
+  recoveryCount: number,
+): boolean {
+  if (sum !== 0) return false;
+  if (recoveryCount >= MAX_SILENCE_RECOVERIES) return false;
+  return nowMs - lastNonZeroAtMs >= SILENCE_RECOVERY_AFTER_MS;
+}
 
 /** Why a take failed to produce speech-level frames. */
 export type DeadTakeReason =
