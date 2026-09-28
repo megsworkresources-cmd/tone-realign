@@ -15,9 +15,12 @@ import {
   isSpeechLevel,
   MAX_INPUT_GAIN,
   MAX_RECORDED_VOLUME,
+  MAX_SILENCE_RECOVERIES,
   MIN_SPEECH_FRAMES,
+  shouldRecoverSilence,
   SOFTWARE_GAIN,
   SPEECH_FLOOR,
+  SILENCE_RECOVERY_AFTER_MS,
 } from "./capture-gain";
 
 /** Build analyzer frames from raw RMS values through the real gain path. */
@@ -242,5 +245,33 @@ describe("dead-take verdicts", () => {
     // …and gives the phone-specific fix, not the in-app-picker one.
     expect(msg).toMatch(/audio-route|unpair/i);
     expect(msg).not.toContain("switch it below");
+  });
+});
+
+describe("shouldRecoverSilence", () => {
+  const start = 1_000;
+
+  test("never fires on nonzero signal — a quiet room is not a dead graph", () => {
+    expect(shouldRecoverSilence(0.5, start, start + 60_000, 0)).toBe(false);
+    expect(shouldRecoverSilence(1e-12, start, start + 60_000, 0)).toBe(false);
+  });
+
+  test("waits the full dead-signal window before rebuilding", () => {
+    expect(shouldRecoverSilence(0, start, start + SILENCE_RECOVERY_AFTER_MS - 1, 0)).toBe(false);
+    expect(shouldRecoverSilence(0, start, start + SILENCE_RECOVERY_AFTER_MS, 0)).toBe(true);
+  });
+
+  test("stops after the recovery cap", () => {
+    expect(
+      shouldRecoverSilence(0, start, start + SILENCE_RECOVERY_AFTER_MS, MAX_SILENCE_RECOVERIES),
+    ).toBe(false);
+  });
+
+  test("a rebuilt graph buys a fresh window, not an instant next rebuild", () => {
+    // recoverGraph resets lastNonZeroAt = now, so an immediately-following
+    // frame must not re-trigger even with recoveries still under the cap.
+    const rebuiltAt = start + SILENCE_RECOVERY_AFTER_MS;
+    expect(shouldRecoverSilence(0, rebuiltAt, rebuiltAt + 1, 1)).toBe(false);
+    expect(shouldRecoverSilence(0, rebuiltAt, rebuiltAt + SILENCE_RECOVERY_AFTER_MS, 1)).toBe(true);
   });
 });

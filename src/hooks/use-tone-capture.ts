@@ -618,8 +618,7 @@ export function useToneCapture(): UseToneCapture {
         // Recover the graph instead of scoring a take we know is empty.
         if (shouldRecoverSilence(sum, lastNonZeroAt, now, recoveries)) {
           lastNonZeroAt = now;
-          recoveries += 1;
-          recoverGraph();
+          recoverGraph(); // owns the recoveries counter
         } else if (sum !== 0) {
           lastNonZeroAt = now;
         }
