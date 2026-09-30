@@ -686,7 +686,6 @@ function SaveRow({
   const generateTakeAudioUploadUrl = useMutation(api.sessions.generateTakeAudioUploadUrl);
   const attachTakeAudio = useMutation(api.sessions.attachTakeAudio);
   const markTake = useMutation(api.dailyLog.mark);
-  const addBonus = useMutation(api.dailyLog.addBonus);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<Id<"practiceSessions"> | null>(null);
   /** Where the listen-back upload landed — shown honestly, never silent. */
@@ -697,13 +696,10 @@ function SaveRow({
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Credit the daily checklist + a personal-best bonus when earned.
+      // Credit the daily checklist.
       try {
         await markTake({ action: "take" });
       } catch { /* checklist credit is best-effort */ }
-      if (analysis.overallScore >= (drillStats?.bestScore ?? 0)) {
-        addBonus({ amount: 25 }).catch(() => {});
-      }
       const sessionId = await saveSession({
         drill: drillId,
         durationMs: Math.round(elapsedMs),

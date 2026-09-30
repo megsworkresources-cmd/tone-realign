@@ -35,7 +35,7 @@ const schema = defineSchema(
       // entitlements module after checkout (see convex/entitlements.ts).
       coachUnlocked: v.optional(v.boolean()),
 
-      // Lifetime Read-the-Room scenarios answered (drives achievements).
+      // Lifetime Read-the-Room scenarios answered.
       quizCount: v.optional(v.number()),
     }).index("email", ["email"]), // index for the email. do not remove or modify
 

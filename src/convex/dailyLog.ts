@@ -99,7 +99,7 @@ export const addBonus = mutation({
 
 /**
  * One Read-the-Room scenario answered. Counts toward the lifetime quiz
- * total (achievements), plus the daily checklist credit once per day.
+ * total, plus the daily checklist credit once per day.
  */
 export const countQuizScenario = mutation({
   args: {},
@@ -155,8 +155,8 @@ export const today = query({
 
 /**
  * Progression stats: lifetime XP from daily log + aggregate practice/quiz/
- * reframe/reset counts. One query so the header ring and achievement shelf
- * don't each re-walk the database.
+ * reframe/reset counts. One query so the header ring doesn't re-walk
+ * the database.
  */
 export const progression = query({
   args: {},

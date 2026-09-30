@@ -1,5 +1,5 @@
 /**
- * The progression engine — XP, levels, achievements, and the daily checklist.
+ * The progression engine — XP, levels, and the daily checklist.
  * Pure logic: no React, no Convex. The server computes the same numbers with
  * these same constants, so the UI can never drift from the backend.
  */
@@ -89,99 +89,4 @@ export function levelInfo(totalXp: number): LevelInfo {
     nextLabel: next?.label,
     maxed: !next,
   };
-}
-
-// ---- Achievements ----
-
-export interface AchievementStats {
-  totalSessions: number;
-  totalMinutes: number;
-  bestOverall: number;
-  totalQuiz: number;
-  totalReframes: number;
-  totalResets: number;
-  streakDays: number;
-  /** Distinct drills attempted. */
-  drillsTried: number;
-  /** Total drills in the catalog. */
-  drills: number;
-}
-
-export interface AchievementDef {
-  id: string;
-  name: string;
-  detail: string;
-  tier: "bronze" | "silver" | "gold";
-  test: (s: AchievementStats) => boolean;
-}
-
-export const ACHIEVEMENTS: AchievementDef[] = [
-  {
-    id: "first-word",
-    name: "First Word",
-    detail: "Record your very first take",
-    tier: "bronze",
-    test: (s) => s.totalSessions >= 1,
-  },
-  {
-    id: "full-circuit",
-    name: "Full Circuit",
-    detail: "Try every drill in the gym",
-    tier: "gold",
-    test: (s) => s.drills > 0 && s.drillsTried >= s.drills,
-  },
-  {
-    id: "week-streak",
-    name: "Seven Straight",
-    detail: "Practice 7 days in a row",
-    tier: "silver",
-    test: (s) => s.streakDays >= 7,
-  },
-  {
-    id: "high-score",
-    name: "Personal Record",
-    detail: "Score 85+ on any drill",
-    tier: "silver",
-    test: (s) => s.bestOverall >= 85,
-  },
-  {
-    id: "room-reader",
-    name: "Room Reader",
-    detail: "Work through 10 Read-the-Room scenarios",
-    tier: "bronze",
-    test: (s) => s.totalQuiz >= 10,
-  },
-  {
-    id: "reframer",
-    name: "The Reframer",
-    detail: "Reframe 5 triggers with the lab",
-    tier: "silver",
-    test: (s) => s.totalReframes >= 5,
-  },
-  {
-    id: "deep-breaths",
-    name: "Deep Breaths",
-    detail: "Complete 10 full resets",
-    tier: "bronze",
-    test: (s) => s.totalResets >= 10,
-  },
-  {
-    id: "ten-takes",
-    name: "Ten Takes Deep",
-    detail: "Log 10 practice takes",
-    tier: "bronze",
-    test: (s) => s.totalSessions >= 10,
-  },
-  {
-    id: "sixty-minutes",
-    name: "The Sixty",
-    detail: "Sixty total minutes of practice",
-    tier: "gold",
-    test: (s) => s.totalMinutes >= 60,
-  },
-];
-
-/** Ids of every achievement the stats satisfy. */
-export function earnedAchievements(stats: AchievementStats): string[] {
-  return ACHIEVEMENTS.filter((a) => a.test(stats)).map((a) => a.id);
 }

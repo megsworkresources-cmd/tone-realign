@@ -16,8 +16,8 @@ import {
   MessagesSquare,
   Mic,
   Sparkles,
+  Target,
   Timer,
-  Trophy,
   Lock,
 } from "lucide-react";
 import { useQuery } from "convex/react";
@@ -122,7 +122,7 @@ export default function Gym() {
                           <Timer className="size-3.5" /> {drill.seconds}s
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <Trophy className="size-3.5" />
+                          <Target className="size-3.5" />
                           {s ? `Best ${s.bestScore}` : "Untried"}
                         </span>
                       </div>

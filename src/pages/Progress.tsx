@@ -1,17 +1,15 @@
 import { NBBadge, NBPanel, NBMeter } from "@/components/nb";
 import { AppShell } from "@/components/AppShell";
-import { ACHIEVEMENTS, levelInfo, type AchievementStats } from "@/lib/gamify";
+import { levelInfo } from "@/lib/gamify";
 import { TRENDS_UNLOCK, buildToneTrends, isUnlocked, type UnlockStats } from "@/lib/unlocks";
 import { TONE_LABELS } from "@/lib/tone-analyzer";
 import { DRILLS } from "@/lib/drills";
 import { api } from "@/convex/_generated/api";
 import {
   History,
-  Lock,
   Minus,
   TrendingDown,
   TrendingUp,
-  Trophy,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { Link } from "react-router";
@@ -33,29 +31,14 @@ export default function Progress() {
   const level = levelInfo(progression?.totalXp ?? 0);
   const bestByDrill = new Map((drillStats ?? []).map((s) => [s.drill, s]));
 
-  const stats: AchievementStats = {
-    totalSessions: progression?.totalSessions ?? 0,
-    totalMinutes: progression?.totalMinutes ?? 0,
-    bestOverall: progression?.bestOverall ?? 0,
-    totalQuiz: progression?.totalQuiz ?? 0,
-    totalReframes: progression?.totalReframes ?? 0,
-    totalResets: progression?.totalResets ?? 0,
-    streakDays: progression?.streakDays ?? 0,
-    drillsTried: progression?.drillsTried ?? 0,
-    drills: progression?.drills ?? DRILLS.length,
-  };
-
   const unlockStats: UnlockStats = {
-    takes: stats.totalSessions,
+    takes: progression?.totalSessions ?? 0,
     level: level.level,
-    drillsTried: stats.drillsTried,
-    bestScore: stats.bestOverall,
-    streak: stats.streakDays,
+    drillsTried: progression?.drillsTried ?? 0,
+    bestScore: progression?.bestOverall ?? 0,
+    streak: progression?.streakDays ?? 0,
   };
   const trendsUnlocked = isUnlocked(TRENDS_UNLOCK, unlockStats);
-  const earned = new Set(
-    ACHIEVEMENTS.filter((a) => a.test(stats)).map((a) => a.id),
-  );
 
   return (
     <AppShell active="progress">
@@ -69,7 +52,7 @@ export default function Progress() {
             Proof it's <span className="italic text-sun">working</span>
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            Trends, trophies, and every take — the long view of the training.
+            Trends and every take — the long view of the training.
           </p>
         </section>
 
@@ -81,58 +64,10 @@ export default function Progress() {
           <NBPanel className="bg-card/70 p-5">
             <p className="text-sm text-muted-foreground">
               <span className="font-bold text-ink">Tone trends unlock at 5 takes</span>{" "}
-              — direction per factor needs history to be honest. You're at{" "}
-              {stats.totalSessions}.
+              — you're at {progression?.totalSessions ?? 0}.
             </p>
           </NBPanel>
         )}
-
-        {/* Trophy shelf — collapsed by default */}
-        <details className="nb group bg-card nb-shadow">
-          <summary className="flex cursor-pointer list-none items-center justify-between border-b-2 border-ink px-6 py-4 [&::-webkit-details-marker]:hidden">
-            <div className="flex items-center gap-2 font-display text-xl">
-              <Trophy className="size-5" /> Trophy shelf
-              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                {earned.size} of {ACHIEVEMENTS.length} earned
-              </span>
-            </div>
-            <span
-              aria-hidden
-              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-transform group-open:rotate-180"
-            >
-              open ▼
-            </span>
-          </summary>
-          <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
-            {ACHIEVEMENTS.map((a) => {
-              const has = earned.has(a.id);
-              return (
-                <div
-                  key={a.id}
-                  className={`nb flex items-start gap-3 p-3 ${has ? "bg-card" : "bg-card/50"}`}
-                >
-                  <span
-                    className={`nb flex size-9 shrink-0 items-center justify-center ${
-                      has
-                        ? a.tier === "gold"
-                          ? "bg-sun"
-                          : a.tier === "silver"
-                            ? "bg-mint"
-                            : "bg-coral"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {has ? <Trophy className="size-4" /> : <Lock className="size-4" />}
-                  </span>
-                  <span>
-                    <span className="block text-sm font-bold">{a.name}</span>
-                    <span className="block text-xs text-muted-foreground">{a.detail}</span>
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </details>
 
         {/* Recent takes */}
         <section className="nb bg-card nb-shadow">
