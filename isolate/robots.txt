@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /gym
+Disallow: /calm
+Disallow: /progress
+Disallow: /practice/
+Disallow: /reframe
+Disallow: /quiz
+Disallow: /translate
+Disallow: /auth
+
+Sitemap: https://shiftedtone.com/sitemap.xml
