@@ -88,7 +88,7 @@ export function ResponsePlanner({
       {/* Message kinds — step four made concrete */}
       <div className="border-t-2 border-ink bg-secondary/60 px-5 py-5">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          What kind of message is this? Tap one:
+          What kind of message is this?
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {MESSAGE_KINDS.map((kind) => {
