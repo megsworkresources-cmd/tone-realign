@@ -1,6 +1,6 @@
 import { NBButton, NBPanel } from "@/components/nb";
 import { AppShell } from "@/components/AppShell";
-import { DRILLS } from "@/lib/drills";
+import { DRILL_GROUPS, drillsInGroup } from "@/lib/drills";
 import { getAccessibleDailyChallenge } from "@/lib/daily";
 import { levelInfo } from "@/lib/gamify";
 import {
@@ -21,7 +21,8 @@ import {
   Lock,
 } from "lucide-react";
 import { useQuery } from "convex/react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
+import { cn } from "@/lib/utils";
 
 /**
  * /gym — the training floor. One job: pick a drill and do it. The daily
@@ -58,6 +59,12 @@ export default function Gym() {
     const gate = UNLOCKABLE_DRILLS.find((u) => u.id === drillId);
     return !gate || isUnlocked(gate, unlockStats);
   });
+  // One drill group per view — ?group= keeps the page short and the
+  // choice simple; an unknown or missing group falls back to the first.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requested = searchParams.get("group");
+  const group = DRILL_GROUPS.find((g) => g.id === requested) ?? DRILL_GROUPS[0];
+  const drills = drillsInGroup(group.id);
 
   return (
     <AppShell active="gym">
@@ -86,18 +93,36 @@ export default function Gym() {
           </div>
         </section>
 
-        {/* The gym — every drill, honest locks */}
+        {/* The gym — one focused group at a time, honest locks */}
         <section>
           <div className="flex items-center justify-between">
             <h2 className="font-display text-2xl">
               The <span className="italic text-coral">gym</span>
             </h2>
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Mic on. One honest take at a time.
+              Pick one. Do it once.
             </p>
           </div>
+          <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="Drill groups">
+            {DRILL_GROUPS.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                role="tab"
+                aria-selected={g.id === group.id}
+                onClick={() => setSearchParams(g.id === group.id ? {} : { group: g.id })}
+                className={cn(
+                  "nb nb-press px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest",
+                  g.id === group.id ? "bg-ink text-paper" : "bg-card text-ink",
+                )}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">{group.blurb}</p>
           <div className="mt-5 grid gap-5 md:grid-cols-3">
-            {DRILLS.map((drill) => {
+            {drills.map((drill) => {
               const s = bestByDrill.get(drill.id);
               const gate = UNLOCKABLE_DRILLS.find((u) => u.id === drill.id);
               const open = !gate || isUnlocked(gate, unlockStats);

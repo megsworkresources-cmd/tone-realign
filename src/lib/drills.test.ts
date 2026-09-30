@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DRILLS, getDrill, REFRAME_SCENARIOS } from "./drills";
+import { DRILLS, DRILL_GROUPS, drillsInGroup, getDrill, REFRAME_SCENARIOS } from "./drills";
 import { DAILY_ANGLES, getDailyChallenge } from "./daily";
 
 describe("drill catalog curation", () => {
@@ -56,5 +56,35 @@ describe("drill catalog curation", () => {
       expect(getDrill(c.drill.id)).toBeDefined();
       expect(DAILY_ANGLES).toContain(c.angle);
     }
+  });
+});
+
+describe("drill groups", () => {
+  test("every drill belongs to exactly one group — no orphans, no doubles", () => {
+    const grouped = DRILL_GROUPS.flatMap((g) => g.drillIds);
+    expect(new Set(grouped).size).toBe(grouped.length);
+    expect([...grouped].sort()).toEqual([...DRILLS.map((d) => d.id)].sort());
+  });
+
+  test("each group resolves to real drills in catalog order", () => {
+    for (const g of DRILL_GROUPS) {
+      const drills = drillsInGroup(g.id);
+      expect(drills.map((d) => d.id)).toEqual(g.drillIds);
+      for (const d of drills) {
+        expect(d.prompt.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  test("groups are small enough to fit one screen — that's the point", () => {
+    for (const g of DRILL_GROUPS) {
+      expect(g.drillIds.length).toBeLessThanOrEqual(3);
+      expect(g.blurb.length).toBeGreaterThan(0);
+    }
+    expect(DRILL_GROUPS.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("unknown group id yields an empty list (Gym falls back to group 0)", () => {
+    expect(drillsInGroup("nope")).toEqual([]);
   });
 });

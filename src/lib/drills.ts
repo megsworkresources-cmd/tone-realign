@@ -11,6 +11,50 @@ export interface Drill {
   seconds: number; // suggested take length
 }
 
+/**
+ * Drill groups — the gym shows one group per page so eight cards never
+ * pile up in a single scroll. Order = the order the groups appear in.
+ */
+export interface DrillGroup {
+  id: string;
+  label: string;
+  blurb: string;
+  drillIds: string[];
+}
+
+export const DRILL_GROUPS: DrillGroup[] = [
+  {
+    id: "calm",
+    label: "Stay calm",
+    blurb: "Keep your voice level when the room heats up",
+    drillIds: ["steady-ground", "unruffled", "de-escalate"],
+  },
+  {
+    id: "boundaries",
+    label: "Hold your ground",
+    blurb: "Say no and set limits without going cold",
+    drillIds: ["nice-no", "firm-clear"],
+  },
+  {
+    id: "connect",
+    label: "Reach people",
+    blurb: "Warmth, praise, and repairing after a miss",
+    drillIds: ["warm-open", "praise-clear", "recovery"],
+  },
+];
+
+/** The drills in one group, in catalog order. Throws if an id is stale —
+ * better a loud test failure than a silently missing drill. */
+export function drillsInGroup(groupId: string): Drill[] {
+  const group = DRILL_GROUPS.find((g) => g.id === groupId);
+  if (!group) return [];
+  return group.drillIds.map((id) => {
+    const drill = getDrill(id);
+    if (!drill) throw new Error(`Drill group "${groupId}" references unknown drill "${id}"`);
+    return drill;
+  });
+}
+
 export const DRILLS: Drill[] = [
   {
     id: "steady-ground",

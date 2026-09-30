@@ -3,7 +3,6 @@ import { AppShell, LevelRing } from "@/components/AppShell";
 import { DailyChecklist } from "@/components/DailyChecklist";
 import { dailyLabel, getAccessibleDailyChallenge } from "@/lib/daily";
 import { GROUNDING_EXERCISES } from "@/lib/grounding";
-import { arcDaysLeft, arcStageFor } from "@/lib/arc";
 import { levelInfo } from "@/lib/gamify";
 import {
   UNLOCKABLE_DRILLS,
@@ -159,8 +158,8 @@ export default function Dashboard() {
                 </div>
               </div>
               <p className="text-sm text-ink/70">
-                {daily.drill.seconds} seconds, mic on. The full catalog and
-                your bests live on the gym floor.
+                About {daily.drill.seconds} seconds. Your microphone will
+                turn on when you start.
               </p>
               <div>
                 <Link to={`/practice/${daily.drill.id}`}>
@@ -176,9 +175,6 @@ export default function Dashboard() {
 
         {/* Next unlock — the one concrete thing to chase next */}
         {next && <NextUnlockPanel next={next} />}
-
-        {/* 21-day arc — where you are in the reprogramming program */}
-        <ArcPanel streakDays={stats.streakDays} />
 
         {/* Progression center */}
         <section id="progress" className="grid gap-6 lg:grid-cols-2">
@@ -288,68 +284,5 @@ function NextUnlockPanel({ next }: { next: NextUnlock }) {
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * The 21-day reprogramming arc: your streak maps onto a three-week
- * program (floor → range → translation), so coming back isn't just a
- * checklist — it's a curriculum with a finish line.
- */
-function ArcPanel({ streakDays }: { streakDays: number }) {
-  const day = Math.max(1, streakDays);
-  const stage = arcStageFor(day);
-  const left = arcDaysLeft(day);
-  const dayPct = Math.min(100, Math.round((day / 21) * 100));
-
-  return (
-    <NBPanel className="overflow-hidden">
-      <div className="flex items-center justify-between border-b-2 border-ink bg-mint px-5 py-3">
-        <div className="font-display">The 21-day reprogramming arc</div>
-        <span className="nb inline-flex items-center bg-ink px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-paper">
-          {left > 0 ? `${left} day${left === 1 ? "" : "s"} to go` : "Arc complete — keep the streak"}
-        </span>
-      </div>
-      <div className="p-5">
-        <div className="flex flex-wrap items-center gap-5">
-          <div className="nb flex size-14 shrink-0 flex-col items-center justify-center bg-card">
-            <span className="font-display text-xl leading-none">{day}</span>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">day</span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-display text-lg">{stage.name}</span>
-              <span className="text-xs text-muted-foreground">· {stage.promise}</span>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              <span className="font-bold text-ink">Today's move:</span> {stage.move}
-            </p>
-          </div>
-        </div>
-
-        {/* Stage track: three blocks across 21 days */}
-        <div className="mt-4 flex gap-1" aria-hidden>
-          {Array.from({ length: 21 }).map((_, i) => {
-            const d = i + 1;
-            const s = arcStageFor(d);
-            const isStage = s.id === stage.id;
-            const isDone = d <= day;
-            return (
-              <span
-                key={i}
-                title={`Day ${d} — ${s.name}`}
-                className={`h-3 flex-1 border border-ink ${
-                  isDone ? (isStage ? "bg-ink" : "bg-muted") : "bg-card"
-                }`}
-              />
-            );
-          })}
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">{stage.why}</p>
-        <div className="mt-3 h-1.5 bg-muted">
-          <div className="h-full bg-ink" style={{ width: `${dayPct}%` }} />
-        </div>
-      </div>
-    </NBPanel>
   );
 }
