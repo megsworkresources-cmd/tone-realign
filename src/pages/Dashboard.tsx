@@ -97,7 +97,7 @@ export default function Dashboard() {
             </h1>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <NBStat label="Total XP" value={progression?.totalXp ?? 0} className="bg-sun" />
+            <NBStat label="Total points" value={progression?.totalXp ?? 0} className="bg-sun" />
             <NBStat label="Takes" value={stats.totalSessions} />
             <NBStat label="Streak" value={stats.streakDays} suffix="d" className="bg-mint" />
             <NBStat
@@ -182,7 +182,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between border-b-2 border-ink px-5 py-3">
               <div className="font-display text-xl">Progression</div>
               <span className="nb inline-flex items-center bg-coral px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest">
-                {level.maxed ? "Top tier" : `${level.xpToNext} XP to ${level.nextLabel}`}
+                {level.maxed ? "Top level" : `${level.xpToNext} points to "${level.nextLabel}"`}
               </span>
             </div>
             <div className="flex items-center gap-5 p-5">
@@ -193,7 +193,7 @@ export default function Dashboard() {
                 <div className="font-display text-2xl">{level.label}</div>
                 <div className="mt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                   {level.into}
-                  {level.needed > 0 ? ` / ${level.needed}` : ""} XP this level
+                  {level.needed > 0 ? ` of ${level.needed}` : ""} points earned here
                 </div>
                 <div className="mt-3 flex h-4 gap-[3px]" aria-hidden>
                   {Array.from({ length: 10 }).map((_, i) => (
@@ -217,7 +217,7 @@ export default function Dashboard() {
                   Last 7 days
                 </p>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {progression?.todayXp ?? 0} XP today
+                  {progression?.todayXp ?? 0} points today
                 </p>
               </div>
               <div className="mt-3 flex h-24 items-end gap-2">
@@ -237,7 +237,7 @@ export default function Dashboard() {
             </div>
             <div className="flex flex-1 items-center justify-between border-t-2 border-ink p-4">
               <p className="text-xs text-muted-foreground">
-                Trends, trophies, and every take live on your record.
+Your full history lives on the Progress page.
               </p>
               <Link
                 to="/progress"

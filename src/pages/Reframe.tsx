@@ -199,10 +199,8 @@ export default function Reframe() {
 
           <div className="p-6">
             <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-              A narrow perception says there's one obvious reading of what
-              happened. There isn't — and practicing the other readings is
-              where the freedom is. Flip through the lenses; keep whatever
-              makes your shoulders drop.
+              The same moment can be read in more than one way. Try each
+              lens below — keep whichever one helps you most.
             </p>
 
             {/* Lens tabs */}
@@ -232,7 +230,7 @@ export default function Reframe() {
                 className="mt-5"
               >
                 <div className={`nb inline-block px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${lens.color}`}>
-                  Through {lens.name}
+                  {lens.name}
                 </div>
                 <p className="mt-3 text-base leading-relaxed">{lens.idea}</p>
                 <p className="nb mt-3 bg-secondary p-3 font-display text-lg leading-snug">

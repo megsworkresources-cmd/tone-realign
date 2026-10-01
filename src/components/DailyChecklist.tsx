@@ -52,7 +52,7 @@ export function DailyChecklist({ todayDrillId }: { todayDrillId: string }) {
         {/* Sweep bonus meter */}
         <div className="nb flex items-center justify-between gap-3 bg-secondary px-3 py-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            All four → +40 XP bonus
+            Do all four for a +40 bonus
           </span>
           <div className="flex gap-1" aria-hidden>
             {DAILY_ACTIONS.map((a) => (
@@ -101,7 +101,7 @@ export function DailyChecklist({ todayDrillId }: { todayDrillId: string }) {
                     done ? "text-ink/70" : "text-muted-foreground"
                   }`}
                 >
-                  {done ? "+done" : `+${action.xp} XP`}
+                  {done ? "Done" : `+${action.xp} points`}
                 </span>
               </button>
             );
