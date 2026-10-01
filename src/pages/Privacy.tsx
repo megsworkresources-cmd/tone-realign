@@ -6,10 +6,10 @@ import { Link } from "react-router";
 
 /**
  * Where users ask "what happens to my voice?" — and the single place the
- * app owner keeps the answers honest. Update SUPPORT_EMAIL to your real
- * address before launch; every deletion request routes there.
+ * app owner keeps the answers honest. Deletion requests and questions
+ * route to this inbox.
  */
-const SUPPORT_EMAIL = "support@example.com";
+const SUPPORT_EMAIL = "shiftedtone.support@gmail.com";
 
 const SECTIONS = [
   {
