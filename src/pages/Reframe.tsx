@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useAction, useMutation } from "convex/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export default function Reframe() {
@@ -28,6 +28,24 @@ export default function Reframe() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // The coached response must be visible the moment it lands — without
+  // this, it renders two panels down and users think the button did nothing.
+  const resultRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [result]);
+
+  // "Use as my goal" fills the goal field below the fold — scroll to it and
+  // flash it so the tap visibly did something.
+  const goalRef = useRef<HTMLInputElement>(null);
+  const applyGoal = (g: string) => {
+    setGoal(g);
+    requestAnimationFrame(() => {
+      goalRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      goalRef.current?.focus({ preventScroll: true });
+    });
+  };
 
   const reframeAction = useAction(api.ai.reframe);
   const saveReframe = useMutation(api.reframes.save);
@@ -115,7 +133,7 @@ export default function Reframe() {
               title="Frame it before you write it"
               intro="Answer these four and the response almost writes itself — you'll know what their move was, what the real message is, and what you want them to feel afterward."
               accent="bg-secondary"
-              onGoalPick={(g) => setGoal(g)}
+              onGoalPick={applyGoal}
             />
           </div>
 
@@ -159,6 +177,7 @@ export default function Reframe() {
                 Your goal (optional)
               </label>
               <input
+                ref={goalRef}
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
                 placeholder="like: stay calm, hold my ground, fix it without groveling"
@@ -185,6 +204,46 @@ export default function Reframe() {
             </div>
           </div>
         </NBPanel>
+
+        {/* Coached response sits DIRECTLY under the form — the user just
+            tapped the button, so the answer must be where their eyes are,
+            not two panels down. */}
+        {result && (
+          <div ref={resultRef}>
+            <NBPanel className="bg-secondary p-6">
+              <div className="flex items-center justify-between">
+                <NBBadge className="bg-sun">Coached response</NBBadge>
+                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  Try saying it like this
+                </span>
+              </div>
+              <p className="mt-4 text-lg font-medium leading-relaxed">
+                “{result.reframe}”
+              </p>
+              <div className="mt-4 nb bg-mint p-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest">
+                  Delivery note
+                </p>
+                <p className="mt-1 text-sm">{result.toneNote}</p>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <NBButton variant="mint" disabled={saving || saved} onClick={handleSave}>
+                  {saved ? "Saved" : saving ? "Saving…" : "Keep this one"}
+                </NBButton>
+                <NBButton
+                  variant="paper"
+                  onClick={() => {
+                    setResult(null);
+                    setReaction("");
+                    setSaved(false);
+                  }}
+                >
+                  Another one
+                </NBButton>
+              </div>
+            </NBPanel>
+          </div>
+        )}
 
         {/* Perspective lens — the same moment, five legitimate readings */}
         <NBPanel className="overflow-hidden">
@@ -263,41 +322,6 @@ export default function Reframe() {
             </div>
           </div>
         </NBPanel>
-
-        {result && (
-          <NBPanel className="p-6">
-            <div className="flex items-center justify-between">
-              <NBBadge className="bg-sun">COACHED RESPONSE</NBBadge>
-              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Try saying it like this
-              </span>
-            </div>
-            <p className="mt-4 text-lg font-medium leading-relaxed">
-              “{result.reframe}”
-            </p>
-            <div className="mt-4 nb bg-mint p-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest">
-                Delivery note
-              </p>
-              <p className="mt-1 text-sm">{result.toneNote}</p>
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <NBButton variant="mint" disabled={saving || saved} onClick={handleSave}>
-                {saved ? "Saved" : saving ? "Saving…" : "Keep this one"}
-              </NBButton>
-              <NBButton
-                variant="paper"
-                onClick={() => {
-                  setResult(null);
-                  setReaction("");
-                  setSaved(false);
-                }}
-              >
-                Another one
-              </NBButton>
-            </div>
-          </NBPanel>
-        )}
       </div>
     </AppShell>
   );
