@@ -21,7 +21,7 @@ export interface Lens {
 export const LENSES: Lens[] = [
   {
     id: "author",
-    name: "The Author",
+    name: "What am I assuming?",
     idea: "You're filling in the blanks — some of what upsets you is guesswork, not fact.",
     question: "What am I assuming that I don't actually know?",
     seed: "Retell it using only what a camera would have recorded. See how much drama was yours.",
@@ -29,7 +29,7 @@ export const LENSES: Lens[] = [
   },
   {
     id: "their-day",
-    name: "Their Day",
+    name: "It's not about me",
     idea: "People snap when they're late, embarrassed, or overwhelmed — it usually isn't about you.",
     question: "What might this have nothing to do with me?",
     seed: "Name three pressures that could explain their words. They don't excuse it; they explain it.",
@@ -37,7 +37,7 @@ export const LENSES: Lens[] = [
   },
   {
     id: "next-year",
-    name: "Next Year",
+    name: "A year from now",
     idea: "Most things feel smaller with time. Today it feels huge — that feeling lies.",
     question: "How big will this be a year from now?",
     seed: "Write the one-line version you'd tell a friend next year. Usually one sentence, usually a shrug.",
@@ -45,7 +45,7 @@ export const LENSES: Lens[] = [
   },
   {
     id: "ally",
-    name: "The Ally",
+    name: "My biggest fan",
     idea: "Imagine your biggest fan watched this moment. What would they say you were doing?",
     question: "What would someone on my side say I was doing here?",
     seed: "\"You were protecting ___\" counts. Looking out for yourself can be both firm and kind.",
@@ -53,7 +53,7 @@ export const LENSES: Lens[] = [
   },
   {
     id: "stake",
-    name: "The Stake",
+    name: "What really matters",
     idea: "Ask what this is really about. Most conflict is one of two things: respect or closeness.",
     question: "What do I actually want to be true after this?",
     seed: "If it's respect, ask for it in one clear sentence. If it's closeness, same rule.",

@@ -54,8 +54,8 @@ export default function Progress() {
         {!hasTrendData && (
           <NBPanel className="bg-card/70 p-5">
             <p className="text-sm text-muted-foreground">
-              <span className="font-bold text-ink">Tone trends appear after 5 takes</span>{" "}
-              — you're at {progression?.totalSessions ?? 0}.
+              <span className="font-bold text-ink">Record {5 - (progression?.totalSessions ?? 0)} more takes</span>
+              {" "}and your tone trends will appear here.
             </p>
           </NBPanel>
         )}

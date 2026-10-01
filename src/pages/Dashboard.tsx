@@ -86,11 +86,11 @@ export default function Dashboard() {
         <section aria-label="Quick reps">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             {[
-              { to: "/gym", icon: Mic, label: "Quick take", sub: "45s", color: "bg-coral" },
-              { to: "/translate", icon: Languages, label: "Translate", sub: "2 passes", color: "bg-sun" },
-              { to: "/quiz", icon: MessagesSquare, label: "Read the Room", sub: "1 scenario", color: "bg-mint" },
-              { to: "/reframe", icon: Shuffle, label: "Reframe", sub: "2 min", color: "bg-paper" },
-              { to: "/calm", icon: Wind, label: "Grounding", sub: `${GROUNDING_EXERCISES.length} exercises`, color: "bg-paper" },
+              { to: "/gym", icon: Mic, label: "Practice a drill", sub: "Record your voice", color: "bg-coral" },
+              { to: "/translate", icon: Languages, label: "Translate", sub: "Say it twice, compare", color: "bg-sun" },
+              { to: "/quiz", icon: MessagesSquare, label: "Read the Room", sub: "No mic needed", color: "bg-mint" },
+              { to: "/reframe", icon: Shuffle, label: "Reframe", sub: "Rewrite a moment", color: "bg-paper" },
+              { to: "/calm", icon: Wind, label: "Grounding", sub: `${GROUNDING_EXERCISES.length} breathing exercises`, color: "bg-paper" },
             ].map((rep) => {
               const Icon = rep.icon;
               return (
@@ -132,8 +132,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <p className="text-sm text-ink/70">
-                About {daily.drill.seconds} seconds. Your microphone will
-                turn on when you start.
+                A short voice exercise — about {daily.drill.seconds} seconds.
               </p>
               <div>
                 <Link to={`/practice/${daily.drill.id}`}>

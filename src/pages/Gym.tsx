@@ -133,15 +133,16 @@ export default function Gym() {
                 <MessagesSquare className="size-5 text-sun" />
               </span>
               <div>
-                <h2 className="font-display text-lg leading-tight">No mic handy?</h2>
+                <h2 className="font-display text-lg leading-tight">No microphone handy?</h2>
                 <p className="text-sm text-paper/70">
-                  Read the Room trains the same judgment without recording.
+                  Practice judgment instead: read a situation, pick your
+                  reply, get feedback — no recording.
                 </p>
               </div>
             </div>
             <Link to="/quiz">
               <NBButton variant="sun" className="text-xs">
-                Today's scenario <ArrowRight className="size-3.5" />
+                Start reading <ArrowRight className="size-3.5" />
               </NBButton>
             </Link>
           </div>

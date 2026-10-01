@@ -115,8 +115,8 @@ export function GroundingKit() {
         )}
       </div>
 
-      {/* Exercise tabs */}
-      <div className="flex gap-1 overflow-x-auto border-b-2 border-ink bg-secondary/60 p-2">
+      {/* Exercise tabs — they wrap instead of overflowing on phones */}
+      <div className="flex flex-wrap gap-1 border-b-2 border-ink bg-secondary/60 p-2">
         {GROUNDING_EXERCISES.map((e) => {
           const Icon = ICONS[e.icon];
           const active = e.id === ex.id;

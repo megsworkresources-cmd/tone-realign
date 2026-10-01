@@ -31,9 +31,8 @@ export default function Calm() {
             The <span className="italic text-mint">calm</span> side of the gym
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            {GROUNDING_EXERCISES.length} grounding exercises — breath pacers
-            and attention guides — plus the no-mic practices. Come here
-            before a hard conversation, or after one.
+            {GROUNDING_EXERCISES.length} short breathing exercises to steady
+            yourself — use them before a hard conversation, or after one.
           </p>
         </section>
 
@@ -50,12 +49,12 @@ export default function Calm() {
             </div>
             <div className="p-6">
               <p className="text-sm leading-relaxed text-paper/80">
-                No mic needed. Pick the reply you'd actually send and see what
-                it would broadcast — new scenario every day.
+                No microphone needed. Read a short situation, pick the reply
+                you'd send, and get instant feedback. A new situation daily.
               </p>
               <Link to="/quiz" className="mt-6 inline-block">
                 <NBButton variant="sun" className="text-xs">
-                  Today's scenario <ArrowRight className="size-3.5" />
+                  Start reading <ArrowRight className="size-3.5" />
                 </NBButton>
               </Link>
             </div>

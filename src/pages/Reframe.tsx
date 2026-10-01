@@ -288,10 +288,7 @@ export default function Reframe() {
                 transition={{ duration: 0.22 }}
                 className="mt-5"
               >
-                <div className={`nb inline-block px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${lens.color}`}>
-                  {lens.name}
-                </div>
-                <p className="mt-3 text-base leading-relaxed">{lens.idea}</p>
+                <p className="text-base leading-relaxed">{lens.idea}</p>
                 <p className="nb mt-3 bg-secondary p-3 font-display text-lg leading-snug">
                   {lens.question}
                 </p>
