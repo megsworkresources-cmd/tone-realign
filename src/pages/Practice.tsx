@@ -388,6 +388,13 @@ function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) 
             <p className="hidden text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:block">
               Tip: press Space to start / stop
             </p>
+            <p className="max-w-md text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Recorded in your browser — nothing is saved unless you tap
+              "Add to my log."{" "}
+              <Link to="/privacy" className="text-coral hover:underline">
+                Privacy
+              </Link>
+            </p>
           </div>
         </NBPanel>
 

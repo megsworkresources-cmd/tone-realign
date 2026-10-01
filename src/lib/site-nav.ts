@@ -17,6 +17,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/drills", label: "Drills", dot: "bg-mint" },
   { to: "/watch", label: "Watch", dot: "bg-coral" },
   { to: "/library", label: "Library", dot: "bg-paper" },
+  { to: "/privacy", label: "Privacy", dot: "bg-paper" },
 ];
 
 /** The public routes the router must register for the nav to be safe. */
@@ -35,6 +36,7 @@ export const PAGE_ORDER: { to: string; label: string; blurb: string; dot: string
   { to: "/drills", label: "Drills", blurb: "Pick a drill, train the tone", dot: "bg-mint" },
   { to: "/watch", label: "Watch", blurb: "Videos from the pros", dot: "bg-coral" },
   { to: "/library", label: "Library", blurb: "Research shelf + all videos", dot: "bg-paper" },
+  { to: "/privacy", label: "Privacy", blurb: "Your voice, your data", dot: "bg-paper" },
 ];
 
 /** Prev/next stops of the tour for a given path (nulls at the ends). */

@@ -12,6 +12,7 @@ import { ArrowRight, AudioLines, Languages, RefreshCw, Square, Target } from "lu
 import { PACE_BAR_CLASS, PACE_HINTS, formatClock, pacePct, paceStatus, TRANSLATE_TAKE_TARGET_MS } from "@/lib/take-timing";
 import { motion } from "framer-motion";
 import { useMutation } from "convex/react";
+import { Link } from "react-router";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { api } from "@/convex/_generated/api";
@@ -109,7 +110,11 @@ export default function Translate() {
     with no way to record the second take. */}
 {(capture.state === "idle" || capture.state === "done") && <div className="mt-5 flex flex-col items-center gap-3">{capture.state === "done" && finishedPass && <NBBadge className="bg-mint text-ink">✓ {finishedPass === "reflex" ? "First" : "Second"} take scored — one to go</NBBadge>}<div className="flex justify-center"><NBButton onClick={startPass} variant={pass === "reflex" ? "coral" : "mint"}>{capture.state === "done" ? "Record the next take" : `Say it — ${pass} take`}</NBButton></div></div>}{capture.state === "recording" && <div className="mt-5 w-full"><div className="h-3 w-full nb overflow-hidden bg-card"><div className={cn("h-full transition-[width] duration-300", PACE_BAR_CLASS[pace])} style={{ width: `${pacePct(capture.elapsedMs, TRANSLATE_TAKE_TARGET_MS)}%` }} /></div><div className="mt-1.5 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground"><span className="flex items-center gap-1.5"><Target className="size-3.5" /> {PACE_HINTS[pace]}</span><span>{formatClock(capture.elapsedMs)} / {formatClock(TRANSLATE_TAKE_TARGET_MS)}</span></div><p className="mt-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">Live pitch · {capture.livePitchHz ? `${Math.round(capture.livePitchHz)} Hz` : "listening for you…"}{capture.level < 0.06 && capture.elapsedMs > 3000 && " · we can barely hear you — move closer"}</p><div className="mt-5 flex justify-center"><NBButton onClick={finishPass} variant="ink"><Square className="size-4" /> Done — score it</NBButton></div></div>}{capture.state === "analyzing" && <div className="mt-5 text-center font-display">Analyzing…</div>}{/* Preview frames block the mic entirely — say so before the
     first failed take, not after. */}
-<PreviewMicHint className="mt-5" />{capture.error && <MicError message={capture.error} />}{capture.state === "recording" && capture.micMuted && <p className="nb mt-5 bg-sun px-3 py-2 text-sm font-medium">Your microphone is muted — check your device's sound settings.</p>}        {/* Ratings appear after EVERY take, not just after both — the
+<PreviewMicHint className="mt-5" />{capture.state === "idle" && <p className="max-w-md text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          Recordings stay on this device — nothing is uploaded. Find a
+          private spot; the mic hears the whole room.{" "}
+          <Link to="/privacy" className="text-coral hover:underline">Privacy</Link>
+        </p>}{capture.error && <MicError message={capture.error} />}{capture.state === "recording" && capture.micMuted && <p className="nb mt-5 bg-sun px-3 py-2 text-sm font-medium">Your microphone is muted — check your device's sound settings.</p>}        {/* Ratings appear after EVERY take, not just after both — the
             checker panel alone after take 1 read as "it doesn't rate". */}
         {!done && (reflexAnalysis || intendedAnalysis) && <div className="mt-5 flex flex-col gap-4"><p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Your take — rated</p>{(["reflex", "intended"] as Pass[]).filter((p) => (p === "reflex" ? reflexAnalysis : intendedAnalysis)).map((p) => <TakeResult key={p} pass={p} analysis={(p === "reflex" ? reflexAnalysis : intendedAnalysis)!} url={p === "reflex" ? reflexUrl : intendedUrl} openFactor={openFactor} setOpenFactor={setOpenFactor} />)}</div>}{/* Device settings sit below the results — setup, not the exercise. */}
         <MicPicker activeLabel={capture.activeDeviceLabel} className="mt-5" /></NBPanel>}

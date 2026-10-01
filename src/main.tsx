@@ -19,6 +19,7 @@ const ToneCheck = lazy(() => import("./pages/ToneCheck.tsx"));
 const DrillsPage = lazy(() => import("./pages/Drills.tsx"));
 const Watch = lazy(() => import("./pages/Watch.tsx"));
 const Library = lazy(() => import("./pages/Library.tsx"));
+const Privacy = lazy(() => import("./pages/Privacy.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const Gym = lazy(() => import("./pages/Gym.tsx"));
@@ -103,6 +104,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/drills" element={<DrillsPage />} />
               <Route path="/watch" element={<Watch />} />
               <Route path="/library" element={<Library />} />
+              <Route path="/privacy" element={<Privacy />} />
               <Route
                 path="/auth"
                 element={<AuthPage redirectAfterAuth="/dashboard" />}

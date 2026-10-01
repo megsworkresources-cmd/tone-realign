@@ -11,7 +11,7 @@ import { resolveRedirectAfterAuth } from "@/lib/redirect";
 import logo from "@/assets/logo.svg";
 import { ArrowRight, AudioWaveform, Loader2, UserX } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 
 interface AuthProps {
@@ -258,6 +258,17 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   >
                     <UserX className="size-4" /> Just looking — continue as guest
                   </NBButton>
+
+                  <p className="text-center text-[10px] text-muted-foreground">
+                    By continuing you agree to our{" "}
+                    <Link
+                      to="/privacy"
+                      className="font-bold text-coral hover:underline"
+                    >
+                      privacy policy
+                    </Link>
+                    .
+                  </p>
                 </div>
               </form>
             </>

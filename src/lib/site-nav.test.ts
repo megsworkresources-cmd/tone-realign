@@ -52,13 +52,16 @@ describe("page tour (back/forward pager)", () => {
     expect(next?.to).toBe("/drills");
   });
 
-  test("tourStops: home opens the tour (no back), library closes it (no next)", () => {
+  test("tourStops: home opens the tour (no back), privacy closes it (no next)", () => {
     const home = tourStops("/");
     expect(home.prev).toBeNull();
     expect(home.next?.to).toBe("/how");
     const library = tourStops("/library");
     expect(library.prev?.to).toBe("/watch");
-    expect(library.next).toBeNull();
+    expect(library.next?.to).toBe("/privacy");
+    const privacy = tourStops("/privacy");
+    expect(privacy.prev?.to).toBe("/library");
+    expect(privacy.next).toBeNull();
   });
 
   test("watch sits between drills and library", () => {
