@@ -1,4 +1,3 @@
-import { levelInfo } from "@/lib/gamify";
 import { APP_ORDER, PAGE_ORDER, appTourStops } from "@/lib/site-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
@@ -52,7 +51,7 @@ const NAV: NavItem[] = [
   { id: "progress", to: "/progress", label: "Progress", short: "Progress", icon: TrendingUp, tab: true },
 ];
 
-/** The signed-in app's shared chrome: one header, consistent nav, live level. */
+/** The signed-in app's shared chrome: one header, consistent nav. */
 export function AppShell({
   active,
   children,
@@ -64,9 +63,6 @@ export function AppShell({
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const tour = appTourStops(pathname);
-  const progression = useQuery(api.dailyLog.progression);
-
-  const level = levelInfo(progression?.totalXp ?? 0);
 
   // A failed sign-out (offline, session already gone) must not leave the
   // user stuck on a header that pretends it worked — say so and stay put
@@ -125,19 +121,6 @@ export function AppShell({
 
           <div className="flex items-center gap-3">
             <EverythingMenu />
-            <Link
-              to="/dashboard#progress"
-              className="flex items-center gap-2"
-              title={`Level ${level.level} — ${level.label}`}
-            >
-              <LevelRing level={level.level} pct={level.progressPct} />
-              <span className="hidden flex-col leading-tight lg:flex">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-paper/60">
-                  Level {level.level}
-                </span>
-                <span className="font-display text-xs">{level.label}</span>
-              </span>
-            </Link>
             <button
               onClick={handleSignOut}
               className="nb nb-press flex items-center gap-2 bg-coral px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-ink"
@@ -324,30 +307,5 @@ function TabItem({
       <Icon className={cn("size-5", isActive && "text-coral")} />
       {item.short}
     </Link>
-  );
-}
-
-/** Small round XP progress ring with the level number inside. */
-export function LevelRing({ level, pct }: { level: number; pct: number }) {
-  const R = 15.5;
-  const C = 2 * Math.PI * R;
-  return (
-    <span className="relative inline-flex size-9 items-center justify-center">
-      <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90" aria-hidden>
-        <circle cx="18" cy="18" r={R} fill="none" strokeWidth="3" className="stroke-paper/20" />
-        <circle
-          cx="18"
-          cy="18"
-          r={R}
-          fill="none"
-          strokeWidth="3"
-          strokeDasharray={C}
-          strokeDashoffset={C * (1 - pct / 100)}
-          strokeLinecap="butt"
-          className="stroke-sun"
-        />
-      </svg>
-      <span className="font-display text-[11px] font-bold tabular-nums">{level}</span>
-    </span>
   );
 }

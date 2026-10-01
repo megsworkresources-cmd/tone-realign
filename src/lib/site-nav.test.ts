@@ -168,16 +168,14 @@ describe("page split contracts", () => {
     }
   });
 
-  test("pages that show lock states wait for stats before rendering", () => {
-    // A zeros-frame would flash earned drills as locked or show a wrong
-    // "next unlock" to veterans. Pages either early-return on the raw
-    // query or gate the lock on a lockKnown-style boolean.
+  test("no drill locks anywhere — the gym is fully open", () => {
+    // Locks were removed at the owner's request: no page may gate a drill
+    // or show unlock progress again.
     for (const page of ["Dashboard", "Gym", "Practice"]) {
       const s = src(page);
-      expect(s).toMatch(
-        /progression === undefined|lockKnown = progression !== undefined/,
-      );
-      expect(s).toContain("Loading your");
+      expect(s).not.toContain("UNLOCKABLE_DRILLS");
+      expect(s).not.toContain("isUnlocked");
+      expect(s).not.toContain("unlockGoalLine");
     }
   });
 
@@ -237,12 +235,13 @@ describe("page split contracts", () => {
     expect(tabs).toBe(4);
   });
 
-  test("the level ring still anchors to the progression panel on the dashboard", () => {
+  test("the weekly chart still anchors to the dashboard's progress anchor", () => {
     const shell = readFileSync(
       new URL("../components/AppShell.tsx", import.meta.url),
       "utf8",
     );
-    expect(shell).toContain('to="/dashboard#progress"');
+    // The header no longer carries a level ring; the anchor is plain.
+    expect(shell).not.toContain("LevelRing");
     expect(src("Dashboard")).toContain('id="progress"');
   });
 });

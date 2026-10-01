@@ -49,22 +49,7 @@ export function DailyChecklist({ todayDrillId }: { todayDrillId: string }) {
       </div>
 
       <div className="p-5">
-        {/* Sweep bonus meter */}
-        <div className="nb flex items-center justify-between gap-3 bg-secondary px-3 py-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Do all four for a +40 bonus
-          </span>
-          <div className="flex gap-1" aria-hidden>
-            {DAILY_ACTIONS.map((a) => (
-              <span
-                key={a.id}
-                className={`h-3 w-6 ${completed.has(a.id) ? "bg-mint" : "bg-card"}`}
-              />
-            ))}
-          </div>
-        </div>
-
-        <ul className="mt-4 flex flex-col gap-2.5">
+        <ul className="flex flex-col gap-2.5">
           {DAILY_ACTIONS.map((action) => {
             const meta = ACTION_META[action.id];
             const Icon = meta.icon;
@@ -101,7 +86,7 @@ export function DailyChecklist({ todayDrillId }: { todayDrillId: string }) {
                     done ? "text-ink/70" : "text-muted-foreground"
                   }`}
                 >
-                  {done ? "Done" : `+${action.xp} points`}
+                  {done ? "Done" : "To do"}
                 </span>
               </button>
             );
@@ -136,8 +121,7 @@ export function DailyChecklist({ todayDrillId }: { todayDrillId: string }) {
         </div>
 
         <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          Four small reps beat one heroic session. Miss nothing and the sweep
-          bonus lands on top.
+          Four small reps beat one heroic session.
         </p>
       </div>
     </NBPanel>

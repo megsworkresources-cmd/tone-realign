@@ -334,7 +334,7 @@ function LensScratchpad({ lensId }: { lensId: string }) {
     <textarea
       value={notes[lensId] ?? ""}
       onChange={(e) => setNotes((n) => ({ ...n, [lensId]: e.target.value }))}
-      placeholder="What surfaced through this lens? (Stays on this screen)"
+      placeholder="What surfaced through this lens?"
       rows={2}
       className="nb mt-4 w-full bg-card p-3 text-sm outline-none placeholder:text-muted-foreground"
     />

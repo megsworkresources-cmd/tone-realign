@@ -1,7 +1,6 @@
 import { NBBadge, NBPanel, NBMeter } from "@/components/nb";
 import { AppShell } from "@/components/AppShell";
-import { levelInfo } from "@/lib/gamify";
-import { TRENDS_UNLOCK, buildToneTrends, isUnlocked, type UnlockStats } from "@/lib/unlocks";
+import { buildToneTrends } from "@/lib/unlocks";
 import { TONE_LABELS } from "@/lib/tone-analyzer";
 import { DRILLS } from "@/lib/drills";
 import { api } from "@/convex/_generated/api";
@@ -28,17 +27,9 @@ export default function Progress() {
   const trendSessions = useQuery(api.sessions.listSessions, { limit: 10 });
   const drillStats = useQuery(api.sessions.drillStats);
 
-  const level = levelInfo(progression?.totalXp ?? 0);
   const bestByDrill = new Map((drillStats ?? []).map((s) => [s.drill, s]));
-
-  const unlockStats: UnlockStats = {
-    takes: progression?.totalSessions ?? 0,
-    level: level.level,
-    drillsTried: progression?.drillsTried ?? 0,
-    bestScore: progression?.bestOverall ?? 0,
-    streak: progression?.streakDays ?? 0,
-  };
-  const trendsUnlocked = isUnlocked(TRENDS_UNLOCK, unlockStats);
+  // Trends simply need history — show them once there's something to chart.
+  const hasTrendData = (progression?.totalSessions ?? 0) >= 5;
 
   return (
     <AppShell active="progress">
@@ -56,14 +47,14 @@ export default function Progress() {
           </p>
         </section>
 
-        {/* Tone trends — unlocked after 5 takes; trends need history */}
-        {trendsUnlocked && trendSessions && trendSessions.length >= 2 && (
+        {/* Tone trends — appear once there's history to chart */}
+        {hasTrendData && trendSessions && trendSessions.length >= 2 && (
           <ToneTrendsPanel sessions={trendSessions} />
         )}
-        {!trendsUnlocked && (
+        {!hasTrendData && (
           <NBPanel className="bg-card/70 p-5">
             <p className="text-sm text-muted-foreground">
-              <span className="font-bold text-ink">Tone trends unlock at 5 takes</span>{" "}
+              <span className="font-bold text-ink">Tone trends appear after 5 takes</span>{" "}
               — you're at {progression?.totalSessions ?? 0}.
             </p>
           </NBPanel>

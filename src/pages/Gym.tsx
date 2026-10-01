@@ -2,14 +2,6 @@ import { NBButton, NBPanel } from "@/components/nb";
 import { AppShell } from "@/components/AppShell";
 import { DRILL_GROUPS, drillsInGroup } from "@/lib/drills";
 import { getAccessibleDailyChallenge } from "@/lib/daily";
-import { levelInfo } from "@/lib/gamify";
-import {
-  UNLOCKABLE_DRILLS,
-  isUnlocked,
-  unlockGoalLine,
-  unlockProgressPct,
-  type UnlockStats,
-} from "@/lib/unlocks";
 import { api } from "@/convex/_generated/api";
 import {
   ArrowRight,
@@ -30,35 +22,11 @@ import { cn } from "@/lib/utils";
  * gates, and the no-mic practices live one callout away.
  */
 export default function Gym() {
-  const progression = useQuery(api.dailyLog.progression);
   const drillStats = useQuery(api.sessions.drillStats);
-  // Unlocks and bests are computed from live stats; rendering before
-  // progression resolves would flash every earned drill as locked.
-  if (progression === undefined) {
-    return (
-      <AppShell active="gym">
-        <div className="mx-auto max-w-3xl px-4 py-10">
-          <NBPanel className="p-8 text-center">
-            <p className="text-sm text-muted-foreground">Loading your gym…</p>
-          </NBPanel>
-        </div>
-      </AppShell>
-    );
-  }
   const bestByDrill = new Map((drillStats ?? []).map((s) => [s.drill, s]));
-  const level = levelInfo(progression?.totalXp ?? 0);
-
-  const unlockStats: UnlockStats = {
-    takes: progression?.totalSessions ?? 0,
-    level: level.level,
-    drillsTried: progression?.drillsTried ?? 0,
-    bestScore: progression?.bestOverall ?? 0,
-    streak: progression?.streakDays ?? 0,
-  };
-  const daily = getAccessibleDailyChallenge((drillId) => {
-    const gate = UNLOCKABLE_DRILLS.find((u) => u.id === drillId);
-    return !gate || isUnlocked(gate, unlockStats);
-  });
+  // Every drill is open — no locks, no gates. The daily challenge still
+  // picks an accessible drill (all of them are).
+  const daily = getAccessibleDailyChallenge(() => true);
   // One drill group per view — ?group= keeps the page short and the
   // choice simple; an unknown or missing group falls back to the first.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -124,58 +92,33 @@ export default function Gym() {
           <div className="mt-5 grid gap-5 md:grid-cols-3">
             {drills.map((drill) => {
               const s = bestByDrill.get(drill.id);
-              const gate = UNLOCKABLE_DRILLS.find((u) => u.id === drill.id);
-              const open = !gate || isUnlocked(gate, unlockStats);
               return (
-                <NBPanel key={drill.id} className={open ? "flex flex-col" : "flex flex-col bg-card/60"}>
-                  <div className={`border-b-2 border-ink px-5 py-3 ${drill.color} ${open ? "" : "opacity-60"}`}>
-                    <div className="flex items-center justify-between font-display text-lg leading-tight">
+                <NBPanel key={drill.id} className="flex flex-col">
+                  <div className={`border-b-2 border-ink px-5 py-3 ${drill.color}`}>
+                    <div className="font-display text-lg leading-tight">
                       {drill.name}
-                      {!open && <Lock className="size-4" />}
                     </div>
                     <div className="mt-1 text-[10px] font-bold uppercase tracking-widest">
                       {drill.tag}
                     </div>
                   </div>
-                  {open ? (
-                    <>
-                      <p className="flex-1 p-5 text-sm leading-relaxed text-muted-foreground">
-                        {drill.focus}
-                      </p>
-                      <div className="flex items-center justify-between border-t-2 border-ink px-5 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                        <span className="flex items-center gap-1.5">
-                          <Timer className="size-3.5" /> {drill.seconds}s
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <Target className="size-3.5" />
-                          {s ? `Best ${s.bestScore}` : "Untried"}
-                        </span>
-                      </div>
-                      <Link to={`/practice/${drill.id}`} className="border-t-2 border-ink">
-                        <NBButton variant="paper" className="w-full rounded-none py-2.5 text-xs">
-                          Start drill <ArrowRight className="size-3.5" />
-                        </NBButton>
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      <p className="flex-1 p-5 text-sm leading-relaxed text-muted-foreground">
-                        {gate!.blurb}
-                      </p>
-                      <div className="border-t-2 border-ink px-5 py-3">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          Unlocks with
-                        </p>
-                        <p className="mt-0.5 text-sm font-bold">{unlockGoalLine(gate!, unlockStats)}</p>
-                      </div>
-                      <div className="h-1.5 border-t-2 border-ink bg-muted">
-                        <div
-                          className="h-full bg-sun"
-                          style={{ width: `${unlockProgressPct(gate!, unlockStats)}%` }}
-                        />
-                      </div>
-                    </>
-                  )}
+                  <p className="flex-1 p-5 text-sm leading-relaxed text-muted-foreground">
+                    {drill.focus}
+                  </p>
+                  <div className="flex items-center justify-between border-t-2 border-ink px-5 py-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Timer className="size-3.5" /> {drill.seconds}s
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Target className="size-3.5" />
+                      {s ? `Best ${s.bestScore}` : "Untried"}
+                    </span>
+                  </div>
+                  <Link to={`/practice/${drill.id}`} className="border-t-2 border-ink">
+                    <NBButton variant="paper" className="w-full rounded-none py-2.5 text-xs">
+                      Start drill <ArrowRight className="size-3.5" />
+                    </NBButton>
+                  </Link>
                 </NBPanel>
               );
             })}

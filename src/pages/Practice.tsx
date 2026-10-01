@@ -5,7 +5,6 @@ import { MicPicker } from "@/components/MicPicker";
 import { getSavedMicDeviceId } from "@/lib/mic-prefs";
 import { CoachNote } from "@/components/CoachNote";
 import { getDrill, type Drill } from "@/lib/drills";
-import { UNLOCKABLE_DRILLS, isUnlocked, unlockGoalLine } from "@/lib/unlocks";
 import { getAccessibleDailyChallenge } from "@/lib/daily";
 import {
   COUNTDOWN_SECONDS,
@@ -29,14 +28,13 @@ import {
   isAllowedTakeAudioMime,
 } from "@/lib/take-audio";
 import { api } from "@/convex/_generated/api";
-import { ArrowLeft, AudioLines, Check, Lock, Mic, MessageSquareText, Square, Target } from "lucide-react";
+import { ArrowLeft, AudioLines, Check, Mic, MessageSquareText, Square, Target } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { CONTEXT_PROMPTS } from "@/lib/context-prompts";
-import { levelInfo } from "@/lib/gamify";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -44,19 +42,6 @@ import type { Id } from "@/convex/_generated/dataModel";
 export default function Practice() {
   const { drillId } = useParams();
   const drill = drillId ? getDrill(drillId) : undefined;
-  const progression = useQuery(api.dailyLog.progression);
-  const stats = {
-    takes: progression?.totalSessions ?? 0,
-    level: levelInfo(progression?.totalXp ?? 0).level,
-    drillsTried: progression?.drillsTried ?? 0,
-    bestScore: progression?.bestOverall ?? 0,
-    streak: progression?.streakDays ?? 0,
-  };
-  const gate = UNLOCKABLE_DRILLS.find((u) => u.id === drillId);
-  // Enforce the lock only once the stats have loaded: with progression
-  // still undefined, zeros would falsely lock veterans mid-navigation.
-  const lockKnown = progression !== undefined;
-  const locked = lockKnown && !!gate && !isUnlocked(gate, stats);
 
   if (!drill) {
     return (
@@ -73,49 +58,10 @@ export default function Practice() {
     );
   }
 
-  if (lockKnown === false && drill) {
-    return (
-      <AppShell>
-        <div className="mx-auto max-w-3xl px-4 py-10">
-          <NBPanel className="p-8 text-center">
-            <p className="text-sm text-muted-foreground">Loading your gym…</p>
-          </NBPanel>
-        </div>
-      </AppShell>
-    );
-  }
-
-  if (locked) {
-    return (
-      <AppShell>
-        <div className="mx-auto max-w-3xl px-4 py-10">
-          <NBPanel className="p-8 text-center">
-            <Lock className="mx-auto size-8" />
-            <p className="mt-3 font-display text-xl">{drill.name} is still locked</p>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-              {gate?.blurb} Unlock it with {gate ? unlockGoalLine(gate, stats) : "practice"} —
-              every honest take counts.
-            </p>
-            <div className="mt-5 flex justify-center gap-3">
-              <Link to="/gym">
-                <NBButton variant="paper">Back to the gym</NBButton>
-              </Link>
-              <Link to="/practice/steady-ground">
-                <NBButton variant="coral">Do an open drill</NBButton>
-              </Link>
-            </div>
-          </NBPanel>
-        </div>
-      </AppShell>
-    );
-  }
 
   // Keyed by drillId: switching drills remounts the runner, which resets
   // capture and saved state cleanly instead of via setState-in-effect.
-  const isDaily = getAccessibleDailyChallenge((id) => {
-    const g = UNLOCKABLE_DRILLS.find((u) => u.id === id);
-    return !g || isUnlocked(g, stats);
-  }).drill.id === drillId;
+  const isDaily = getAccessibleDailyChallenge(() => true).drill.id === drillId;
   return <PracticeRunner key={drillId} drill={drill} isDaily={isDaily} />;
 }
 
@@ -398,17 +344,15 @@ function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) 
           </div>
         </NBPanel>
 
-        {/* The user's context — what this take is responding to or opening. */}
+        {/* The user's context — pick a situation, or type your own. */}
         <NBPanel className="bg-secondary p-6">
           <div className="flex items-center gap-2">
             <MessageSquareText className="size-5" />
-            <p className="font-display text-xl">Your context</p>
+            <p className="font-display text-xl">Who are you talking to?</p>
           </div>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Tell the mic what the take is for — who it's aimed at, what you're
-            responding to or opening. It gets saved with the take and your
-            coach reads it, so the advice lands on your moment, not a made-up
-            one.
+            Pick one — it helps the coach give advice that fits your moment.
+            Skip it if you're not sure.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {CONTEXT_PROMPTS.map((p) => (
@@ -429,15 +373,20 @@ function PracticeRunner({ drill, isDaily }: { drill: Drill; isDaily: boolean }) 
               </button>
             ))}
           </div>
+          {context && (
+            <p className="mt-3 nb bg-mint px-3 py-2 text-sm font-medium">
+              ✓ Context set: {context}
+            </p>
+          )}
           <textarea
             value={context}
             onChange={(e) => setContext(e.target.value)}
-            placeholder="e.g. my manager messaged “we need to talk” and I'm rehearsing my reply"
+            placeholder="Or type your own situation here…"
             rows={3}
             className="nb mt-4 w-full bg-card p-3 text-sm outline-none placeholder:text-muted-foreground"
           />
           <p className="mt-2 text-xs text-muted-foreground">
-            Optional — but a coach that knows the room coaches better.
+            Optional — skip it anytime.
           </p>
         </NBPanel>
 
