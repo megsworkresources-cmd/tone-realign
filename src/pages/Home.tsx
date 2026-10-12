@@ -466,7 +466,7 @@ export default function Home() {
         <div className="nb-marquee flex w-max gap-8 whitespace-nowrap">
           {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
             <span
-              key={i}
+              key={`${item}-${i}`}
               className="flex items-center gap-8 font-display text-sm uppercase tracking-widest"
             >
               {item}
@@ -520,7 +520,6 @@ export default function Home() {
             {
               to: "/drills",
               title: "See the drills",
-              // Count stays honest as the catalog grows — rendered from the source of truth.
               body: `${DRILLS.length} real-world reps — calm, warmth, boundaries, recovery.`,
               color: "bg-mint",
             },
