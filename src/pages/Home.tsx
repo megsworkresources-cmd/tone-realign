@@ -100,6 +100,76 @@ const VALUE_PROPS = [
   },
 ];
 
+const HOW_IT_WORKS = [
+  {
+    step: "01",
+    title: "Pick a drill",
+    body: "Choose a real-world situation like calm follow-up, clear boundary, warm recovery, or strong reset.",
+  },
+  {
+    step: "02",
+    title: "Record your response",
+    body: "Speak naturally for 30–60 seconds and get immediate readings on tone, pace, and clarity.",
+  },
+  {
+    step: "03",
+    title: "Practice the lever",
+    body: "See the biggest factor to improve, get coach notes, and repeat the drill until it feels natural.",
+  },
+];
+
+const TESTIMONIALS = [
+  {
+    quote:
+      "I caught myself rushing in the first two minutes of the call. The drill showed exactly where my tone was slipping — and it helped immediately.",
+    name: "Maya R.",
+    title: "Sales manager",
+  },
+  {
+    quote:
+      "This is the first communication tool that feels practical. It isn't abstract advice — it's a voice practice system.",
+    name: "Julian P.",
+    title: "Founder",
+  },
+  {
+    quote:
+      "I used it before a difficult client conversation and it put me on a calmer track in under ten minutes.",
+    name: "Nina T.",
+    title: "Client success lead",
+  },
+];
+
+const FAQ_ITEMS = [
+  {
+    q: "Does it save my audio?",
+    a: "No — your audio is only kept if you choose to save it. The analysis and scores can still help you improve without storing every take.",
+  },
+  {
+    q: "Who is this for?",
+    a: "It works best for founders, sales professionals, consultants, recruiters, team leads, and anyone whose tone affects trust, influence, and outcomes.",
+  },
+  {
+    q: "Is this therapy or coaching?",
+    a: "No. This is a communication training and practice app. It helps you build observable habits in how you sound and respond under pressure.",
+  },
+  {
+    q: "Does it work on mobile?",
+    a: "Yes. The product is browser-based and designed for quick practice sessions on desktop or mobile devices.",
+  },
+  {
+    q: "Can teams use it?",
+    a: "Yes. The Team pilot plan is designed for client-facing teams that want consistent communication practice and progress tracking.",
+  },
+];
+
+const TRUST_BADGES = [
+  "Privacy-first",
+  "Works in-browser",
+  "No hidden setup",
+  "Built for high-stakes conversations",
+  "Fast practice loops",
+];
+
 export default function Home() {
   const { isAuthenticated } = useAuth();
 
@@ -327,6 +397,19 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Trust badges */}
+      <section className="border-b-2 border-ink bg-paper">
+        <div className="mx-auto max-w-6xl px-4 py-4">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {TRUST_BADGES.map((badge) => (
+              <span key={badge} className="nb bg-secondary px-3 py-2">
+                {badge}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Value prop section */}
       <section className="border-b-2 border-ink bg-paper">
         <div className="mx-auto max-w-6xl px-4 py-12">
@@ -353,6 +436,31 @@ export default function Home() {
         </div>
       </section>
 
+      {/* How it works */}
+      <section className="border-b-2 border-ink bg-secondary/60">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <div className="text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              How it works
+            </p>
+            <h2 className="mt-2 font-display text-3xl sm:text-4xl">
+              Turn a difficult conversation into a repeatable skill.
+            </h2>
+          </div>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {HOW_IT_WORKS.map((item) => (
+              <NBPanel key={item.step} className="h-full p-5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {item.step}
+                </p>
+                <p className="mt-3 font-display text-2xl">{item.title}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
+              </NBPanel>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Marquee */}
       <div className="overflow-hidden border-b-2 border-ink bg-ink py-3 text-paper">
         <div className="nb-marquee flex w-max gap-8 whitespace-nowrap">
@@ -371,6 +479,33 @@ export default function Home() {
           ))}
         </div>
       </div>
+
+      {/* Testimonials */}
+      <section className="border-b-2 border-ink bg-paper">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <div className="text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Trusted by people who talk for a living
+            </p>
+            <h2 className="mt-2 font-display text-3xl sm:text-4xl">
+              A sharper voice is a stronger outcome.
+            </h2>
+          </div>
+          <div className="mt-10 grid gap-5 lg:grid-cols-3">
+            {TESTIMONIALS.map((item) => (
+              <NBPanel key={item.name} className="h-full p-5">
+                <p className="text-base leading-relaxed text-ink">“{item.quote}”</p>
+                <div className="mt-5 border-t-2 border-dashed border-ink/20 pt-4">
+                  <p className="font-display text-lg">{item.name}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {item.title}
+                  </p>
+                </div>
+              </NBPanel>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Quick routes: three doors into the site */}
       <section className="border-b-2 border-ink bg-paper">
@@ -516,12 +651,34 @@ export default function Home() {
                 </ul>
 
                 <div className="mt-6">
-                  <Link to={plan.name === "Team pilot" ? "/auth" : "/auth"}>
+                  <Link to="/auth">
                     <NBButton variant={plan.featured ? "ink" : "paper"} className="w-full py-3">
                       {plan.cta}
                     </NBButton>
                   </Link>
                 </div>
+              </NBPanel>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="border-b-2 border-ink bg-paper">
+        <div className="mx-auto max-w-4xl px-4 py-16">
+          <div className="text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              FAQ
+            </p>
+            <h2 className="mt-2 font-display text-3xl sm:text-4xl">
+              Questions people ask before they try it.
+            </h2>
+          </div>
+          <div className="mt-8 space-y-4">
+            {FAQ_ITEMS.map((item) => (
+              <NBPanel key={item.q} className="p-5">
+                <p className="font-display text-xl">{item.q}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.a}</p>
               </NBPanel>
             ))}
           </div>
