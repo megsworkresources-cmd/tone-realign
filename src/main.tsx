@@ -15,6 +15,9 @@ import { trackPageview } from "@/lib/analytics";
 
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const HowItWorks = lazy(() => import("./pages/HowItWorks.tsx"));
+const Pricing = lazy(() => import("./pages/Pricing.tsx"));
+const About = lazy(() => import("./pages/About.tsx"));
+const Contact = lazy(() => import("./pages/Contact.tsx"));
 const ToneCheck = lazy(() => import("./pages/ToneCheck.tsx"));
 const DrillsPage = lazy(() => import("./pages/Drills.tsx"));
 const Watch = lazy(() => import("./pages/Watch.tsx"));
@@ -100,6 +103,9 @@ createRoot(document.getElementById("root")!).render(
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/how" element={<HowItWorks />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/tone-check" element={<ToneCheck />} />
               <Route path="/drills" element={<DrillsPage />} />
               <Route path="/watch" element={<Watch />} />
