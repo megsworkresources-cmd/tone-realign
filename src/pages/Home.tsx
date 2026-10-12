@@ -77,6 +77,29 @@ const MARQUEE_ITEMS = [
   "REPLY, DON'T REACT",
 ];
 
+const VALUE_PROPS = [
+  {
+    title: "Real-time feedback",
+    body: "Get instant readings on calm, clarity, energy, and stability before the next important conversation.",
+  },
+  {
+    title: "Practice the real moment",
+    body: "Use guided drills modeled on high-stakes situations instead of vague confidence advice.",
+  },
+  {
+    title: "Coach notes that make sense",
+    body: "See the exact factor to improve next time — not a generic performance score.",
+  },
+  {
+    title: "Build a stronger voice",
+    body: "Track your progress over time and notice the changes that actually change how people hear you.",
+  },
+  {
+    title: "Leave your audio alone",
+    body: "Your tone data can help you improve without forcing you to save every recording.",
+  },
+];
+
 export default function Home() {
   const { isAuthenticated } = useAuth();
 
@@ -304,6 +327,32 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Value prop section */}
+      <section className="border-b-2 border-ink bg-paper">
+        <div className="mx-auto max-w-6xl px-4 py-12">
+          <div className="max-w-2xl">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Practice the tone that gets people to listen
+            </p>
+            <h2 className="mt-2 font-display text-3xl sm:text-4xl">
+              Most communication problems aren't about the words.
+            </h2>
+            <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+              ShiftedTone helps professionals hear how their voice lands before the next high-stakes conversation begins.
+            </p>
+          </div>
+          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            {VALUE_PROPS.map((item) => (
+              <NBPanel key={item.title} className="h-full p-4">
+                <div className="mb-3 h-1.5 w-10 bg-coral" />
+                <p className="font-display text-lg leading-tight">{item.title}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
+              </NBPanel>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Marquee */}
       <div className="overflow-hidden border-b-2 border-ink bg-ink py-3 text-paper">
         <div className="nb-marquee flex w-max gap-8 whitespace-nowrap">
@@ -374,6 +423,108 @@ export default function Home() {
               </Link>
             </motion.div>
           ))}
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="border-b-2 border-ink bg-sun/30">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Simple pricing
+            </p>
+            <h2 className="mt-2 font-display text-3xl sm:text-4xl">
+              Pick the plan that matches your practice.
+            </h2>
+          </div>
+
+          <div className="mt-8 grid gap-5 lg:grid-cols-3">
+            {[
+              {
+                name: "Free",
+                price: "$0",
+                subtitle: "For starting out",
+                cta: "Start free",
+                features: [
+                  "3 tone checks per month",
+                  "Access to starter drills",
+                  "Track your progress",
+                  "No audio saved by default",
+                ],
+                className: "bg-paper",
+              },
+              {
+                name: "Pro",
+                price: "$9",
+                subtitle: "Per month",
+                cta: "Go Pro",
+                features: [
+                  "Unlimited tone checks",
+                  "Full drill library",
+                  "AI coach notes after every take",
+                  "Weekly progress insights",
+                ],
+                featured: true,
+                className: "bg-mint",
+              },
+              {
+                name: "Team pilot",
+                price: "$49",
+                subtitle: "Per seat / month",
+                cta: "Book a pilot",
+                features: [
+                  "Shared team dashboard",
+                  "Team progress tracking",
+                  "Built for client-facing roles",
+                  "Pilot support and onboarding",
+                ],
+                className: "bg-sun",
+              },
+            ].map((plan) => (
+              <NBPanel
+                key={plan.name}
+                className={`flex h-full flex-col p-5 ${plan.className} ${
+                  plan.featured ? "border-2 border-ink" : ""
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {plan.name}
+                    </p>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="font-display text-4xl">{plan.price}</span>
+                      <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                        {plan.subtitle}
+                      </span>
+                    </div>
+                  </div>
+                  {plan.featured && (
+                    <span className="nb bg-ink px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-paper">
+                      Popular
+                    </span>
+                  )}
+                </div>
+
+                <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <span className="mt-0.5 size-2 bg-coral nb" aria-hidden />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-6">
+                  <Link to={plan.name === "Team pilot" ? "/auth" : "/auth"}>
+                    <NBButton variant={plan.featured ? "ink" : "paper"} className="w-full py-3">
+                      {plan.cta}
+                    </NBButton>
+                  </Link>
+                </div>
+              </NBPanel>
+            ))}
+          </div>
         </div>
       </section>
 
